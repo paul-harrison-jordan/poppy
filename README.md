@@ -1,17 +1,15 @@
 ## Getting Started
-
-<!-- Add these to your env.local file in the root of this folder to enable login -->
-GOOGLE_CLIENT_ID=490186627107-k3vbrnhdjllrhm302ovporhltlukf328.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=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
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=cMDPTAuFjsjFXh1PrWLIHUth0wtG5TQ+eZpXGbQBDRg
-
 <!-- Slack me that you want to use this, I need to add your email to the allowlist -->
 
-<!-- add your own values for these, we use pinecone.io as our vectordb, they're free-->
+
+<!-- This repo requires a .env.local file in the root of the project folder. Add your own values for the below, we use pinecone.io as our vectordb, they're free. You do not need to create an index from them, just an API Key-->
 PINECONE_API_KEY=
 OPENAI_API_KEY=
 OPENAI_ORGANIZATION=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+NEXTAUTH_URL=
+NEXTAUTH_SECRET=
 
 First, run the development server:
 
