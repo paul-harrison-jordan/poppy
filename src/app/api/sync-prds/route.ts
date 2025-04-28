@@ -6,6 +6,7 @@ import { Pinecone } from '@pinecone-database/pinecone';
 import { chunkTextByMultiParagraphs, enhanceChunks } from '@/app/chunk';
 import { buildPineconeRecords } from '@/app/embed';
 import { getUserIndex, createUserIndex } from '@/lib/pinecone';
+
 interface Session {
   accessToken?: string;
   user?: {
@@ -34,11 +35,11 @@ export async function POST(request: Request) {
     const index = getUserIndex(authSession.user.name);
     
     const body = await request.json();
-    const folderId = body.folderId;
+    const documentId = body.documentId;
 
-    if (!folderId) {
+    if (!documentId) {
       return NextResponse.json(
-        { error: 'Folder ID is required' },
+        { error: 'Document ID is required' },
         { status: 400 }
       );
     }
@@ -51,8 +52,7 @@ export async function POST(request: Request) {
     });
 
     // Set the access token from the session
-    const session = await getAuthServerSession() as Session;
-    if (!session?.accessToken) {
+    if (!authSession.accessToken) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
@@ -60,64 +60,48 @@ export async function POST(request: Request) {
     }
 
     auth.setCredentials({
-      access_token: session.accessToken,
+      access_token: authSession.accessToken,
     });
 
     // Initialize the Drive API
     const drive = google.drive({ version: 'v3', auth });
 
-    // List all files in the specified folder
-    const response = await drive.files.list({
-      q: `'${folderId}' in parents and mimeType='application/vnd.google-apps.document'`,
-      fields: 'files(id, name)',
+    // Get document details
+    const docResponse = await drive.files.get({
+      fileId: documentId,
+      fields: 'id, name',
     });
 
-    const documents = response.data.files || [];
-    const documentContents: DocumentContent[] = [];
-
-    // Fetch content for each document
-    for (const doc of documents) {
-      try {
-        const content = await drive.files.export({
-          fileId: doc.id!,
-          mimeType: 'text/plain',
-        });
-
-        documentContents.push({
-          name: doc.name || 'Untitled Document',
-          content: content.data as string,
-        });
-      } catch (error) {
-        console.error(`Error fetching document ${doc.name}:`, error);
-        continue; // Skip this document but continue with others
-      }
+    const doc = docResponse.data;
+    if (!doc.name) {
+      return NextResponse.json(
+        { error: 'Document not found' },
+        { status: 404 }
+      );
     }
 
-    // Process and store each document
-    const allFormattedEmbeddings = [];
-    const syncedPrds = [];
-    for (const doc of documentContents) {
-      try {
-        const chunks = chunkTextByMultiParagraphs(doc.content);
-        const formattedEmbeddings = await buildPineconeRecords(chunks);
-        allFormattedEmbeddings.push(formattedEmbeddings);
-        syncedPrds.push(doc.name);
-      } catch (error) {
-        console.error(`Error processing document ${doc.name}:`, error);
-        continue; // Skip this document but continue with others
-      }
-    }
-    for (const formattedEmbeddings of allFormattedEmbeddings) {
-      await index.namespace('ns1').upsert(formattedEmbeddings);
-    }
+    // Fetch document content
+    const contentResponse = await drive.files.export({
+      fileId: documentId,
+      mimeType: 'text/plain',
+    });
+
+    const documentContent: DocumentContent = {
+      name: doc.name,
+      content: contentResponse.data as string,
+    };
+
+    // Process and store the document
+    const chunks = chunkTextByMultiParagraphs(documentContent.content);
+    const formattedEmbeddings = await buildPineconeRecords(chunks);
+    await index.namespace('ns1').upsert(formattedEmbeddings);
     
     return NextResponse.json({
-      message: 'PRDs synced successfully',
-      totalDocuments: documentContents.length,
-      syncedPrds: syncedPrds,
+      message: 'Document synced successfully',
+      documentName: documentContent.name,
     });
   } catch (error) {
-    console.error('Error syncing PRDs:', error);
+    console.error('Error syncing document:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }

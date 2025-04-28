@@ -6,27 +6,32 @@ import Sidebar from '@/components/Sidebar';
 import SyncForm from '@/components/SyncForm';
 import { useEffect, useState } from 'react';
 
+
+
 export default function SyncPage() {
   const { data: session, status } = useSession();
-  const [syncedPrds, setSyncedPrds] = useState<string[]>([]);
+  const [syncedPrds, setSyncedPrds] = useState<PRD[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   const refreshSyncedPrds = () => {
-    const stored = localStorage.getItem('syncedPrds');
+    const stored = localStorage.getItem('prds');
     if (stored) {
-      setSyncedPrds(JSON.parse(stored));
+      try {
+        const parsedPrds = JSON.parse(stored);
+        // Filter out any invalid PRD objects
+
+        setSyncedPrds(parsedPrds);
+      } catch (error) {
+        console.error('Error parsing PRDs from localStorage:', error);
+        setSyncedPrds([]);
+      }
     }
   };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('syncedPrds');
-      console.log('Raw stored data:', stored);
-      if (stored) {
-        console.log('Parsed stored data:', JSON.parse(stored));
-        setSyncedPrds(JSON.parse(stored));
-      }
+      refreshSyncedPrds();
     }
   }, []);
 
@@ -50,13 +55,16 @@ export default function SyncPage() {
   return (
     <div className="min-h-screen bg-[#FFFAF3]">
       <Sidebar />
-      <div className="ml-64 flex items-center justify-center min-h-screen bg-[#FFFAF3]">
+      <div className={`ml-64 flex items-center justify-center min-h-screen bg-[#FFFAF3]`}>
         <div className="max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-8 flex justify-center">
             <div className="w-full max-w-4xl space-y-8">
             <SyncForm onSyncComplete={refreshSyncedPrds} />
             {/* Synced PRDs Table - match width with other cards */}
             <div className="bg-white rounded-xl shadow-lg border border-[#E9DCC6] overflow-x-auto">
-              <h2 className="text-2xl font-bold text-[#232426] mb-6 px-6 pt-6">Synced PRDs</h2>
+              <h2 className="text-2xl font-bold text-[#232426] px-6 pt-6">Synced Documents</h2>
+                      <h3 className="text-sm text-[#BBC7B6] mb-6 px-6 pt-6">
+                        Whenever you write a PRD, we'll query these documents to find relevant information to provide ChatPRD
+                      </h3>
               <table className="min-w-full divide-y divide-[#E9DCC6]">
                 <thead>
                   <tr>
@@ -69,9 +77,11 @@ export default function SyncPage() {
                       <td className="px-6 py-4 text-[#EF6351] text-center font-semibold">No synced PRDs found.</td>
                     </tr>
                   ) : (
-                    currentPrds.map((name, idx) => (
+                    currentPrds.map((prd, idx) => (
                       <tr key={idx}>
-                        <td className="px-6 py-4 text-[#232426]">{name}</td>
+                        <td className="px-6 py-4">
+                            {prd}
+                        </td>
                       </tr>
                     ))
                   )}

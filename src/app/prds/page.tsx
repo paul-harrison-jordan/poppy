@@ -21,11 +21,25 @@ export default function PRDsPage() {
   useEffect(() => {
     const stored = localStorage.getItem('prds');
     if (stored) {
-      setPrds(JSON.parse(stored));
+      try {
+        const parsedPrds = JSON.parse(stored);
+        // Filter out any invalid PRD objects
+        const validPrds = parsedPrds.filter((prd: PRD) => prd && typeof prd === 'object' && prd.id);
+        setPrds(validPrds);
+      } catch (error) {
+        console.error('Error parsing PRDs from localStorage:', error);
+        setPrds([]);
+      }
     }
   }, []);
 
   const handleDelete = async (id: string, title: string) => {
+    if (!id) {
+      console.error('Cannot delete PRD: ID is missing');
+      setToastMessage('Failed to delete PRD: ID is missing');
+      setShowToast(true);
+      return;
+    }
     setDeletingId(id);
     try {
       // Call API to delete from Google Drive
@@ -95,7 +109,7 @@ export default function PRDsPage() {
                       </td>
                       <td className="px-6 py-4 text-center">
                         <button
-                          onClick={() => prd.id && handleDelete(prd.id, prd.title)}
+                          onClick={() => prd.id && handleDelete(prd.id, prd.title || 'Untitled PRD')}
                           className="group transition-all duration-200 p-2 rounded-full hover:bg-[#FFF5F3]"
                           title="Delete PRD"
                         >

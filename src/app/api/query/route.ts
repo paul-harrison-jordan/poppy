@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const authSession = await getAuthServerSession();
     if (!authSession?.user?.name) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  }
 
     // Ensure the index exists
     await createUserIndex(authSession.user.name);
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     });
     
     const results = queryResponse.matches.map((match) => (
-      match.metadata?.text || 'No text available'
+        match.metadata?.text || 'No text available'
     ));
 
     const additionalContext = results.join("");
@@ -74,18 +74,18 @@ export async function POST(request: Request) {
     const drive = google.drive({ version: 'v3', auth });
     const docs = google.docs({ version: 'v1', auth });
 
-    /* 1️⃣  Create our Google Doc file */
-    const fileRes = await drive.files.create({
-      requestBody: {
-        name: title,
-        mimeType: 'application/vnd.google-apps.document',
-      },
-      media: {
+      /* 1️⃣  Create our Google Doc file */
+      const fileRes = await drive.files.create({
+        requestBody: {
+          name: title,
+          mimeType: 'application/vnd.google-apps.document',
+        },
+        media: {
         mimeType: 'text/markdown',
-        body: summary
-      },
+          body: summary
+        },
       fields: 'id',
-    });
+      });
     
     const docId = fileRes.data.id!;
     const url = `https://docs.google.com/document/d/${docId}/edit`;
