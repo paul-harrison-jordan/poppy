@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { Pinecone } from '@pinecone-database/pinecone';
+import { getUserIndex, createUserIndex } from '@/lib/pinecone';
 import { embedChunks } from '@/app/embed';
 import { writeSummary } from '@/app/search';
 import { google } from 'googleapis';
@@ -7,31 +7,22 @@ import { OAuth2Client } from 'google-auth-library';
 import { getAuthServerSession } from '@/lib/auth';
 
 export async function POST(request: Request) {
-
-  interface Session {
-    accessToken?: string;
-    user?: {
-      name?: string;
-      email?: string;
-    };
-  }
-  const pc = new Pinecone({
-    apiKey: process.env.PINECONE_API_KEY || '',
-  });
-  const index = pc.index('pm-context-manual-embedding');
-
   try {
+    const authSession = await getAuthServerSession();
+    if (!authSession?.user?.name) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Ensure the index exists
+    await createUserIndex(authSession.user.name);
+    
+    const index = getUserIndex(authSession.user.name);
     const body = await request.json();
     const query = body.query;
     const title = body.title;
     const questions = body.questions;
+
     interface FormValues {
-      teamStrategy: string;
-      howYouThinkAboutProduct: string;
-      pillarGoalsKeyTermsBackground: string;
-      examplesOfHowYouThink: string;
-    }
-    interface QuestionValues {
       teamStrategy: string;
       howYouThinkAboutProduct: string;
       pillarGoalsKeyTermsBackground: string;
@@ -43,10 +34,9 @@ export async function POST(request: Request) {
     const howYouThinkAboutProduct = parsed.howYouThinkAboutProduct;
     const pillarGoalsKeyTermsBackground = parsed.pillarGoalsKeyTermsBackground;
     const examplesOfHowYouThink = parsed.examplesOfHowYouThink;
-    // // Embed the query
+
     const queryEmbedding = await embedChunks([query]);
     
-    // // Query Pinecone
     const queryResponse = await index.namespace('ns1').query({
       vector: queryEmbedding[0].embedding,
       topK: 10,
@@ -54,7 +44,7 @@ export async function POST(request: Request) {
     });
     
     const results = queryResponse.matches.map((match) => (
-        match.metadata?.text || 'No text available'
+      match.metadata?.text || 'No text available'
     ));
 
     const additionalContext = results.join("");
@@ -69,8 +59,7 @@ export async function POST(request: Request) {
     });
 
     // Set the access token from the session
-    const session = await getAuthServerSession() as Session;
-    if (!session?.accessToken) {
+    if (!authSession.accessToken) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
@@ -78,31 +67,30 @@ export async function POST(request: Request) {
     }
 
     auth.setCredentials({
-      access_token: session.accessToken,
+      access_token: authSession.accessToken,
     });
 
     // Initialize the Drive API
     const drive = google.drive({ version: 'v3', auth });
-    const docs  = google.docs({  version: 'v1', auth });
+    const docs = google.docs({ version: 'v1', auth });
 
-      /* 1️⃣  Create our Google Doc file */
-      const fileRes = await drive.files.create({
-        requestBody: {
-          name: title,
-          mimeType: 'application/vnd.google-apps.document',
-        },
-        media: {
-          mimeType: 'text/markdown',                          // the file you're uploading
-          body: summary
-        },
-        fields: 'id',                      // we only need the ID
-      });
+    /* 1️⃣  Create our Google Doc file */
+    const fileRes = await drive.files.create({
+      requestBody: {
+        name: title,
+        mimeType: 'application/vnd.google-apps.document',
+      },
+      media: {
+        mimeType: 'text/markdown',
+        body: summary
+      },
+      fields: 'id',
+    });
     
+    const docId = fileRes.data.id!;
+    const url = `https://docs.google.com/document/d/${docId}/edit`;
     
-      const docId = fileRes.data.id!;
-
-      const url = `https://docs.google.com/document/d/${docId}/edit`
-    return NextResponse.json({title,url, docId} );
+    return NextResponse.json({ title, url, docId });
   } catch (error) {
     console.error('Error processing query:', error);
     return NextResponse.json(

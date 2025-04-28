@@ -1,20 +1,13 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
-import { Pinecone } from '@pinecone-database/pinecone';
+import { getUserIndex, createUserIndex } from '@/lib/pinecone';
+import { getAuthServerSession } from '@/lib/auth';
+import { OpenAI } from 'openai';
 import { embedChunks } from '@/app/embed';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const pinecone = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY!,
-});
-
-const pc = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY!,
-});
-const index = pc.index('pm-context-manual-embedding');
 const terms = {
   "Profile": "A person record that stores identifiers, custom properties, consent status, and a full activity timeline.",
   "Active profile": "Any profile that is not suppressed and can legally receive messages.",
@@ -29,7 +22,7 @@ const terms = {
   "Double opt-in": "Flow where new subscribers confirm via a follow-up message before becoming subscribed.",
   "Re-engagement segment": "Dynamic group built around inactivity rules to win back lapsing subscribers.",
   "Predictive analytics fields": "Auto generated profile values such as lifetime value and churn risk once data thresholds are met.",
-  "Customer Lifetime Value": "Historic revenue plus Klaviyo’s forecast of future spend for that customer.",
+  "Customer Lifetime Value": "Historic revenue plus Klaviyo's forecast of future spend for that customer.",
   "Churn risk prediction": "Probability score estimating how likely a customer is to stop purchasing.",
   "Flow": "Automated series of actions triggered by an event, date, or audience change.",
   "Flow trigger": "Specific event, schedule, or list or segment join that drops a profile into a flow.",
@@ -118,6 +111,15 @@ const terms = {
 }
 export async function POST(request: Request) {
   try {
+    const authSession = await getAuthServerSession();
+    if (!authSession?.user?.name) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Ensure the index exists
+    await createUserIndex(authSession.user.name);
+    
+    const index = getUserIndex(authSession.user.name);  
     const { title, query } = await request.json();
 
     // Get embedding for the combined title and query

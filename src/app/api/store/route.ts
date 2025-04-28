@@ -4,16 +4,31 @@ import { chunkTextByMultiParagraphs, enhanceChunks} from '@/app/chunk';
 import { embedChunks, formatEmbeddings, buildPineconeRecords } from '@/app/embed';
 const { nanoid } = require('nanoid');
 import { cookies } from 'next/headers';
+import { getAuthServerSession } from '@/lib/auth';
+import { getUserIndex, createUserIndex } from '@/lib/pinecone';
 
 
 export async function POST(request: Request) {
-  const pc = new Pinecone({
-    apiKey: process.env.PINECONE_API_KEY || ''
-  });
-  const index = pc.index('pm-context-manual-embedding');
   try {
-    const body = await request.json();
+    const session = await getAuthServerSession();
+    if (!session?.user?.name) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Ensure the index exists
+    await createUserIndex(session.user.name);
     
+    const index = getUserIndex(session.user.name);
+    const body = await request.json();
+    const { title, query, answers, userId } = body;
+
+    // Create a single vector from the PRD data
+    const prdContent = `
+Title: ${title}
+Query: ${query}
+Answers:
+${Object.entries(answers).map(([question, answer]) => `- ${question}: ${answer}`).join('\n')}
+`;
 
     const chunks = chunkTextByMultiParagraphs(body.personalBackground);
 

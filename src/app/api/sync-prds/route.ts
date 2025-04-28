@@ -5,7 +5,7 @@ import { getAuthServerSession } from '@/lib/auth';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { chunkTextByMultiParagraphs, enhanceChunks } from '@/app/chunk';
 import { buildPineconeRecords } from '@/app/embed';
-
+import { getUserIndex, createUserIndex } from '@/lib/pinecone';
 interface Session {
   accessToken?: string;
   user?: {
@@ -23,6 +23,16 @@ const SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
 
 export async function POST(request: Request) {
   try {
+    const authSession = await getAuthServerSession();
+    if (!authSession?.user?.name) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Ensure the index exists
+    await createUserIndex(authSession.user.name);
+    
+    const index = getUserIndex(authSession.user.name);
+    
     const body = await request.json();
     const folderId = body.folderId;
 
@@ -82,12 +92,6 @@ export async function POST(request: Request) {
         continue; // Skip this document but continue with others
       }
     }
-
-    // Initialize Pinecone
-    const pc = new Pinecone({
-      apiKey: process.env.PINECONE_API_KEY!,
-    });
-    const index = pc.index('pm-context-manual-embedding');
 
     // Process and store each document
     const allFormattedEmbeddings = [];
