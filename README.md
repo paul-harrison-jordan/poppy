@@ -1,9 +1,5 @@
 ## Getting Started
-<!-- Slack me that you want to use this, I need to add your email to the allowlist -->
-
-
-<!-- This repo requires a .env.local file in the root of the project folder. Add your own values for the below, we use pinecone.io as our vectordb, they're free. You do not need to create an index from them, just an API Key-->
-
+Slack me that you want to use this, I need to add your email to the allowlist, and share the env.local values for you to use.
 
 First, run the development server:
 
