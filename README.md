@@ -3,13 +3,7 @@
 
 
 <!-- This repo requires a .env.local file in the root of the project folder. Add your own values for the below, we use pinecone.io as our vectordb, they're free. You do not need to create an index from them, just an API Key-->
-PINECONE_API_KEY=
-OPENAI_API_KEY=
-OPENAI_ORGANIZATION=
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-NEXTAUTH_URL=
-NEXTAUTH_SECRET=
+
 
 First, run the development server:
 
