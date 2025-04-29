@@ -1,10 +1,11 @@
 import OpenAI from "openai";
 import { enhanceChunks } from "./chunk";
-import { nanoid } from "nanoid";
+import { nanoid } from "nanoid"; 
 
 /** Alias the SDK’s item type */
 type OpenAIEmbedding = OpenAI.Embeddings.Embedding;
 
+export const maxDuration = 60;   
 /**
  * Call OpenAI and return the array of embedding objects.
  */
