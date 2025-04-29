@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { CheckCircle2, X, Loader2 } from "lucide-react"
+import { CheckCircle2, Loader2 } from "lucide-react"
 
 // Types
 export interface Document {
