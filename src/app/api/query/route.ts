@@ -73,18 +73,18 @@ export async function POST(request: Request) {
     // Initialize the Drive API
     const drive = google.drive({ version: 'v3', auth });
 
-      /* 1️⃣  Create our Google Doc file */
-      const fileRes = await drive.files.create({
-        requestBody: {
-          name: title,
-          mimeType: 'application/vnd.google-apps.document',
-        },
-        media: {
+    /* 1️⃣  Create our Google Doc file */
+    const fileRes = await drive.files.create({
+      requestBody: {
+        name: title,
+        mimeType: 'application/vnd.google-apps.document',
+      },
+      media: {
         mimeType: 'text/markdown',
-          body: summary
-        },
+        body: summary
+      },
       fields: 'id',
-      });
+    });
     
     const docId = fileRes.data.id!;
     const url = `https://docs.google.com/document/d/${docId}/edit`;
