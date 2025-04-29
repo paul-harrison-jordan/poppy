@@ -132,6 +132,15 @@ export function ProgressNotification({
             transition={{ exit: { duration: 0.4 } }}
           >
             <div className="px-5 py-4 relative">
+              {/* Dismiss button */}
+              <button
+                onClick={handleDismiss}
+                className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Dismiss notification"
+              >
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+
               {/* Header with progress */}
               <div className="flex items-center gap-3 mb-3">
                 <div className="relative">

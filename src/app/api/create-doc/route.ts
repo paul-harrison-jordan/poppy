@@ -14,32 +14,8 @@ const docs = google.docs({ version: 'v1', auth });
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { title, content, documentId } = body;
+    const { title, content } = body;
 
-    if (documentId) {
-      // Update existing document
-      const updateResponse = await docs.documents.batchUpdate({
-        documentId,
-        requestBody: {
-          requests: [
-            {
-              insertText: {
-                location: {
-                  index: 1,
-                },
-                text: content,
-              },
-            },
-          ],
-        },
-      });
-
-      return NextResponse.json({ 
-        success: true, 
-        documentId,
-        url: `https://docs.google.com/document/d/${documentId}/edit`
-      });
-    } else {
       // Create new document
       const createResponse = await docs.documents.create({
         requestBody: {
@@ -71,7 +47,6 @@ export async function POST(request: Request) {
         documentId: newDocumentId,
         url: `https://docs.google.com/document/d/${newDocumentId}/edit`
       });
-    }
   } catch (error) {
     console.error('Error creating/updating Google Doc:', error);
     return NextResponse.json(

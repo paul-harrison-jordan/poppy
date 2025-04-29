@@ -1,7 +1,6 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import Navigation from '@/components/Navigation';
 import Sidebar from '@/components/Sidebar';
 import SyncForm from '@/components/SyncForm';
 import { useEffect, useState } from 'react';
@@ -69,7 +68,7 @@ export default function SyncPage() {
             <div className="bg-white rounded-xl shadow-lg border border-[#E9DCC6] overflow-x-auto">
               <h2 className="text-2xl font-bold text-[#232426] px-6 pt-6">Synced Documents</h2>
                       <h3 className="text-sm text-[#BBC7B6] mb-6 px-6 pt-6">
-                        Whenever you write a PRD, we'll query these documents to find relevant information to provide ChatPRD
+                        Whenever you write a PRD, we&apos;ll query these documents to find relevant information to provide ChatPRD
                       </h3>
               <table className="min-w-full divide-y divide-[#E9DCC6]">
                 <thead>

@@ -1,7 +1,6 @@
 'use client';
 
-import { useSession, signIn } from 'next-auth/react';
-import Navigation from '@/components/Navigation';
+import { useSession } from 'next-auth/react';
 import Sidebar from '@/components/Sidebar';
 import DraftForm from '@/components/DraftForm';
 import SignIn from '@/app/auth/signin/page';
@@ -33,7 +32,7 @@ export default function HomePage() {
             <div className="w-full max-w-4xl space-y-8">
             <div>
               <div className="text-4xl font-medium text-[#232426] mb-8 text-center">
-                We're 1% Done
+                We&apos;re 1% Done
               </div>
               <div>
                   <DraftForm />

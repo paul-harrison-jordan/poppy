@@ -3,14 +3,6 @@ import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { getAuthServerSession } from '@/lib/auth';
 
-interface Session {
-  accessToken?: string;
-  user?: {
-    name?: string;
-    email?: string;
-  };
-}
-
 interface GoogleDoc {
   id: string;
   name: string;

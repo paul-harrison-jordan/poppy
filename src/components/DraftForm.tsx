@@ -133,25 +133,27 @@ export default function DraftForm() {
         throw new Error('Failed to process query');
       }
 
-      setShowPrdsLink(true);
       const data = await response.json();
-      const url = data.url;
-      const returnedTitle = data.title;
-      const docId = data.docId;
-      setQueryResults(data || '');
-      setSummary(data || '');
-      setDriveUrl(data || '');
-      setPrdLink(data.driveUrl || data.url || null);
+      console.log('PRD generation response:', data);
 
       if (data && data.url) {
+        setShowPrdsLink(true);
+        setPrdLink(data.url);
+        
+        // Update savedPRD in localStorage
         const savedPrds = JSON.parse(localStorage.getItem('savedPRD') || '[]');
         savedPrds.push({
-          url: url,
-          title: returnedTitle,
+          url: data.url,
+          title: data.title || title,
           createdAt: new Date().toISOString(),
-          id: docId,
+          id: data.docId,
         });
         localStorage.setItem('savedPRD', JSON.stringify(savedPrds));
+        
+        // Dispatch event to update sidebar counter
+        window.dispatchEvent(new CustomEvent('prdCountUpdated', {
+          detail: { count: savedPrds.length }
+        }));
       }
 
       // Clear the draft form state after successful PRD generation
@@ -159,8 +161,6 @@ export default function DraftForm() {
       setIsGenerating(false);
     } catch (error) {
       console.error('Error processing query:', error);
-      setQueryResults('Failed to process query');
-      setDriveUrl('');
       setIsGenerating(false);
     }
   };

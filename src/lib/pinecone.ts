@@ -10,7 +10,7 @@ export async function createUserIndex(username: string) {
     
     // Check if index exists
     const indexList = await pc.listIndexes();
-    const indexExists = indexList.indexes?.some((index: any) => index.name === indexName) || false;
+    const indexExists = indexList.indexes?.some((index) => index.name === indexName) || false;
     
     if (!indexExists) {
       await pc.createIndex({

@@ -1,4 +1,3 @@
-import Navigation from '@/components/Navigation';
 import Sidebar from '@/components/Sidebar';
 
 export default function Instructions() {
@@ -13,11 +12,11 @@ export default function Instructions() {
             <section>
               <h2 className="text-2xl font-semibold text-[#232426] mb-4">1. Store Your Information</h2>
               <p className="text-[#232426] mb-4">
-                Start by providing your personal context in the "Store Information" section. This helps ChatPRD understand your background and preferences.
+                Start by providing your personal context in the Store Information section. This helps ChatPRD understand your background and preferences.
               </p>
               <ul className="list-disc pl-6 space-y-2 text-[#232426]">
                 <li>Enter your personal background and experience</li>
-                <li>Describe your team's goals and objectives</li>
+                <li>Describe your team goals and objectives</li>
                 <li>List key terms and background information</li>
                 <li>Share examples of your thinking process</li>
               </ul>
@@ -30,7 +29,7 @@ export default function Instructions() {
               </p>
               <ul className="list-disc pl-6 space-y-2 text-[#232426]">
                 <li>Enter your question or request in the search box</li>
-                <li>Click "Search" to get a response</li>
+                <li>Click Search to get a response</li>
                 <li>View the generated response in the results section</li>
                 <li>Click the link to view your generated PRD</li>
               </ul>
@@ -43,7 +42,7 @@ export default function Instructions() {
               </p>
               <ul className="list-disc pl-6 space-y-2 text-[#232426]">
                 <li>Enter your Google Drive folder ID</li>
-                <li>Click "Sync PRDs" to connect</li>
+                <li>Click Sync PRDs to connect</li>
                 <li>View your synced documents in the list below</li>
               </ul>
             </section>

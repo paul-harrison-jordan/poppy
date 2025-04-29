@@ -2,25 +2,16 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { getAuthServerSession } from '@/lib/auth';
-import { Pinecone } from '@pinecone-database/pinecone';
-import { chunkTextByMultiParagraphs, enhanceChunks } from '@/app/chunk';
+import { chunkTextByMultiParagraphs } from '@/app/chunk';
 import { buildPineconeRecords } from '@/app/embed';
 import { getUserIndex, createUserIndex } from '@/lib/pinecone';
 
-interface Session {
-  accessToken?: string;
-  user?: {
-    name?: string;
-    email?: string;
-  };
-}
+
 
 interface DocumentContent {
   name: string;
   content: string;
 }
-
-const SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
 
 export async function POST(request: Request) {
   try {

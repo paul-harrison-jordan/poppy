@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { enhanceChunks } from './chunk';
-const { nanoid } = require('nanoid');
+import { nanoid } from 'nanoid';
+import { Vector } from '@pinecone-database/pinecone/dist/pinecone-generated-ts-fetch/db_data';
 /**
  * Embed a piece of text using an embedding model or service.
 * This is a placeholder and needs to be implemented based on your embedding solution.
@@ -8,14 +9,14 @@ const { nanoid } = require('nanoid');
 * @param chunks Array of text chunks to embed.
 * @returns The embedded representation of the text.
 */
-export async function embedChunks(chunks: any): Promise<any> {
+export async function embedChunks(chunks: string[]): Promise<any> {
     const openai = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY,
         organization: 'org-4sVYvNZQTa4dYOT8bAgyz8gu',
     });
-    const formattedChunks = [];
+    const formattedChunks: string[] = [];
     for (const chunk of chunks) {
-        formattedChunks.push(chunk.formattedEmbeddings);
+        formattedChunks.push(chunk);
     }
     try {
         const response = await openai.embeddings.create({
@@ -28,7 +29,7 @@ export async function embedChunks(chunks: any): Promise<any> {
         throw error;
     }
 }
-export async function formatEmbeddings(embeddings: any): Promise<any> {
+export async function formatEmbeddings(embeddings: []): Promise<any> {
     const formattedEmbeddings = embeddings.map((embedding: any) => ({
         id: nanoid(),
         values: embedding.embedding,

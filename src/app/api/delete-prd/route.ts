@@ -36,7 +36,6 @@ export async function POST(request: Request) {
 
     // Initialize the Drive API
     const drive = google.drive({ version: 'v3', auth });
-    const docs  = google.docs({  version: 'v1', auth });
 
     const body = await request.json();
     const docId = body.id;

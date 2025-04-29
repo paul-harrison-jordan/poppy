@@ -72,7 +72,6 @@ export async function POST(request: Request) {
 
     // Initialize the Drive API
     const drive = google.drive({ version: 'v3', auth });
-    const docs = google.docs({ version: 'v1', auth });
 
       /* 1️⃣  Create our Google Doc file */
       const fileRes = await drive.files.create({

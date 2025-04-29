@@ -43,7 +43,6 @@ export default function QuestionsForm({ questions, onSubmit }: QuestionsFormProp
   const currentQuestion = questions[currentStep];
   const currentValue = answers[currentQuestion.id];
   const isLastStep = currentStep === questions.length - 1;
-  const allQuestionsAnswered = Object.values(answers).every(answer => answer.trim() !== '');
 
   return (
     <div className="space-y-8">

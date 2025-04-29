@@ -1,7 +1,6 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import Navigation from '@/components/Navigation';
 import Sidebar from '@/components/Sidebar';
 import ContextForm from '@/components/ContextForm';
 

@@ -29,6 +29,18 @@ export default function Sidebar() {
       } else {
         setPrdCount(0);
       }
+
+      // Add event listener for PRD count updates
+      const handlePrdCountUpdate = (event: CustomEvent) => {
+        setPrdCount(event.detail.count);
+      };
+
+      window.addEventListener('prdCountUpdated', handlePrdCountUpdate as EventListener);
+
+      // Cleanup
+      return () => {
+        window.removeEventListener('prdCountUpdated', handlePrdCountUpdate as EventListener);
+      };
     }
   }, []);
 

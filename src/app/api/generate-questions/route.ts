@@ -109,6 +109,20 @@ const terms = {
   "Benchmarks tab in Customer Hub": "Compares a brand’s support metrics to industry peers once connected.",
   "Deliverability Health alerts": "Automated warnings that flag rising spam or bounces and recommend fixes"
 }
+
+export interface Question {
+  /** Unique identifier (can be reused as display text if desired) */
+  id: string;
+  /** The full question presented to the user or team */
+  text: string;
+  /** Explanation of why the question matters */
+  reasoning: string;
+}
+
+/** API or function response containing an ordered list of questions */
+export interface QuestionsResponse {
+  questions: Question[];
+}
 export async function POST(request: Request) {
   try {
     const authSession = await getAuthServerSession();
@@ -225,7 +239,7 @@ export async function POST(request: Request) {
         }))
       : [];
 
-    return NextResponse.json({ questions });
+    return NextResponse.json({ questions: questions as QuestionsResponse });
   } catch (error) {
     console.error('Error generating questions:', error);
     return NextResponse.json(
