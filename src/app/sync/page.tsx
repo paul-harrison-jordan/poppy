@@ -6,7 +6,13 @@ import Sidebar from '@/components/Sidebar';
 import SyncForm from '@/components/SyncForm';
 import { useEffect, useState } from 'react';
 
-
+interface PRD {
+  title: string;
+  url: string;
+  query?: string;
+  createdAt?: string;
+  id?: string;
+}
 
 export default function SyncPage() {
   const { data: session, status } = useSession();
@@ -80,7 +86,14 @@ export default function SyncPage() {
                     currentPrds.map((prd, idx) => (
                       <tr key={idx}>
                         <td className="px-6 py-4">
-                            {prd}
+                          <a
+                            href={prd.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#232426] font-semibold underline hover:text-[#EF6351] transition-colors duration-200"
+                          >
+                            {prd.title || 'Untitled PRD'}
+                          </a>
                         </td>
                       </tr>
                     ))

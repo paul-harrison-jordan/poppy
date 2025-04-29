@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
-import { Pinecone } from '@pinecone-database/pinecone';
-import { chunkTextByMultiParagraphs, enhanceChunks} from '@/app/chunk';
-import { embedChunks, formatEmbeddings, buildPineconeRecords } from '@/app/embed';
-const { nanoid } = require('nanoid');
-import { cookies } from 'next/headers';
+import { chunkTextByMultiParagraphs} from '@/app/chunk';
+import {  buildPineconeRecords } from '@/app/embed';
 import { getAuthServerSession } from '@/lib/auth';
 import { getUserIndex, createUserIndex } from '@/lib/pinecone';
 

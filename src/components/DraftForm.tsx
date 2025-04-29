@@ -10,7 +10,7 @@ interface Question {
 
 export default function DraftForm() {
   const [query, setQuery] = useState('');
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState('Name your PRD');
   const [showQuery, setShowQuery] = useState(false);
   const [readyToSubmit, setReadyToSubmit] = useState(false);
   const [queryResults, setQueryResults] = useState('');
@@ -144,14 +144,14 @@ export default function DraftForm() {
       setPrdLink(data.driveUrl || data.url || null);
 
       if (data && data.url) {
-        const prds = JSON.parse(localStorage.getItem('prds') || '[]');
-        prds.push({
+        const savedPrds = JSON.parse(localStorage.getItem('savedPRD') || '[]');
+        savedPrds.push({
           url: url,
           title: returnedTitle,
           createdAt: new Date().toISOString(),
           id: docId,
         });
-        localStorage.setItem('prds', JSON.stringify(prds));
+        localStorage.setItem('savedPRD', JSON.stringify(savedPrds));
       }
 
       // Clear the draft form state after successful PRD generation
@@ -206,7 +206,6 @@ export default function DraftForm() {
                 <input
                   id="title"
                   type="text"
-                  value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   onKeyDown={handleTitleKeyDown}
                   className="flex-1 rounded-md border border-[#E9DCC6] bg-white px-3 py-2 text-[#232426] shadow-sm focus:border-[#EF6351] focus:outline-none focus:ring-1 focus:ring-[#EF6351]"

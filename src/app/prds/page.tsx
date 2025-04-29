@@ -19,7 +19,7 @@ export default function PRDsPage() {
   const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
-    const stored = localStorage.getItem('prds');
+    const stored = localStorage.getItem('savedPRD');
     if (stored) {
       try {
         const parsedPrds = JSON.parse(stored);
@@ -51,7 +51,7 @@ export default function PRDsPage() {
       // Remove from localStorage
       const updated = prds.filter((prd) => prd.id !== id);
       setPrds(updated);
-      localStorage.setItem('prds', JSON.stringify(updated));
+      localStorage.setItem('savedPRD', JSON.stringify(updated));
       // Show success toast
       setToastMessage(`"${title}" has been deleted`);
       setShowToast(true);

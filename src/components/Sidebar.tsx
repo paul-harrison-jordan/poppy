@@ -23,7 +23,7 @@ export default function Sidebar() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('prds');
+      const stored = localStorage.getItem('savedPRD');
       if (stored) {
         setPrdCount(JSON.parse(stored).length);
       } else {

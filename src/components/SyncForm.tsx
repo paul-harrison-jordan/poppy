@@ -62,6 +62,7 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
             return null;
           }
 
+          const data = await response.json();
           // Update the document's sync status
           setDocuments(prevDocs => 
             prevDocs.map(d => 
@@ -69,8 +70,18 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
             )
           );
 
-      const data = await response.json();
-          return data.syncedPrds?.[0] || null;
+          // Store the document name in prds localStorage
+          const storedPrds = localStorage.getItem('prds');
+          const prds = storedPrds ? JSON.parse(storedPrds) : [];
+          prds.push({
+            title: data.documentName,
+            url: `https://docs.google.com/document/d/${doc.id}`,
+            createdAt: new Date().toISOString(),
+            id: doc.id
+          });
+          localStorage.setItem('prds', JSON.stringify(prds));
+
+          return data.documentName;
         } catch (error) {
           console.error(`Error syncing document ${doc.name}:`, error);
           return null;
@@ -84,10 +95,6 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
       const successfulSyncs = results.filter((doc): doc is string => doc !== null);
       
       if (successfulSyncs.length > 0) {
-        const stored = localStorage.getItem('syncedPrds');
-        const existingPRDs = stored ? JSON.parse(stored) : [];
-        const updatedPRDs = [...existingPRDs, ...successfulSyncs];
-        localStorage.setItem('syncedPrds', JSON.stringify(updatedPRDs));
         onSyncComplete?.();
       }
 
@@ -143,7 +150,7 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
           }}
           position="top-center"
         />
-        </div>
+      </div>
     </div>
   );
-} 
+}
