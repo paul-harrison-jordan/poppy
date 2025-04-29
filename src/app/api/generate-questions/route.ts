@@ -112,7 +112,7 @@ const terms = {
 
 export interface Question {
   /** Unique identifier (can be reused as display text if desired) */
-  id: string;
+  id?: string;
   /** The full question presented to the user or team */
   text: string;
   /** Explanation of why the question matters */
@@ -232,7 +232,7 @@ export async function POST(request: Request) {
     
     // Ensure we have exactly 3 questions
     const questions = Array.isArray(response.questions) 
-      ? response.questions.slice(0, 3).map((q: any) => ({
+      ? response.questions.slice(0, 3).map((q: Question) => ({
           id: q.text, // Use the actual question text as the ID
           text: q.text,
           reasoning: q.reasoning,

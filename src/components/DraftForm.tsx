@@ -12,10 +12,6 @@ export default function DraftForm() {
   const [query, setQuery] = useState('');
   const [title, setTitle] = useState('Name your PRD');
   const [showQuery, setShowQuery] = useState(false);
-  const [readyToSubmit, setReadyToSubmit] = useState(false);
-  const [queryResults, setQueryResults] = useState('');
-  const [summary, setSummary] = useState('');
-  const [driveUrl, setDriveUrl] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [showPrdsLink, setShowPrdsLink] = useState(false);
   const [prdLink, setPrdLink] = useState<string | null>(null);
@@ -60,7 +56,6 @@ export default function DraftForm() {
     if (e.key === 'Enter' && title.trim() !== '') {
       e.preventDefault();
       setShowQuery(true);
-      setReadyToSubmit(true);
     }
   };
 
@@ -177,10 +172,6 @@ export default function DraftForm() {
     setTitle('');
     setQuery('');
     setShowQuery(false);
-    setReadyToSubmit(false);
-    setQueryResults('');
-    setSummary('');
-    setDriveUrl('');
     setSubmitted(false);
     setShowPrdsLink(false);
     setPrdLink(null);
