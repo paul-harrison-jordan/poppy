@@ -60,9 +60,9 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
           if (!response.ok) {
             console.error(`Failed to sync document: ${doc.name}`);
             return null;
-          }
+      }
 
-          const data = await response.json();
+      const data = await response.json();
           // Update the document's sync status
           setDocuments(prevDocs => 
             prevDocs.map(d => 
@@ -150,7 +150,7 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
           }}
           position="top-center"
         />
-      </div>
+        </div>
     </div>
   );
-}
+} 

@@ -252,12 +252,25 @@ export default function DraftForm() {
           </div>
         </form>
       ) : (
-        <div className="text-center flex flex-col items-center gap-4">
+        <div className="text-center flex flex-col items-center gap-4 border border-[#E9DCC6] bg-white/80 rounded-2xl shadow-lg p-8 max-w-xl mx-auto mt-8">
           <div className="text-lg font-semibold text-[#232426]">
             {isGenerating ? (
-              isGeneratingQuestions 
-                ? 'Sit tight! We\'re going to ask you a few clarifying questions to help us create the best possible PRD for you.'
-                : 'We\'re on it, greatness incoming'
+              <div className="flex flex-col items-center justify-center gap-3" aria-live="polite">
+                <svg className="w-10 h-10 text-[#EF6351] animate-spin mb-2" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+                <span>
+                  {isGeneratingQuestions
+                    ? "We're preparing a few clarifying questions to help us create the best possible PRD for you..."
+                    : (
+                        <>
+                          Working on your PRD <span className="inline-block animate-pulse">...</span>
+                        </>
+                      )
+                  }
+                </span>
+              </div>
             ) : (prdLink ? 'First draft complete!' : 'Something went wrong')}
           </div>
           <div className="text-base text-[#232426]">

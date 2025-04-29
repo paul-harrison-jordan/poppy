@@ -62,21 +62,26 @@ export function ProgressNotification({
 
   // Handle completion and auto-dismiss
   useEffect(() => {
-    // If all documents are synced and we're still in loading state
-    if (isComplete && isLoading) {
-      // Set a timeout to auto-dismiss after 3 seconds
-      dismissTimeoutRef.current = setTimeout(() => {
-        setVisible(false)
-        onComplete?.()
-      }, 3000)
-
-      return () => {
-        if (dismissTimeoutRef.current) {
-          clearTimeout(dismissTimeoutRef.current)
-        }
+    if (isComplete && visible) {
+      if (!dismissTimeoutRef.current) {
+        dismissTimeoutRef.current = setTimeout(() => {
+          setVisible(false)
+          onComplete?.()
+        }, 5000)
+      }
+    } else {
+      if (dismissTimeoutRef.current) {
+        clearTimeout(dismissTimeoutRef.current)
+        dismissTimeoutRef.current = null
       }
     }
-  }, [isComplete, isLoading, onComplete])
+    return () => {
+      if (dismissTimeoutRef.current) {
+        clearTimeout(dismissTimeoutRef.current)
+        dismissTimeoutRef.current = null
+      }
+    }
+  }, [isComplete, visible, onComplete])
 
   // Track newly synced documents
   useEffect(() => {
@@ -131,50 +136,57 @@ export function ProgressNotification({
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ exit: { duration: 0.4 } }}
           >
-            <div className="px-5 py-4 relative">
-              {/* Dismiss button */}
-              <button
-                onClick={handleDismiss}
-                className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                aria-label="Dismiss notification"
-              >
-                <X className="w-4 h-4 text-gray-500" />
-              </button>
-
-              {/* Header with progress */}
-              <div className="flex items-center gap-3 mb-3">
-                <div className="relative">
-                  <svg className="w-10 h-10">
-                    <circle cx="20" cy="20" r="18" fill="none" stroke="#f1f1f1" strokeWidth="2" />
-                    <motion.circle
-                      cx="20"
-                      cy="20"
-                      r="18"
-                      fill="none"
-                      stroke={isComplete ? "#22c55e" : "#f97316"}
-                      strokeWidth="2"
-                      strokeDasharray={2 * Math.PI * 18}
-                      strokeDashoffset={2 * Math.PI * 18 * (1 - completionPercentage / 100)}
-                      strokeLinecap="round"
-                      initial={{ strokeDashoffset: 2 * Math.PI * 18 }}
-                      animate={{ strokeDashoffset: 2 * Math.PI * 18 * (1 - completionPercentage / 100) }}
-                      transition={{ duration: 0.5, ease: "easeInOut" }}
-                      transform="rotate(-90 20 20)"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={`text-xs font-medium ${isComplete ? "text-green-600" : "text-orange-600"}`}>
-                      {completionPercentage}%
-                    </span>
+            <div className="px-5 py-4">
+              {/* Header with progress and dismiss button */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3 pr-2">
+                  <div className="relative">
+                    <svg className="w-10 h-10">
+                      <circle cx="20" cy="20" r="18" fill="none" stroke="#f1f1f1" strokeWidth="2" />
+                      <motion.circle
+                        cx="20"
+                        cy="20"
+                        r="18"
+                        fill="none"
+                        stroke={isComplete ? "#22c55e" : "#f97316"}
+                        strokeWidth="2"
+                        strokeDasharray={2 * Math.PI * 18}
+                        strokeDashoffset={2 * Math.PI * 18 * (1 - completionPercentage / 100)}
+                        strokeLinecap="round"
+                        initial={{ strokeDashoffset: 2 * Math.PI * 18 }}
+                        animate={{ strokeDashoffset: 2 * Math.PI * 18 * (1 - completionPercentage / 100) }}
+                        transition={{ duration: 0.5, ease: "easeInOut" }}
+                        transform="rotate(-90 20 20)"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className={`text-xs font-medium ${isComplete ? "text-green-600" : "text-orange-600"}`}>
+                        {completionPercentage}%
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-800">Syncing Documents</h3>
+                    <p className="text-xs text-gray-500">
+                      {syncedDocs} of {totalDocs} documents synced
+                    </p>
                   </div>
                 </div>
-
-                <div>
-                  <h3 className="font-medium text-gray-800">Syncing Documents</h3>
-                  <p className="text-xs text-gray-500">
-                    {syncedDocs} of {totalDocs} documents synced
-                  </p>
-                </div>
+                <button
+                  onClick={handleDismiss}
+                  className="ml-2 text-[#232426] hover:text-[#EF6351] transition-colors"
+                  aria-label="Dismiss notification"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
 
               {/* Document history list */}
