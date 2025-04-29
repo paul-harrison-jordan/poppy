@@ -1,9 +1,8 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { JWT } from "next-auth/jwt";
 import { Session, Account } from "next-auth";
+import { getServerSession } from "next-auth";
 
 /* -------- extend the built-in types -------- */
 declare module "next-auth" {
