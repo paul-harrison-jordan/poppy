@@ -3,6 +3,7 @@ import { getUserIndex } from '@/lib/pinecone';
 import { getAuthServerSession } from '@/lib/auth';
 import { OpenAI } from 'openai';
 import { embedChunks } from '@/app/embed';
+import { Question } from '@/types/question';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -23,7 +24,11 @@ export async function POST(request: Request) {
 
     const indexName = `${formattedUsername}`;
     const index = getUserIndex(indexName);
-    const { title, query, questions } = await request.json();
+    const { title, query, questions } = await request.json() as {
+      title: string;
+      query: string;
+      questions: Question[];
+    };
 
     const embeddings = await embedChunks([`${title}\n${query}`]);
     const embedding = embeddings[0]['embedding'];
@@ -44,7 +49,7 @@ export async function POST(request: Request) {
       .join('\n\n') || '';
 
     // Format questions and answers for the prompt
-    const qaContext = questions.map((q: any) => 
+    const qaContext = questions.map((q: Question) => 
       `Question: ${q.text}\nAnswer: ${q.answer}`
     ).join('\n\n');
 

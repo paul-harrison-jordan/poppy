@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import BrandMessagingSuccessModal from './BrandMessagingSuccessModal';
 import LoadingModal from './LoadingModal';
 import PastBrandMessages from './PastBrandMessages';
@@ -14,11 +12,8 @@ interface Question {
 }
 
 export default function BrandMessagingForm() {
-  const router = useRouter();
-  const { data: session } = useSession();
   const [title, setTitle] = useState('');
   const [query, setQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState<'initial' | 'questions'>('initial');
