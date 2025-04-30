@@ -32,6 +32,6 @@ export async function createUserIndex(username: string) {
 }
 
 export function getUserIndex(username: string) {
-  const indexName = `prd-${username.toLowerCase().replace(/\s+/g, '-')}`;
+  const indexName = `${username.toLowerCase().replace(/\s+/g, '-')}`;
   return pc.index(indexName);
 } 

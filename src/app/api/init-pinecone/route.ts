@@ -21,7 +21,7 @@ export async function POST() {
       .replace(/-+/g, '-') // Replace multiple consecutive hyphens with a single one
       .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
 
-    const indexName = `prd-${formattedUsername}`;
+    const indexName = `${formattedUsername}`;
 
     // Check if the index already exists
     const indexList = await pinecone.listIndexes();
