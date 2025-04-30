@@ -4,9 +4,31 @@ import { useSession } from 'next-auth/react';
 import Sidebar from '@/components/Sidebar';
 import DraftForm from '@/components/DraftForm';
 import SignIn from '@/app/auth/signin/page';
-
+import { useEffect } from 'react';
 export default function HomePage() {
   const { data: session, status } = useSession();
+  useEffect(() => {
+    const initializePinecone = async () => {
+      if (session?.user) {
+        try {
+          const response = await fetch('/api/init-pinecone', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!response.ok) {
+            console.error('Failed to initialize Pinecone index');
+          }
+        } catch (error) {
+          console.error('Error initializing Pinecone index:', error);
+        }
+      }
+    };
+
+    initializePinecone();
+  }, [session]);
 
   if (status === 'loading') {
     return (

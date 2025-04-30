@@ -13,10 +13,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-    // Ensure the index exists
-    await createUserIndex(authSession.user.name);
     
-    const index = getUserIndex(authSession.user.name);
+    // Format username to comply with Pinecone naming requirements
+    const formattedUsername = authSession.user.name
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-') // Replace multiple consecutive hyphens with a single one
+      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+
+    const indexName = `prd-${formattedUsername}`;
+    
+    const index = getUserIndex(indexName);
+    
     const body = await request.json();
     const query = body.query;
     const title = body.title;
