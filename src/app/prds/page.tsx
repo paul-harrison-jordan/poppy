@@ -17,14 +17,18 @@ export default function PRDsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const stored = localStorage.getItem('savedPRD');
     if (stored) {
       try {
         const parsedPrds = JSON.parse(stored);
-        // Filter out any invalid PRD objects
-        const validPrds = parsedPrds.filter((prd: PRD) => prd && typeof prd === 'object' && prd.id);
+        // Filter out any invalid PRD objects and reverse the order
+        const validPrds = parsedPrds
+          .filter((prd: PRD) => prd && typeof prd === 'object' && prd.id)
+          .reverse();
         setPrds(validPrds);
       } catch (error) {
         console.error('Error parsing PRDs from localStorage:', error);
@@ -32,6 +36,11 @@ export default function PRDsPage() {
       }
     }
   }, []);
+
+  const totalPages = Math.ceil(prds.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPrds = prds.slice(startIndex, endIndex);
 
   const handleDelete = async (id: string, title: string) => {
     if (!id) {
@@ -68,54 +77,54 @@ export default function PRDsPage() {
     <div className="min-h-screen bg-[#FFFAF3]">
       <Sidebar />
       <div className="ml-64 flex items-center justify-center min-h-screen bg-[#FFFAF3]">
-        <div className="max-w-3xl w-full px-4 py-8">
+        <div className="max-w-4xl w-full px-4 py-8">
           <h1 className="text-2xl font-bold text-[#232426] mb-6">Your PRDs</h1>
           <div className="bg-white rounded-xl shadow-lg border border-[#E9DCC6] overflow-x-auto">
             <table className="min-w-full divide-y divide-[#E9DCC6]">
               <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#232426]">Title</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#232426]">Created At</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-[#232426] uppercase tracking-wider">Delete</th>
+                  <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-[#232426] w-1/2">Title</th>
+                  <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-[#232426] w-1/3">Created At</th>
+                  <th className="px-4 py-2 text-center text-xs font-medium text-[#232426] uppercase tracking-wider w-1/6">Delete</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E9DCC6]">
-                {prds.length === 0 ? (
+                {currentPrds.length === 0 ? (
                   <tr>
-                    <td className="px-6 py-4 text-[#EF6351] text-center font-semibold" colSpan={3}>
+                    <td className="px-4 py-2 text-[#EF6351] text-center text-sm font-semibold" colSpan={3}>
                       No PRDs found.
                     </td>
                   </tr>
                 ) : (
-                  prds.map((prd, idx) => (
+                  currentPrds.map((prd, idx) => (
                     <tr 
                       key={idx}
                       className={`transition-all duration-200 ${
                         deletingId === prd.id ? 'opacity-50' : ''
                       }`}
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-2">
                         <a
                           href={prd.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[#232426] font-semibold underline hover:text-[#EF6351] transition-colors duration-200"
+                          className="text-sm text-[#232426] font-semibold underline hover:text-[#EF6351] transition-colors duration-200"
                         >
                           {prd.title || 'Untitled PRD'}
                         </a>
                       </td>
-                      <td className="px-6 py-4 text-[#232426]">
+                      <td className="px-4 py-2 text-sm text-[#232426]">
                         {prd.createdAt ? new Date(prd.createdAt).toLocaleString() : ''}
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-4 py-2 text-center">
                         <button
                           onClick={() => prd.id && handleDelete(prd.id, prd.title || 'Untitled PRD')}
-                          className="group transition-all duration-200 p-2 rounded-full hover:bg-[#FFF5F3]"
+                          className="group transition-all duration-200 p-1.5 rounded-full hover:bg-[#FFF5F3]"
                           title="Delete PRD"
                         >
                           <svg 
                             xmlns="http://www.w3.org/2000/svg" 
-                            className="h-5 w-5 inline transition-all duration-200 text-[#E9DCC6] group-hover:text-[#EF6351] group-hover:scale-110" 
+                            className="h-4 w-4 inline transition-all duration-200 text-[#E9DCC6] group-hover:text-[#EF6351] group-hover:scale-110" 
                             fill="none" 
                             viewBox="0 0 24 24" 
                             stroke="currentColor"
@@ -130,6 +139,38 @@ export default function PRDsPage() {
                 )}
               </tbody>
             </table>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-[#E9DCC6]">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors
+                      ${currentPage === 1 
+                        ? 'text-[#E9DCC6] cursor-not-allowed' 
+                        : 'text-[#232426] hover:text-[#EF6351]'}`}
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-[#232426]">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors
+                      ${currentPage === totalPages 
+                        ? 'text-[#E9DCC6] cursor-not-allowed' 
+                        : 'text-[#232426] hover:text-[#EF6351]'}`}
+                  >
+                    Next
+                  </button>
+                </div>
+                <div className="text-sm text-[#232426]">
+                  Showing {startIndex + 1}-{Math.min(endIndex, prds.length)} of {prds.length} PRDs
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

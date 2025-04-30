@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import Sidebar from '@/components/Sidebar';
 import DraftForm from '@/components/DraftForm';
+import PastPRDs from '@/components/PastPRDs';
 import SignIn from '@/app/auth/signin/page';
 import { useEffect } from 'react';
 export default function HomePage() {
@@ -58,6 +59,7 @@ export default function HomePage() {
               </div>
               <div>
                   <DraftForm />
+                  <PastPRDs />
               </div>
             </div>
           </div>

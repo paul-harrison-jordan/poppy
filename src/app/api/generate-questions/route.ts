@@ -137,7 +137,7 @@ export async function POST(request: Request) {
       .replace(/-+/g, '-') // Replace multiple consecutive hyphens with a single one
       .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
 
-    const indexName = `prd-${formattedUsername}`;
+    const indexName = `${formattedUsername}`;
     
     const index = getUserIndex(indexName);
     const { title, query } = await request.json();

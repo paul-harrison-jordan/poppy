@@ -135,7 +135,7 @@ export default function DraftForm() {
         setShowPrdsLink(true);
         setPrdLink(data.url);
         
-        // Update savedPRD in localStorage
+        // Save to localStorage with key 'savedPRD'
         const savedPrds = JSON.parse(localStorage.getItem('savedPRD') || '[]');
         savedPrds.push({
           url: data.url,
