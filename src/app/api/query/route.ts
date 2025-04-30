@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getUserIndex, createUserIndex } from '@/lib/pinecone';
+import { getUserIndex } from '@/lib/pinecone';
 import { embedChunks } from '@/app/embed';
 import { writeSummary } from '@/app/search';
 import { google } from 'googleapis';
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const indexName = `prd-${formattedUsername}`;
     
     const index = getUserIndex(indexName);
-    
+
     const body = await request.json();
     const query = body.query;
     const title = body.title;

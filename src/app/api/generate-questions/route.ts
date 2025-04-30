@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getUserIndex, createUserIndex } from '@/lib/pinecone';
+import { getUserIndex } from '@/lib/pinecone';
 import { getAuthServerSession } from '@/lib/auth';
 import { OpenAI } from 'openai';
 import { embedChunks } from '@/app/embed';

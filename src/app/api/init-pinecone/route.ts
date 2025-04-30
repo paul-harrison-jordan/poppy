@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { getAuthServerSession } from '@/lib/auth';
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     const authSession = await getAuthServerSession();
 
@@ -53,10 +53,10 @@ export async function POST(request: Request) {
         indexName,
       });
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error initializing Pinecone index:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to initialize Pinecone index' },
+      { error: error instanceof Error ? error.message : 'Failed to initialize Pinecone index' },
       { status: 500 }
     );
   }

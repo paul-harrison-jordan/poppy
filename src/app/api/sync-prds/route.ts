@@ -4,8 +4,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { getAuthServerSession } from '@/lib/auth';
 import { chunkTextByMultiParagraphs } from '@/app/chunk';
 import { buildPineconeRecords } from '@/app/embed';
-import { getUserIndex, createUserIndex } from '@/lib/pinecone';
-import { Pinecone } from '@pinecone-database/pinecone';
+import { getUserIndex } from '@/lib/pinecone';
 
 
 
