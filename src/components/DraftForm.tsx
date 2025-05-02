@@ -108,50 +108,73 @@ export default function DraftForm() {
     try {
       setIsGenerating(true);
       setIsGeneratingQuestions(false);
-      // Get stored context from localStorage
       const storedContext = localStorage.getItem('personalContext');
 
-      const response = await fetch('/api/query', {
+      // 1. Get embedding for the query
+      const embedRes = await fetch('/api/embed-request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, query }),
+      });
+      if (!embedRes.ok) throw new Error('Failed to get embedding');
+      const { queryEmbedding } = await embedRes.json();
+      if (!queryEmbedding || !Array.isArray(queryEmbedding)) throw new Error('Invalid embedding response');
+
+      const embedding = queryEmbedding[0].embedding;
+
+      // 2. Get matched context from Pinecone
+      const matchRes = await fetch('/api/match-embeds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(embedding),
+      });
+      if (!matchRes.ok) throw new Error('Failed to match embeddings');
+      const { matchedContext } = await matchRes.json();
+      if (!matchedContext || !Array.isArray(matchedContext)) throw new Error('Invalid matched context response');
+
+      // 3. Generate PRD content
+      const genRes = await fetch('/api/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          type: 'prd',
           title,
           query,
+          questions: questions.map(q => q.text),
           storedContext,
+          additionalContext: matchedContext.join('\n'),
           questionAnswers,
         }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to process query');
-      }
-
-      const data = await response.json();
+      if (!genRes.ok) throw new Error('Failed to generate PRD content');
+      const data = await genRes.json();
       console.log('PRD generation response:', data);
 
-      if (data && data.url) {
+      // 4. Create Google Doc
+      const docRes = await fetch('/api/create-google-doc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: data.title || title,
+          content: data.content || data.summary || '',
+        }),
+      });
+      if (!docRes.ok) throw new Error('Failed to create Google Doc');
+      const docData = await docRes.json();
+
+      if (docData && docData.url) {
         setShowPrdsLink(true);
-        setPrdLink(data.url);
-        
-        // Save to localStorage with key 'savedPRD'
+        setPrdLink(docData.url);
         const savedPrds = JSON.parse(localStorage.getItem('savedPRD') || '[]');
         savedPrds.push({
-          url: data.url,
-          title: data.title || title,
+          url: docData.url,
+          title: docData.title || title,
           createdAt: new Date().toISOString(),
-          id: data.docId,
+          id: docData.docId,
         });
         localStorage.setItem('savedPRD', JSON.stringify(savedPrds));
-        
-        // Dispatch event to update sidebar counter
-        window.dispatchEvent(new CustomEvent('prdCountUpdated', {
-          detail: { count: savedPrds.length }
-        }));
+        window.dispatchEvent(new CustomEvent('prdCountUpdated', { detail: { count: savedPrds.length } }));
       }
-
-      // Clear the draft form state after successful PRD generation
       localStorage.removeItem('draftFormState');
       setIsGenerating(false);
     } catch (error) {
