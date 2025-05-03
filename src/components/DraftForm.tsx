@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import QuestionsForm from './QuestionsForm';
-
+import { collectStream } from '@/lib/collectStream';
 interface Question {
   id: string;
   text: string;
@@ -146,17 +146,17 @@ export default function DraftForm() {
           questionAnswers,
         }),
       });
-      if (!genRes.ok) throw new Error('Failed to generate PRD content');
-      const data = await genRes.json();
-      console.log('PRD generation response:', data);
+    
+      const markdown = await collectStream(genRes);
+      console.log('PRD generation response:', markdown);
 
       // 4. Create Google Doc
       const docRes = await fetch('/api/create-google-doc', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: data.title || title,
-          content: data.content || data.summary || '',
+          title: title,
+          content: markdown
         }),
       });
       if (!docRes.ok) throw new Error('Failed to create Google Doc');
