@@ -113,39 +113,6 @@ export default function HomeForm() {
       if (!response.ok) {
         throw new Error('Failed to generate PRD');
       }
-
-      // Create Google Doc
-      const fileRes = await drive.files.create({
-        requestBody: {
-          name: title,
-          mimeType: 'application/vnd.google-apps.document',
-        },
-        fields: 'id',
-      });
-
-      const docId = fileRes.data.id!;
-      const url = `https://docs.google.com/document/d/${docId}/edit`;
-
-      // Save to localStorage
-      const savedPRDs = JSON.parse(localStorage.getItem('savedPRDs') || '[]');
-      const newPRD = {
-        docId,
-        title,
-        createdAt: new Date().toISOString(),
-        url,
-      };
-      localStorage.setItem('savedPRDs', JSON.stringify([newPRD, ...savedPRDs]));
-
-      // Trigger update event for PastWork component
-      window.dispatchEvent(new CustomEvent('savedPRDsUpdated'));
-      
-      // Set the created document and show success only after localStorage is updated
-      setCreatedDoc({
-        docId,
-        title,
-        url,
-      });
-      setShowSuccess(true);
       
       // Reset form state
       setLoadingState({ isOpen: false, title: '', message: '' });
@@ -158,8 +125,6 @@ export default function HomeForm() {
       setShowTitle(true);
       setShowQuery(false);
       setShowPastWork(true);
-      
-      return apiJsonResponse({ docId, title, url });
     } catch (error) {
       console.error('Error:', error);
       setError('Failed to generate PRD. Please try again.');
