@@ -32,7 +32,6 @@ export default function HomeForm() {
   const [showTitle, setShowTitle] = useState(true);
   const [showPastWork, setShowPastWork] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [createdDoc, setCreatedDoc] = useState<{ docId: string; title: string; url: string } | null>(null);
 
   const handleInitialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
