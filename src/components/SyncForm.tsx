@@ -49,20 +49,52 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
       // Create an array of promises for each document sync
       const syncPromises = fetchedDocs.map(async (doc: GoogleDoc) => {
         try {
-          const response = await fetch('/api/sync-prds', {
+          const response = await fetch('/api/chunk-docs', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ documentId: doc.id }),
           });
 
           if (!response.ok) {
             console.error(`Failed to sync document: ${doc.name}`);
             return null;
-      }
+          }
 
-      const data = await response.json();
+          const chunksResponse = await response.json();
+          const chunks = chunksResponse.chunks;
+          const documentId = chunksResponse.id;
+
+          const embeddedChunks = await fetch('/api/embed-chunks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chunks, documentId }),
+          });
+
+          if (!embeddedChunks.ok) {
+            console.error(`Failed to embed document: ${documentId}`);
+            return null;
+          }
+
+          const embeddedChunksResponse = await embeddedChunks.json();
+          const formattedEmbeddings = embeddedChunksResponse.formattedEmbeddings;
+
+          const sanitizedEmbeddings = formattedEmbeddings.map((embedding: any) => {
+            // Only keep allowed properties
+            const { id, values, sparseValues, metadata } = embedding;
+            return { id, values, sparseValues, metadata };
+          });
+
+          const pineconeUpsert = await fetch('/api/pinecone-upsert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ formattedEmbeddings: sanitizedEmbeddings, documentId }),
+          });
+
+          if (!pineconeUpsert.ok) {
+            console.error(`Failed to upsert to Pinecone: ${documentId}`);
+            return null;
+          }
+
           // Update the document's sync status
           setDocuments(prevDocs => 
             prevDocs.map(d => 
@@ -74,14 +106,14 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
           const storedPrds = localStorage.getItem('prds');
           const prds = storedPrds ? JSON.parse(storedPrds) : [];
           prds.push({
-            title: data.documentName,
+            title: doc.name,
             url: `https://docs.google.com/document/d/${doc.id}`,
             createdAt: new Date().toISOString(),
             id: doc.id
           });
           localStorage.setItem('prds', JSON.stringify(prds));
 
-          return data.documentName;
+          return doc.name;
         } catch (error) {
           console.error(`Error syncing document ${doc.name}:`, error);
           return null;

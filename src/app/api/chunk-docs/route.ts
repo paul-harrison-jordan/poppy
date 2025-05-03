@@ -3,8 +3,6 @@ import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { getAuthServerSession } from '@/lib/auth';
 import { chunkTextByMultiParagraphs } from '@/app/chunk';
-import { buildPineconeRecords } from '@/app/embed';
-import { getUserIndex } from '@/lib/pinecone';
 
 
 
@@ -15,27 +13,10 @@ interface DocumentContent {
 
 export async function POST(request: Request) {
   try {
-    // const authSession = await getAuthServerSession();
-    // if (!authSession?.user?.name) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
-
     const authSession = await getAuthServerSession();
-
     if (!authSession?.user?.name) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    // Format username to comply with Pinecone naming requirements
-    const formattedUsername = authSession.user.name
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, '-')
-      .replace(/-+/g, '-') // Replace multiple consecutive hyphens with a single one
-      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
-
-    const indexName = `${formattedUsername}`;
-    
-    const index = getUserIndex(indexName);
     
     const body = await request.json();
     const documentId = body.documentId;
@@ -96,12 +77,12 @@ export async function POST(request: Request) {
 
     // Process and store the document
     const chunks = chunkTextByMultiParagraphs(documentContent.content);
-    const formattedEmbeddings = await buildPineconeRecords(chunks);
-    await index.namespace('ns1').upsert(formattedEmbeddings);
+
     
     return NextResponse.json({
-      message: 'Document synced successfully',
-      documentName: documentContent.name,
+      message: `${documentContent.name} chunked successfully`,
+      chunks: chunks,
+      id: documentId,
     });
   } catch (error) {
     console.error('Error syncing document:', error);

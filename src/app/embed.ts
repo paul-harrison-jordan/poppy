@@ -37,21 +37,24 @@ export interface PineconeVector {
   metadata: { text: string };
 }
 
-export async function formatEmbeddings(
-  embeddings: OpenAIEmbedding[]
-): Promise<PineconeVector[]> {
-  return embeddings.map((e) => ({
-    id: nanoid(),
-    values: e.embedding, // float32[]
-    metadata: { text: "" }, // fill later if needed
-  }));
-}
+// export async function formatEmbeddings(
+//   embeddings: OpenAIEmbedding[], 
+//   documentId: string
+// ): Promise<PineconeVector[]> {
+//   return embeddings.map((e) => ({
+//     id: nanoid(),
+//     values: e.embedding, // float32[]
+//     metadata: { text: "" },
+//     documentId: documentId // fill later if needed
+//   }));
+// }
 
 /**
  * Enhance → embed → package for Pinecone (id, values, metadata).
  */
 export async function buildPineconeRecords(
-  rawChunks: string[]
+  rawChunks: string[],
+  documentId: string
 ): Promise<PineconeVector[]> {
   const enhanced = await enhanceChunks(rawChunks);     // string[]
   const vectors  = await embedChunks(enhanced);        // OpenAIEmbedding[]
@@ -60,5 +63,6 @@ export async function buildPineconeRecords(
     id: nanoid(),
     values: vectors[i].embedding,
     metadata: { text: chunk },
+    documentId: documentId // fill later if needed
   }));
 }
