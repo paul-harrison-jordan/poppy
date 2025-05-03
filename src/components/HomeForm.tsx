@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import LoadingModal from './LoadingModal';
 import PastWork from './PastWork';
 import { AlertNotification } from "./AlertNotification"
@@ -11,14 +10,6 @@ interface Question {
   text: string;
   reasoning: string;
 }
-
-interface SuccessModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  docId: string;
-  title: string;
-}
-
 
 export default function HomeForm() {
   const [title, setTitle] = useState('');
@@ -122,8 +113,6 @@ export default function HomeForm() {
       if (!response.ok) {
         throw new Error('Failed to generate PRD');
       }
-
-      const data = await response.json();
 
       // Create Google Doc
       const fileRes = await drive.files.create({
@@ -381,9 +370,6 @@ export default function HomeForm() {
           <PastWork 
             storageKey="savedPRDs" 
             title="Past PRDs"
-            onCountUpdate={(count) => {
-              window.dispatchEvent(new CustomEvent('savedPRDsUpdated'));
-            }}
           />
         )}
       </div>
