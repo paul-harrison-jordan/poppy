@@ -12,6 +12,13 @@ interface GoogleDoc {
   name: string;
 }
 
+interface PineconeEmbedding {
+  id: string;
+  values: number[];
+  sparseValues?: unknown;
+  metadata?: Record<string, unknown>;
+}
+
 export default function SyncForm({ onSyncComplete }: SyncFormProps) {
   const [folderId, setFolderId] = useState('');
   const [syncStatus, setSyncStatus] = useState('');
@@ -78,8 +85,7 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
           const embeddedChunksResponse = await embeddedChunks.json();
           const formattedEmbeddings = embeddedChunksResponse.formattedEmbeddings;
 
-          const sanitizedEmbeddings = formattedEmbeddings.map((embedding: any) => {
-            // Only keep allowed properties
+          const sanitizedEmbeddings = formattedEmbeddings.map((embedding: PineconeEmbedding) => {
             const { id, values, sparseValues, metadata } = embedding;
             return { id, values, sparseValues, metadata };
           });
