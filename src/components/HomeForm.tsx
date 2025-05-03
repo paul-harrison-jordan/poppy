@@ -19,39 +19,8 @@ interface SuccessModalProps {
   title: string;
 }
 
-function SuccessModal({ isOpen, onClose, docId, title }: SuccessModalProps) {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-        <h2 className="text-2xl font-bold text-[#232426] mb-4">PRD Created Successfully!</h2>
-        <p className="text-[#4A4A4A] mb-6">
-          Your PRD "{title}" has been created. You can view it now or find it later in your PRDs list.
-        </p>
-        <div className="flex justify-end space-x-4">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-[#4A4A4A] hover:text-[#232426]"
-          >
-            Close
-          </button>
-          <a
-            href={`https://docs.google.com/document/d/${docId}/edit`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 bg-[#EF6351] text-white rounded-md hover:bg-[#d94d38] transition-colors"
-          >
-            View PRD
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function HomeForm() {
-  const router = useRouter();
   const [title, setTitle] = useState('');
   const [query, setQuery] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -80,7 +49,7 @@ export default function HomeForm() {
     setLoadingState({
       isOpen: true,
       title: 'Generating Questions',
-      message: 'We\'re analyzing your PRD context to create relevant questions...',
+      message: 'analyzing your PRD context to ask a few relevant questions...',
     });
 
     try {
@@ -122,7 +91,7 @@ export default function HomeForm() {
     setLoadingState({
       isOpen: true,
       title: 'Creating PRD',
-      message: 'We\'re generating your PRD document...',
+      message: 'generating your PRD draft...',
     });
 
     try {

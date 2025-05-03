@@ -12,18 +12,18 @@ export class APIError extends Error {
   }
 }
 
-export type APIResponse<T = any> = {
+export type APIResponse<T = unknown, E = unknown> = {
   data?: T;
   error?: {
     message: string;
-    details?: any;
+    details?: E;
   };
 };
 
-export function createAPIResponse<T>(
+export function createAPIResponse<T, E = unknown>(
   data: T | undefined,
-  error?: { message: string; details?: any }
-): APIResponse<T> {
+  error?: { message: string; details?: E }
+): APIResponse<T, E> {
   return {
     data,
     error,
@@ -84,8 +84,8 @@ export async function withErrorHandling<T>(
   }
 }
 
-export function withAuth<T, Args extends any[]>(
-  handler: (session: any, ...args: Args) => Promise<T>
+export function withAuth<T, Session = unknown, Args extends unknown[] = []>(
+  handler: (session: Session, ...args: Args) => Promise<T>
 ): (...args: Args) => Promise<NextResponse> {
   return async (...args: Args) => {
     return withErrorHandling(async () => {
@@ -93,7 +93,7 @@ export function withAuth<T, Args extends any[]>(
       if (!session?.user?.name) {
         throw new APIError('Unauthorized', 401);
       }
-      return handler(session, ...args);
+      return handler(session as Session, ...args);
     });
   };
 } 
