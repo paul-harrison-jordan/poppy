@@ -238,17 +238,6 @@ export default function HomeForm() {
               </button>
             </div>
           </form>
-          {showSuccess && createdDoc && (
-            <AlertNotification
-              title="Document Created"
-              message="Your PRD document has been created successfully."
-              link={{
-                text: "View Document",
-                url: createdDoc.url,
-              }}
-              onDismiss={() => setShowSuccess(false)}
-            />
-          )}
         </div>
       </div>
     );
