@@ -196,7 +196,7 @@ Q&A: ${questions.join('\n')}`,
 }
 
 /* Helper: turns AsyncIterable<Chunk> → NextResponse(stream) */
-function streamTextResponse(iterable: AsyncIterable<any>) {
+function streamTextResponse(iterable: AsyncIterable<OpenAI.ChatCompletionChunk>) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async pull(controller) {
