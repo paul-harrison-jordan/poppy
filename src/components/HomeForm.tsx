@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import LoadingModal from './LoadingModal';
 import PastWork from './PastWork';
-import { AlertNotification } from "./AlertNotification"
 
 interface Question {
   id: string;
@@ -31,7 +30,6 @@ export default function HomeForm() {
   const [showQuery, setShowQuery] = useState(false);
   const [showTitle, setShowTitle] = useState(true);
   const [showPastWork, setShowPastWork] = useState(true);
-  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleInitialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
