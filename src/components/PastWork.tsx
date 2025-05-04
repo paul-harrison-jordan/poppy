@@ -38,7 +38,7 @@ export default function PastWork({
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedItem, setSelectedItem] = useState<PastWorkItem | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
-
+  
   const loadItems = useCallback(() => {
     const stored = localStorage.getItem(storageKey)
     if (stored) {
