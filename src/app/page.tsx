@@ -10,6 +10,10 @@ import PastWork from '@/components/PastWork';
 export default function HomePage() {
   const { data: session, status } = useSession();
   const [showPastWorkFull, setShowPastWorkFull] = useState(false);
+  const [_selectedItem, _setSelectedItem] = useState<PastWorkItem | null>(null);
+  const _handleItemSelect = (item: PastWorkItem) => {
+    _setSelectedItem(item);
+  };
 
   useEffect(() => {
     const initializePinecone = async () => {
