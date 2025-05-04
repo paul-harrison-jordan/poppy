@@ -43,12 +43,8 @@ export default function DraftForm() {
   const [internalTerms, setInternalTerms] = useState<string[]>([])
   const [pendingTerms, setPendingTerms] = useState<string[]>([])
   const [pendingTermDefs, setPendingTermDefs] = useState<Record<string, string>>({})
-  const [showTermDefs, setShowTermDefs] = useState(false)
+  const [setShowTermDefs] = useState(false)
   const [matchedContext, setMatchedContext] = useState<any[]>([])
-  const [terms, setTerms] = useState<string[]>([])
-  const [termDefs, setTermDefs] = useState<Record<string, string>>({})
-  const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [result, setResult] = useState<any>(null)
 
   // Load saved state from localStorage
   useEffect(() => {
@@ -147,7 +143,7 @@ export default function DraftForm() {
       const vocabData = await vocabRes.json()
       if (vocabData.teamTerms && vocabData.teamTerms.length > 0) {
         setPendingTerms(vocabData.teamTerms)
-        setShowTermDefs(true)
+        // setShowTermDefs(true)
         setIsGenerating(false)
         setIsGeneratingQuestions(false)
         setStep("terms")
@@ -307,10 +303,6 @@ export default function DraftForm() {
       setPendingTermDefs(prev => ({ ...parsed, ...prev }));
     }
   }, [pendingTerms.length]);
-
-  // Only show terms that are not defined
-  const undefinedTerms = pendingTerms.filter(term => !pendingTermDefs[term] || !pendingTermDefs[term].trim());
-  const allTermsDefined = undefinedTerms.length === 0;
 
   if (step === "title") {
     // Render title/query form

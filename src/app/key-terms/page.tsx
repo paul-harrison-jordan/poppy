@@ -2,7 +2,6 @@
 
 import { useSession } from "next-auth/react";
 import Sidebar from "@/components/Sidebar";
-import PastWork from "@/components/PastWork";
 import { useEffect, useState } from "react";
 
 interface TeamTerms {
@@ -67,7 +66,7 @@ export default function KeyTermsPage() {
             <div className="bg-white rounded-xl shadow-lg border border-[#E9DCC6] overflow-x-auto">
               <h2 className="text-2xl font-bold text-[#232426] px-6 pt-6">Key Terms</h2>
               <p className="text-sm text-[#BBC7B6] mb-6 px-6 pt-2">
-                Edit your team's key terms and definitions. Changes are saved automatically.
+                Edit your team&apos;s key terms and definitions. Changes are saved automatically.
               </p>
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
