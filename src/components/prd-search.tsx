@@ -103,7 +103,7 @@ export function PrdSearch() {
           </div>
 
           <div className="relative">
-            <AnimatePresence mode={"crossfade" as any} initial={false}>
+            <AnimatePresence initial={false}>
               {activeTab === "create" && (
                 <motion.div
                   key="create-tab"
