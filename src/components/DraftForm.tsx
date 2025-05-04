@@ -229,6 +229,7 @@ export default function DraftForm() {
 
       // 3. Generate PRD content
       const storedContext = localStorage.getItem("personalContext")
+      const teamTerms = JSON.parse(localStorage.getItem("teamTerms") || "{}")
       const genRes = await fetch("/api/generate-content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -236,7 +237,7 @@ export default function DraftForm() {
           type: "prd",
           title,
           query,
-          questions: questions.map((q) => q.text),
+          teamTerms,
           storedContext,
           additionalContext: matchedContext.join("\n"),
           questionAnswers,

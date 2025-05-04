@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import Sidebar from "@/components/Sidebar";
 import { useEffect, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 
 interface TeamTerms {
   [term: string]: string;
@@ -13,6 +14,7 @@ export default function KeyTermsPage() {
   const [terms, setTerms] = useState<TeamTerms>({});
   const [editingTerm, setEditingTerm] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -33,6 +35,7 @@ export default function KeyTermsPage() {
   const handleEdit = (term: string, currentDefinition: string) => {
     setEditingTerm(term);
     setEditValue(currentDefinition);
+    setIsEditModalOpen(true);
   };
 
   const handleSave = (term: string) => {
@@ -41,6 +44,20 @@ export default function KeyTermsPage() {
     localStorage.setItem("teamTerms", JSON.stringify(updatedTerms));
     setEditingTerm(null);
     setEditValue("");
+    setIsEditModalOpen(false);
+  };
+
+  const handleCancel = () => {
+    setEditingTerm(null);
+    setEditValue("");
+    setIsEditModalOpen(false);
+  };
+
+  const handleDelete = (term: string) => {
+    const updatedTerms = { ...terms };
+    delete updatedTerms[term];
+    setTerms(updatedTerms);
+    localStorage.setItem("teamTerms", JSON.stringify(updatedTerms));
   };
 
   if (status === "loading") {
@@ -88,30 +105,22 @@ export default function KeyTermsPage() {
                     <tr key={term}>
                       <td className="px-6 py-4 font-medium text-gray-900">{term}</td>
                       <td className="px-6 py-4">
-                        {editingTerm === term ? (
-                          <input
-                            className="border rounded px-2 py-1 w-full"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onBlur={() => handleSave(term)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleSave(term);
-                            }}
-                            autoFocus
-                          />
-                        ) : (
-                          <span>{definition}</span>
-                        )}
+                        <span>{definition}</span>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        {editingTerm === term ? null : (
-                          <button
-                            className="text-poppy-600 hover:underline text-sm"
-                            onClick={() => handleEdit(term, definition)}
-                          >
-                            Edit
-                          </button>
-                        )}
+                      <td className="px-6 py-4 text-right flex gap-2 justify-end">
+                        <button
+                          className="text-poppy-600 hover:underline text-sm"
+                          onClick={() => handleEdit(term, definition)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="text-red-500 hover:underline text-sm ml-2"
+                          onClick={() => handleDelete(term)}
+                          aria-label={`Delete ${term}`}
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -121,6 +130,43 @@ export default function KeyTermsPage() {
           </div>
         </div>
       </div>
+      {/* Edit Definition Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[600px] bg-white/90 backdrop-blur-sm border-rose-100/30 rounded-2xl shadow-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-[#232426]">Edit Definition</DialogTitle>
+          </DialogHeader>
+          <div className="mb-4">
+            <div className="font-medium text-gray-900 mb-2">{editingTerm}</div>
+            <textarea
+              className="border rounded px-2 py-2 w-full min-h-[8rem] resize-vertical"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              autoFocus
+              rows={6}
+              placeholder="Enter definition..."
+            />
+          </div>
+          <DialogFooter>
+            <button
+              className="px-4 py-2 rounded bg-[#EF6351] text-white font-semibold hover:bg-[#d94d38] transition-colors"
+              onClick={() => editingTerm && handleSave(editingTerm)}
+              disabled={!editValue.trim()}
+            >
+              Save
+            </button>
+            <DialogClose asChild>
+              <button
+                className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition-colors"
+                onClick={handleCancel}
+                type="button"
+              >
+                Cancel
+              </button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

@@ -190,7 +190,7 @@ export async function POST(request: Request) {
           Title: ${title}\nQuery: ${query}`
         }
       ],
-      model: "o4-mini",
+      model: "o3",
       response_format: { type: "json_object" },
     });
 

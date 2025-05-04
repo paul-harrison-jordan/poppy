@@ -15,6 +15,7 @@ interface GenerateContentRequest {
   questions: string[];
   storedContext?: string;
   additionalContext: string;
+  teamTerms: Record<string, string>;
 }
 
 const terms = {
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
     /* 2. Parse body */
     const {
       type, title, query, questions,
-      storedContext, additionalContext,
+      storedContext, additionalContext, teamTerms,
     } = (await request.json()) as GenerateContentRequest;
 
     /* 3A. PRD – streamed */
@@ -150,6 +151,8 @@ export async function POST(request: Request) {
           {
             role: 'user',
             content:`I have  included a list of key terms that you may need to use to generate your response. Use this as background information to help you understand the rest of the prompt. ${Object.keys(terms).join(', ')}
+
+            I've also included a list of key terms that my team has defined for our product. Use this as background information to help you understand the rest of the prompt. ${Object.keys(teamTerms).join(', ')}
                     
             I've included instructions for how to think and write PRDs like a product manager with" ${ctx.examplesOfHowYouThink} "I've also included background on how to think like the K:Service team" ${ctx.pillarGoalsKeyTermsBackground} "I've included a doc that starts with Building a Product That Grows With Its Users to demonstrate my personal philosophy on how we should approach building a product to cross sell to existing users" ${ctx.howYouThinkAboutProduct} "I've included a doc that outlines the strategic goals of the Unified Inbox product for the rest of the year" ${ctx.teamStrategy} 
             
