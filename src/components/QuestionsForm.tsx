@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronRight, Edit2, ArrowRight, CheckCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -15,20 +15,44 @@ interface Question {
 interface QuestionsFormProps {
   questions: Question[]
   onSubmit: (answers: Record<string, string>) => void
+  internalTerms?: string[]
 }
 
-export default function QuestionsForm({ questions, onSubmit }: QuestionsFormProps) {
+export default function QuestionsForm({ questions, onSubmit, internalTerms = [] }: QuestionsFormProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>(
     questions.reduce((acc, q) => ({ ...acc, [q.id]: "" }), {}),
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // State for term definitions
+  const [termDefs, setTermDefs] = useState<Record<string, string>>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('teamTerms');
+      if (stored) return JSON.parse(stored);
+    }
+    return internalTerms.reduce((acc, term) => ({ ...acc, [term]: '' }), {});
+  });
+
+  // Save to localStorage whenever termDefs changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('teamTerms', JSON.stringify(termDefs));
+    }
+  }, [termDefs]);
+
+  // Only allow proceeding if all term definitions are filled
+  const allTermsDefined = internalTerms.length === 0 || internalTerms.every(term => termDefs[term]?.trim().length > 0);
+
   const handleInputChange = (questionId: string, value: string) => {
     setAnswers((prev) => ({
       ...prev,
       [questionId]: value,
     }))
+  }
+
+  const handleTermChange = (term: string, value: string) => {
+    setTermDefs(prev => ({ ...prev, [term]: value }));
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,6 +95,29 @@ export default function QuestionsForm({ questions, onSubmit }: QuestionsFormProp
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="space-y-8 max-w-2xl mx-auto"
     >
+      {/* Internal Terms Definitions Section */}
+      {internalTerms.length > 0 && (
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6 mb-4">
+          <h2 className="text-lg font-bold text-rose-600 mb-2">Define Key Terms</h2>
+          <p className="text-sm text-gray-500 mb-4">Please provide a definition for each key term below so your team is aligned on language.</p>
+          <div className="space-y-4">
+            {internalTerms.map(term => (
+              <div key={term} className="flex flex-col gap-1">
+                <label htmlFor={`term-${term}`} className="font-semibold text-rose-600">{term}</label>
+                <input
+                  id={`term-${term}`}
+                  type="text"
+                  value={termDefs[term] || ''}
+                  onChange={e => handleTermChange(term, e.target.value)}
+                  className="rounded-md border border-rose-100 px-3 py-2 text-[#232426] shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-200 bg-white"
+                  placeholder={`Define "${term}"...`}
+                  required
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="text-center">
         <motion.h1
           initial={{ opacity: 0, y: -10 }}
@@ -97,6 +144,10 @@ export default function QuestionsForm({ questions, onSubmit }: QuestionsFormProp
         className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Prevent proceeding to questions until all terms are defined */}
+          {!allTermsDefined && (
+            <div className="text-rose-600 font-semibold text-center mb-4">Please define all key terms above to continue.</div>
+          )}
           <div className="space-y-4">
             <AnimatePresence mode="wait">
               <motion.p
@@ -172,7 +223,7 @@ export default function QuestionsForm({ questions, onSubmit }: QuestionsFormProp
                   className={cn(
                     "w-2 h-2 rounded-full transition-colors",
                     index === currentStep
-                      ? "bg-gradient-to-r from-rose-400 to-pink-400 shadow-sm"
+                      ? "bg-gradient-to-r from-rose-500 to-rose-400 shadow-sm"
                       : index < currentStep
                         ? "bg-rose-200"
                         : "bg-rose-100",
@@ -187,13 +238,13 @@ export default function QuestionsForm({ questions, onSubmit }: QuestionsFormProp
               whileTap={hasAnswer ? { scale: 0.95 } : {}}
               type={isLastStep ? "submit" : "button"}
               onClick={isLastStep ? undefined : handleNext}
-              disabled={!hasAnswer || isSubmitting}
+              disabled={!hasAnswer || isSubmitting || !allTermsDefined}
               className={cn(
                 "rounded-full flex items-center justify-center shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all px-4 py-2",
-                hasAnswer
+                hasAnswer && allTermsDefined
                   ? isLastStep
-                    ? "bg-gradient-to-r from-rose-400 to-pink-400 text-white hover:from-rose-500 hover:to-pink-500 focus:ring-rose-200"
-                    : "bg-gradient-to-r from-rose-400 to-pink-400 text-white hover:from-rose-500 hover:to-pink-500 focus:ring-rose-200"
+                    ? "bg-gradient-to-r from-rose-500 to-rose-400 text-white hover:from-rose-600 hover:to-rose-500 focus:ring-rose-200"
+                    : "bg-gradient-to-r from-rose-500 to-rose-400 text-white hover:from-rose-600 hover:to-rose-500 focus:ring-rose-200"
                   : "bg-rose-100 text-rose-300 cursor-not-allowed",
               )}
             >

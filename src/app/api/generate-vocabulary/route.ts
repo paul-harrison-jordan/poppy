@@ -108,19 +108,10 @@ const terms = {
   "Deliverability Health alerts": "Automated warnings that flag rising spam or bounces and recommend fixes"
 }
 
-export interface Question {
-  /** Unique identifier (can be reused as display text if desired) */
-  id?: string;
-  /** The full question presented to the user or team */
-  text: string;
-  /** Explanation of why the question matters */
-  reasoning: string;
+export interface TeamTerms {
+  terms: string[];
 }
 
-/** API or function response containing an ordered list of questions */
-export interface QuestionsResponse {
-  questions: Question[];
-}
 export async function POST(request: Request) {
   try {
     const authSession = await getAuthServerSession();
@@ -133,61 +124,34 @@ export async function POST(request: Request) {
       messages: [
         {
           role: "system",
-          content: `You are a product manager helping to write a PRD. Please generate 3 specific questions in JSON format that would help you write a more impactful PRD based on the title and initial query. Make the questions focused on understanding how the PRD will solve a customer problem, the different approaches to solving the problem, and what success will look like for the customer.
+          content: `
+
+          You are a system that helps a product manager write a PRD. You will be given a title and query for a new PRD, as well as relevant context from previous PRDs or documents that the user has shared with you. 
+
+        
+          Over time, you should become smarter and more procifient at your job, because of this, it's especially important that you build a better understanding of terms over time.
+
+          If the title, query, or context have words or terms you aren't 100% certain about, include them in the internalTerms array. You must always return the internalTerms array with string values of internal terms that you are unsure about.
 
           Example JSON object:
           {
-            "questions": [
-              {
-                "id": "q1",
-                "text": "What specific problem are you trying to solve?",
-                "reasoning": "This question helps the product manager understand the problem they are trying to solve.",  
-              },
-              {
-                "id": "q2",
-                "text": "Who are the primary users of this feature?",
-                "reasoning": "This question helps the product manager understand the users of the feature.",
-              },
-              {
-                "id": "q3",
-                "text": "What are the key success metrics?",
-                "reasoning": "This question helps the product manager understand the success metrics for the feature.", 
-              }
+            "internalTerms": [
+              "Profile",
+              "Active profile",
+              "Suppressed profile",
+              "Activity feed",
             ]
           }
 
-          Be a clarity creator. Your job is to create clarity about the problems we are solving, the solutions we are building, and the steps we are taking to deliver value to customers. It is your job to reduce ambiguity, ensure visibility and alignment of your projects.
-
-          Know the system. You need to be able to break down technical systems and problems such that you can support engineers in making good engineering decisions. Learn our systems so that you can talk about how everything fits together.
-
-          Be opinionated. You have your own point of view / opinion of how the product should work (Relying entirely on customers to tell you what to build is lazy). But, you listen and adapt as you learn new information. Think: Strong opinions, loosely held.
-
-          Be detail oriented. You care deeply about the details, but know that nothing will be perfect. You pay thorough attention to details while you guide towards making decisions and making progress. Think: Perfection is the enemy of done.
-
-          Push the envelope. You think beyond what already exists and what people are talking about today. You imagine what can exist tomorrow based on the trajectories that you are observing today. You embrace innovation, high-risk/high-reward, and failure as a way to learn.
-
-          Here is some relevant context from similar PRDs:
-          ${matchedContext}
           I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a product manager would ask.
           ${Object.keys(terms).join(', ')}
           
-          Please respond with a JSON object containing an array of questions, where each question has an 'id' and 'text' property. the JSON object shuld also have a reasoning property, where you outline why you asked the question.`
+          you must respond with a JSON object containing an array of teamTerms you need definitions of.`
         },
         {
           role: "user",
-          content: `You must think hard and return 3 questions that you need answers to in order to write a PRD on the topic. 
-          
-          Use the following as background for the types of answers your questions should elicit. I want you to think like your an experienced and accomplished product manager: I've included some themes of what PRDs should embody (problem-oriented, clear success criteria, just enough direction, urgency, and short and sweet).
-          Problem-oriented: They crystallize the problem being solved in a few strong sentences—ideally near the top of the document—to focus the brainpower of every teammate in the same direction.
-
-          Clear success criteria: They super-specifically define what success looks like when the product or feature ships, at first to make sure it’s even worth doing, and later to help everyone make tradeoff decisions throughout the project.
-
-          Just enough direction: They give the reader (e.g. engineers, designers, managers) just enough an idea of what the project will entail—including requirements and constraints—without eliminating the opportunity for (your super-smart) teammates to come up with even better solutions.
-
-          Urgency: There’s a clear (proposed) timeline by which to review, align on, build and ship the project, to keep the project moving forward (and from exploding in scope).
-          
-          Short and sweet: In the end, if you want this document to be used, it needs to be readable. Put additional context into an appendix at the end
-          Title: ${title}\nQuery: ${query}`
+          content: `
+          Title: ${title}\nQuery: ${query}, \nContext: ${matchedContext}`
         }
       ],
       model: "o4-mini",
@@ -196,16 +160,9 @@ export async function POST(request: Request) {
 
     const response = JSON.parse(completion.choices[0].message.content || '{}');
     
-    // Ensure we have exactly 3 questions
-    const questions = Array.isArray(response.questions) 
-      ? response.questions.slice(0, 3).map((q: Question) => ({
-          id: q.text, // Use the actual question text as the ID
-          text: q.text,
-          reasoning: q.reasoning,
-        }))
-      : [];
+    const teamTerms = response.teamTerms;
 
-    return NextResponse.json({ questions: questions as QuestionsResponse, internalTerms: response.internalTerms });
+    return NextResponse.json({ teamTerms: teamTerms as TeamTerms });
   } catch (error) {
     console.error('Error generating questions:', error);
     return NextResponse.json(

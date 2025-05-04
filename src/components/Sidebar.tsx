@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Pencil, Settings, RefreshCw, Mic, BookOpen, LogOut } from "lucide-react"
+import { Pencil, Settings, RefreshCw, Mic, BookOpen, LogOut, GraduationCap } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function Sidebar() {
@@ -49,9 +49,14 @@ export default function Sidebar() {
       icon: <Mic className="w-4 h-4" />,
     },
     {
+      href: "/key-terms",
+      label: "Key Terms",
+      icon: <BookOpen className="w-4 h-4" />,
+    },
+    {
       href: "/instructions",
       label: "How to Use It",
-      icon: <BookOpen className="w-4 h-4" />,
+      icon: <GraduationCap className="w-4 h-4" />,
     },
   ]
 
@@ -93,7 +98,7 @@ export default function Sidebar() {
         </motion.div>
       </div>
       <nav className="p-4 h-full flex flex-col">
-        <ul className="space-y-2">
+        <ul className="space-y-2 flex flex-col h-full">
           {navItems.map((item) => (
             <li key={item.href}>
               <Link href={item.href} className="block">
