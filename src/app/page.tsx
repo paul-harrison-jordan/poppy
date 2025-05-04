@@ -3,20 +3,9 @@
 import { useSession } from 'next-auth/react';
 import Sidebar from '@/components/Sidebar';
 import DraftForm from '@/components/DraftForm';
-import PastPRDs from '@/components/PastPRDs';
 import SignIn from '@/app/auth/signin/page';
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import PastWork from '@/components/PastWork';
-
-interface PastWorkProps {
-  storageKey: string;
-  title: string;
-  onCountUpdate?: (count: number) => void;
-  onExpand?: () => void;
-  largeFormat?: boolean;
-  onClose?: () => void;
-}
 
 export default function HomePage() {
   const { data: session, status } = useSession();

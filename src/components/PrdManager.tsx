@@ -21,11 +21,9 @@ export function PrdManager() {
   const [searchQuery, setSearchQuery] = useState("")
   const [items, setItems] = useState<PrdItem[]>([])
   const [filteredItems, setFilteredItems] = useState<PrdItem[]>([])
-  const [selectedItem, setSelectedItem] = useState<PrdItem | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [containerHeight, setContainerHeight] = useState<number | "auto">("auto")
 
   // Load items from localStorage
   const loadItems = () => {
@@ -115,10 +113,6 @@ export function PrdManager() {
     } finally {
       setDeletingId(null)
     }
-  }
-
-  const handleItemSelect = (item: PrdItem) => {
-    setSelectedItem(item)
   }
 
   // Animation variants for smoother transitions

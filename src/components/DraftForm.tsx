@@ -4,12 +4,10 @@ import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronDown, FilePlus } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import {  FilePlus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import QuestionsForm from "./QuestionsForm"
 import { collectStream } from "@/lib/collectStream"
-import { cn } from "@/lib/utils"
 
 interface Question {
   id: string

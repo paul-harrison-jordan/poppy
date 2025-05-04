@@ -5,12 +5,11 @@ import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronLeft, ChevronRight, Pencil, Database, Settings, RefreshCw, Mic, BookOpen, LogOut } from "lucide-react"
+import { Pencil, Settings, RefreshCw, Mic, BookOpen, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const [prdCount, setPrdCount] = useState(0)
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("sidebarCollapsed") === "true"
@@ -23,29 +22,6 @@ export default function Sidebar() {
       localStorage.setItem("sidebarCollapsed", collapsed ? "true" : "false")
     }
   }, [collapsed])
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("savedPRD")
-      if (stored) {
-        setPrdCount(JSON.parse(stored).length)
-      } else {
-        setPrdCount(0)
-      }
-
-      // Add event listener for PRD count updates
-      const handlePrdCountUpdate = (event: CustomEvent) => {
-        setPrdCount(event.detail.count)
-      }
-
-      window.addEventListener("prdCountUpdated", handlePrdCountUpdate as EventListener)
-
-      // Cleanup
-      return () => {
-        window.removeEventListener("prdCountUpdated", handlePrdCountUpdate as EventListener)
-      }
-    }
-  }, [])
 
   const isActive = (path: string) => {
     return pathname === path
