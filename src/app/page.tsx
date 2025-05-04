@@ -5,9 +5,23 @@ import Sidebar from '@/components/Sidebar';
 import DraftForm from '@/components/DraftForm';
 import PastPRDs from '@/components/PastPRDs';
 import SignIn from '@/app/auth/signin/page';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import PastWork from '@/components/PastWork';
+
+interface PastWorkProps {
+  storageKey: string;
+  title: string;
+  onCountUpdate?: (count: number) => void;
+  onExpand?: () => void;
+  largeFormat?: boolean;
+  onClose?: () => void;
+}
+
 export default function HomePage() {
   const { data: session, status } = useSession();
+  const [showPastWorkFull, setShowPastWorkFull] = useState(false);
+
   useEffect(() => {
     const initializePinecone = async () => {
       if (session?.user) {
@@ -58,8 +72,14 @@ export default function HomePage() {
                 We&apos;re 1% Done
               </div>
               <div>
-                  <DraftForm />
-                  <PastPRDs />
+                  {!showPastWorkFull && <DraftForm />}
+                  <PastWork
+                    storageKey="savedPRD"
+                    title="Past PRDs"
+                    onExpand={() => setShowPastWorkFull(true)}
+                    largeFormat={showPastWorkFull}
+                    onClose={() => setShowPastWorkFull(false)}
+                  />
               </div>
             </div>
           </div>

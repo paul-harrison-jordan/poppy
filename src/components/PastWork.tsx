@@ -1,226 +1,334 @@
-'use client';
+"use client"
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useInView } from 'framer-motion';
+import { useState, useEffect, useRef, useCallback } from "react"
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion"
+import { Eye, Trash2, ChevronDown, Search, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Dialog } from "@/components/ui/dialog"
 
 interface PastWorkItem {
-  id: string;
-  title: string;
-  url: string;
-  createdAt: string;
+  id: string
+  title: string
+  url: string
+  createdAt: string
 }
 
 interface PastWorkProps {
-  storageKey: string;
-  title: string;
-  onCountUpdate?: (count: number) => void;
+  storageKey: string
+  title: string
+  onCountUpdate?: (count: number) => void
+  onExpand?: () => void
+  largeFormat?: boolean
+  onClose?: () => void
 }
 
-export default function PastWork({ storageKey, title, onCountUpdate }: PastWorkProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [items, setItems] = useState<PastWorkItem[]>([]);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true });
+export default function PastWork({
+  storageKey,
+  title,
+  onCountUpdate,
+  onExpand,
+  largeFormat = false,
+  onClose,
+}: PastWorkProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [items, setItems] = useState<PastWorkItem[]>([])
+  const [filteredItems, setFilteredItems] = useState<PastWorkItem[]>([])
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedItem, setSelectedItem] = useState<PastWorkItem | null>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   const loadItems = useCallback(() => {
-    const stored = localStorage.getItem(storageKey);
+    const stored = localStorage.getItem(storageKey)
     if (stored) {
       try {
-        const parsedItems = JSON.parse(stored);
-        setItems(parsedItems);
+        const parsedItems = JSON.parse(stored)
+        setItems(parsedItems)
+        setFilteredItems(parsedItems)
         if (onCountUpdate) {
-          onCountUpdate(parsedItems.length);
+          onCountUpdate(parsedItems.length)
         }
       } catch (error) {
-        console.error(`Error parsing ${storageKey}:`, error);
-        setItems([]);
+        console.error(`Error parsing ${storageKey}:`, error)
+        setItems([])
+        setFilteredItems([])
       }
     } else {
-      setItems([]);
+      setItems([])
+      setFilteredItems([])
     }
-  }, [storageKey, onCountUpdate]);
+  }, [storageKey, onCountUpdate])
 
   // Load items on mount and when storageKey changes
   useEffect(() => {
-    loadItems();
-  }, [loadItems]);
+    loadItems()
+  }, [loadItems])
 
   // Listen for storage changes
   useEffect(() => {
     // Create a custom event name based on the storageKey
-    const updateEventName = `${storageKey}Updated`;
-    
+    const updateEventName = `${storageKey}Updated`
+
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === storageKey) {
-        loadItems();
+        loadItems()
       }
-    };
+    }
 
     const handleCustomEvent = () => {
-      loadItems();
-    };
+      loadItems()
+    }
 
     // Listen for both storage events and custom events
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener(updateEventName, handleCustomEvent);
+    window.addEventListener("storage", handleStorageChange)
+    window.addEventListener(updateEventName, handleCustomEvent)
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener(updateEventName, handleCustomEvent);
-    };
-  }, [storageKey, loadItems]);
-
-  useEffect(() => {
-    if (isInView) {
-      setIsVisible(true);
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener(updateEventName, handleCustomEvent)
     }
-  }, [isInView]);
+  }, [storageKey, loadItems])
+
+  // Filter items when search query changes
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredItems(items)
+      return
+    }
+
+    const filtered = items.filter((item) => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    setFilteredItems(filtered)
+  }, [searchQuery, items])
+
+  // Focus search input when expanded in large format
+  useEffect(() => {
+    if (largeFormat && searchInputRef.current) {
+      setTimeout(() => {
+        searchInputRef.current?.focus()
+      }, 300)
+    }
+  }, [largeFormat])
 
   const handleDelete = async (id: string) => {
-    setDeletingId(id);
+    setDeletingId(id)
     try {
-      const updatedItems = items.filter(item => item.id !== id);
-      setItems(updatedItems);
-      localStorage.setItem(storageKey, JSON.stringify(updatedItems));
-      
+      const updatedItems = items.filter((item) => item.id !== id)
+      setItems(updatedItems)
+      setFilteredItems(
+        updatedItems.filter(
+          (item) => !searchQuery.trim() || item.title.toLowerCase().includes(searchQuery.toLowerCase()),
+        ),
+      )
+      localStorage.setItem(storageKey, JSON.stringify(updatedItems))
+
       if (onCountUpdate) {
-        onCountUpdate(updatedItems.length);
+        onCountUpdate(updatedItems.length)
       }
 
       // Dispatch custom event to notify other components
-      window.dispatchEvent(new CustomEvent(`${storageKey}Updated`));
+      window.dispatchEvent(new CustomEvent(`${storageKey}Updated`))
     } catch (error) {
-      console.error('Error deleting item:', error);
+      console.error("Error deleting item:", error)
     } finally {
-      setDeletingId(null);
+      setDeletingId(null)
     }
-  };
+  }
 
-  // Don't render anything if there are no items
-  // if (items.length === 0) {
-  //   return null;
-  // }
+  const handleToggleExpand = () => {
+    if (!isExpanded && onExpand) {
+      onExpand()
+    } else {
+      setIsExpanded(!isExpanded)
+    }
+  }
 
-  return (
-    <motion.div 
-      ref={ref}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ 
-        opacity: isVisible ? 1 : 0,
-        y: isVisible ? 0 : 20
-      }}
-      transition={{ duration: 0.5 }}
-      className="mt-8"
-    >
-      <motion.button
-        onClick={() => setIsExpanded(!isExpanded)}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        className="w-full flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-[#E9DCC6]/50 hover:bg-white/90 transition-all duration-300"
+  const handleItemSelect = (item: PastWorkItem) => {
+    setSelectedItem(item)
+  }
+
+  // Compact view (collapsed or toggle button)
+  if (!largeFormat && !isExpanded) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="mt-6"
       >
-        <span className="text-lg font-semibold text-[#232426]">{title}</span>
-        <motion.svg
-          animate={{ rotate: isExpanded ? 180 : 0 }}
-          transition={{ duration: 0.3 }}
-          className="w-5 h-5 text-[#232426]"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+        <Button
+          variant="ghost"
+          onClick={handleToggleExpand}
+          className="group flex items-center gap-2 text-[#EF6351] hover:text-[#d94d38] hover:bg-transparent rounded-full px-4 py-2 border-none shadow-none"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </motion.svg>
-      </motion.button>
+          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-500">
+            <Search className="h-3 w-3" />
+          </div>
+          <span className="text-sm font-normal">{title}</span>
+          <span className="ml-1 text-xs text-rose-400 group-hover:text-rose-500 opacity-70">({items.length})</span>
+        </Button>
+      </motion.div>
+    )
+  }
 
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-            className="mt-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-[#E9DCC6]/50 overflow-hidden"
+  // Full view (expanded or large format)
+  return (
+    <LayoutGroup>
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="mt-8"
+      >
+        {!largeFormat && (
+          <motion.button
+            layout
+            onClick={handleToggleExpand}
+            className="w-full flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100 hover:bg-rose-50/30 focus:outline-none focus:ring-2 focus:ring-rose-200 transition-all duration-300"
+            aria-expanded={isExpanded}
+            aria-controls="pastwork-content"
           >
-            <div className="p-4 space-y-4">
-              {items.map((item, index) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className={`flex items-center justify-between p-3 rounded-lg transition-all duration-200 ${
-                    deletingId === item.id ? 'opacity-50 bg-[#FFF5F3]' : 'hover:bg-[#FFFAF3]'
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-[#232426] truncate">
-                      {item.title}
-                    </h3>
-                    <p className="text-xs text-[#232426]/60">
-                      {new Date(item.createdAt).toLocaleString()}
+            <span className="text-lg font-medium text-[#232426] flex items-center gap-2">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-500">
+                <Search className="h-3 w-3" />
+              </div>
+              {title}
+            </span>
+            <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
+              <ChevronDown className="w-5 h-5 text-rose-400" />
+            </motion.div>
+          </motion.button>
+        )}
+
+        <AnimatePresence mode="wait">
+          {(isExpanded || largeFormat) && (
+            <motion.div
+              layout
+              key="pastwork-content"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="mt-4 relative backdrop-blur-sm bg-white/70 rounded-2xl shadow-sm overflow-hidden"
+            >
+              {/* Search header with input */}
+              <motion.div layout className="p-4 border-b border-rose-100/30">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-rose-400" />
+                  <Input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Search your past PRDs..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 h-10 text-sm rounded-full border-rose-100 bg-white/80 backdrop-blur-sm shadow-sm focus-visible:ring-rose-200"
+                  />
+                  {searchQuery && (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-1 top-1 h-8 w-8 rounded-full hover:bg-rose-50/70"
+                    >
+                      <X className="h-4 w-4" />
+                      <span className="sr-only">Clear search</span>
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
+
+              {/* PRD list */}
+              <motion.div layout>
+                {filteredItems.length > 0 ? (
+                  <ul className="divide-y divide-rose-100/30">
+                    {filteredItems.map((item, index) => (
+                      <motion.li
+                        key={item.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          delay: index * 0.05,
+                          type: "spring",
+                          stiffness: 500,
+                          damping: 30,
+                        }}
+                        className="group"
+                      >
+                        <Dialog>
+                          <div className="flex items-center justify-between p-4 hover:bg-rose-50/70 transition-colors">
+                            <div className="flex-1">
+                              <h3 className="font-medium text-gray-800">{item.title}</h3>
+                              <p className="text-xs text-gray-500">{new Date(item.createdAt).toLocaleString()}</p>
+                            </div>
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <a href={item.url} target="_blank" rel="noopener noreferrer">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full text-rose-500 hover:text-rose-600 hover:bg-rose-100/50"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  <span className="sr-only">View</span>
+                                </Button>
+                              </a>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-full text-rose-500 hover:text-rose-600 hover:bg-rose-100/50"
+                                onClick={() => handleDelete(item.id)}
+                                disabled={deletingId === item.id}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">Delete</span>
+                              </Button>
+                            </div>
+                          </div>
+                        </Dialog>
+                      </motion.li>
+                    ))}
+                  </ul>
+                ) : (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-4 py-8 text-center">
+                    <p className="text-sm text-gray-500">
+                      {items.length === 0
+                        ? "No PRDs found. Create your first one!"
+                        : "No PRDs found matching your search"}
                     </p>
-                  </div>
-                  <div className="flex items-center space-x-2 ml-4">
-                    <motion.a
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-full bg-[#EF6351] text-white hover:bg-[#d94d38] transition-colors"
-                      title="View in Google Docs"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        />
-                      </svg>
-                    </motion.a>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => handleDelete(item.id)}
-                      disabled={deletingId === item.id}
-                      className="p-2 rounded-full text-[#E9DCC6] hover:text-[#EF6351] hover:bg-[#FFF5F3] transition-colors"
-                      title="Delete"
-                    >
-                      <svg 
-                        className="w-4 h-4"
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={2} 
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
-                        />
-                      </svg>
-                    </motion.button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                  </motion.div>
+                )}
+              </motion.div>
+
+              <div className="absolute inset-0 pointer-events-none rounded-2xl ring-1 ring-inset ring-rose-100/20" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Results count */}
+        {(isExpanded || largeFormat) && (
+          <motion.div
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-2 text-center flex justify-between items-center"
+          >
+            <p className="text-xs text-gray-500">
+              {filteredItems.length} PRD{filteredItems.length !== 1 ? "s" : ""} available
+            </p>
+            {largeFormat && onClose && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="text-xs text-rose-400 hover:text-rose-500 hover:bg-transparent"
+              >
+                Close
+              </Button>
+            )}
           </motion.div>
         )}
-      </AnimatePresence>
-    </motion.div>
-  );
-} 
+      </motion.div>
+    </LayoutGroup>
+  )
+}

@@ -1,123 +1,223 @@
-'use client';
+"use client"
 
-import { useState } from 'react';
+import type React from "react"
+
+import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { ChevronRight, Edit2, ArrowRight, CheckCircle } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface Question {
-  id: string;
-  text: string;
+  id: string
+  text: string
 }
 
 interface QuestionsFormProps {
-  questions: Question[];
-  onSubmit: (answers: Record<string, string>) => void;
+  questions: Question[]
+  onSubmit: (answers: Record<string, string>) => void
 }
 
 export default function QuestionsForm({ questions, onSubmit }: QuestionsFormProps) {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>(
-    questions.reduce((acc, q) => ({ ...acc, [q.id]: '' }), {})
-  );
+    questions.reduce((acc, q) => ({ ...acc, [q.id]: "" }), {}),
+  )
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleInputChange = (questionId: string, value: string) => {
-    setAnswers(prev => ({
+    setAnswers((prev) => ({
       ...prev,
-      [questionId]: value
-    }));
-  };
+      [questionId]: value,
+    }))
+  }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(answers);
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    // Small delay to show the animation
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    onSubmit(answers)
+  }
 
   const handleNext = () => {
     if (currentStep < questions.length - 1) {
-      setCurrentStep(prev => prev + 1);
+      setCurrentStep((prev) => prev + 1)
     }
-  };
+  }
+
+  const handlePrevious = () => {
+    if (currentStep > 0) {
+      setCurrentStep((prev) => prev - 1)
+    }
+  }
 
   const handleStepClick = (index: number) => {
-    setCurrentStep(index);
-  };
+    setCurrentStep(index)
+  }
 
-  const currentQuestion = questions[currentStep];
-  const currentValue = answers[currentQuestion.id];
-  const isLastStep = currentStep === questions.length - 1;
+  const currentQuestion = questions[currentStep]
+  const currentValue = answers[currentQuestion.id]
+  const isLastStep = currentStep === questions.length - 1
+  const isFirstStep = currentStep === 0
+  const hasAnswer = currentValue.trim().length > 0
 
   return (
-    <div className="space-y-8">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="space-y-8 max-w-2xl mx-auto"
+    >
       <div className="text-center">
-        <h1 className="text-4xl font-medium text-[#232426] mb-2">Just a few questions</h1>
-        <p className="text-sm text-[#BBC7B6]">Help us understand your needs better</p>
+        <motion.h1
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-4xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent mb-2"
+        >
+          Just a few questions
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-sm text-gray-500"
+        >
+          Help us understand your needs better
+        </motion.p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <p className="text-2xl font-medium text-[#232426] mb-4">{currentQuestion.text}</p>
-          <div className="relative">
-            <textarea
-              id={currentQuestion.id}
-              value={currentValue}
-              onChange={(e) => handleInputChange(currentQuestion.id, e.target.value)}
-              rows={6}
-              className="flex-1 w-full rounded-md border border-[#E9DCC6] bg-white px-3 py-2 text-[#232426] shadow-sm focus:border-[#EF6351] focus:outline-none focus:ring-1 focus:ring-[#EF6351] pr-12 pb-12"
-              placeholder="Type your answer here..."
-              required
-            />
-            <button
-              type="button"
-              onClick={() => {
-                const textarea = document.getElementById(currentQuestion.id) as HTMLTextAreaElement;
-                textarea.focus();
-              }}
-              className="absolute bottom-4 right-4 w-8 h-8 rounded-full flex items-center justify-center shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors bg-[#E9DCC6] text-white hover:bg-[#d4c8b0] cursor-pointer focus:ring-[#E9DCC6]"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4 }}
+        className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6"
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={`question-${currentStep}`}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="text-xl font-medium text-gray-800 mb-4"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </button>
+                {currentQuestion.text}
+              </motion.p>
+            </AnimatePresence>
+            <div className="relative">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`textarea-${currentStep}`}
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  className="w-full"
+                >
+                  <textarea
+                    id={currentQuestion.id}
+                    value={currentValue}
+                    onChange={(e) => handleInputChange(currentQuestion.id, e.target.value)}
+                    rows={6}
+                    className="w-full rounded-xl border border-rose-100 bg-white/90 backdrop-blur-sm px-4 py-3 text-gray-800 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200 pr-12 pb-12 resize-none"
+                    placeholder="Type your answer here..."
+                    required
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.1, rotate: 15 }}
+                    whileTap={{ scale: 0.9 }}
+                    type="button"
+                    onClick={() => {
+                      const textarea = document.getElementById(currentQuestion.id) as HTMLTextAreaElement
+                      textarea.focus()
+                    }}
+                    className="absolute bottom-4 right-4 w-8 h-8 rounded-full flex items-center justify-center shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-200 transition-colors bg-rose-100 text-rose-500 hover:bg-rose-200"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </motion.button>
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
-        </div>
-        <div className="flex justify-between items-center">
-          <div className="flex justify-center gap-2">
-            {questions.map((_, index) => (
-              <button
-                key={index}
-                type="button"
-                onClick={() => handleStepClick(index)}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  index === currentStep ? 'bg-[#EF6351]' : 'bg-[#E9DCC6]'
-                }`}
-                aria-label={`Go to step ${index + 1}`}
-              />
-            ))}
-          </div>
-          <button
-            type={isLastStep ? 'submit' : 'button'}
-            onClick={isLastStep ? undefined : handleNext}
-            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors
-              ${isLastStep ? 'bg-[#EF6351] text-white hover:bg-[#d94d38] cursor-pointer focus:ring-[#EF6351]' : 'bg-[#E9DCC6] text-white cursor-not-allowed'}
-            `}
-            disabled={!isLastStep && !currentValue.trim()}
-          >
-            <svg
-              className={`w-5 h-5 transition-transform duration-300 ${isLastStep ? 'rotate-[-90deg]' : 'rotate-0'}`}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              {!isFirstStep && (
+                <motion.button
+                  whileHover={{ scale: 1.05, x: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  type="button"
+                  onClick={handlePrevious}
+                  className="text-xs text-rose-500 hover:text-rose-600 flex items-center gap-1"
+                >
+                  <ChevronRight className="w-3 h-3 rotate-180" />
+                  <span>Previous</span>
+                </motion.button>
+              )}
+            </div>
+
+            <div className="flex justify-center gap-2">
+              {questions.map((_, index) => (
+                <motion.button
+                  key={index}
+                  whileHover={{ scale: 1.2 }}
+                  whileTap={{ scale: 0.8 }}
+                  type="button"
+                  onClick={() => handleStepClick(index)}
+                  className={cn(
+                    "w-2 h-2 rounded-full transition-colors",
+                    index === currentStep
+                      ? "bg-gradient-to-r from-rose-400 to-pink-400 shadow-sm"
+                      : index < currentStep
+                        ? "bg-rose-200"
+                        : "bg-rose-100",
+                  )}
+                  aria-label={`Go to step ${index + 1}`}
+                />
+              ))}
+            </div>
+
+            <motion.button
+              whileHover={hasAnswer ? { scale: 1.05 } : {}}
+              whileTap={hasAnswer ? { scale: 0.95 } : {}}
+              type={isLastStep ? "submit" : "button"}
+              onClick={isLastStep ? undefined : handleNext}
+              disabled={!hasAnswer || isSubmitting}
+              className={cn(
+                "rounded-full flex items-center justify-center shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all px-4 py-2",
+                hasAnswer
+                  ? isLastStep
+                    ? "bg-gradient-to-r from-rose-400 to-pink-400 text-white hover:from-rose-500 hover:to-pink-500 focus:ring-rose-200"
+                    : "bg-gradient-to-r from-rose-400 to-pink-400 text-white hover:from-rose-500 hover:to-pink-500 focus:ring-rose-200"
+                  : "bg-rose-100 text-rose-300 cursor-not-allowed",
+              )}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-} 
+              {isSubmitting ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                  className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                />
+              ) : isLastStep ? (
+                <>
+                  <span className="mr-2">Submit</span>
+                  <CheckCircle className="w-4 h-4" />
+                </>
+              ) : (
+                <>
+                  <span className="mr-2">Next</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </motion.button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
+  )
+}
