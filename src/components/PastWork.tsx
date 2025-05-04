@@ -36,7 +36,7 @@ export default function PastWork({
   const [filteredItems, setFilteredItems] = useState<PastWorkItem[]>([])
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedItem, setSelectedItem] = useState<PastWorkItem | null>(null)
+  const [setSelectedItem] = useState<PastWorkItem | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   
   const loadItems = useCallback(() => {
@@ -143,9 +143,9 @@ export default function PastWork({
     }
   }
 
-  const handleItemSelect = (item: PastWorkItem) => {
-    setSelectedItem(item)
-  }
+  // const handleItemSelect = (item: PastWorkItem) => {
+  //   setSelectedItem(item)
+  // }
 
   // Compact view (collapsed or toggle button)
   if (!largeFormat && !isExpanded) {
