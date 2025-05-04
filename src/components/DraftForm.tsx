@@ -43,8 +43,7 @@ export default function DraftForm() {
   const [internalTerms, setInternalTerms] = useState<string[]>([])
   const [pendingTerms, setPendingTerms] = useState<string[]>([])
   const [pendingTermDefs, setPendingTermDefs] = useState<Record<string, string>>({})
-  const [setShowTermDefs] = useState(false)
-  const [matchedContext, setMatchedContext] = useState<any[]>([])
+  const [matchedContext, setMatchedContext] = useState<string[]>([])
 
   // Load saved state from localStorage
   useEffect(() => {
@@ -161,7 +160,13 @@ export default function DraftForm() {
     }
   }
   // Helper to fetch questions
-  const fetchQuestions = async (teamTerms: Record<string, string>, matchedContext: any[], storedContext: string | null) => {
+  type FetchQuestions = (
+    teamTerms: Record<string, string>,
+    matchedContext: string[],
+    storedContext: string | null
+  ) => Promise<void>;
+
+  const fetchQuestions: FetchQuestions = async (teamTerms, matchedContext, storedContext) => {
     const questionsResponse = await fetch("/api/generate-questions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
