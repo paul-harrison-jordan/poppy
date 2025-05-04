@@ -36,7 +36,7 @@ export default function PastWork({
   const [filteredItems, setFilteredItems] = useState<PastWorkItem[]>([])
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [setSelectedItem] = useState<PastWorkItem | null>(null)
+  // const [setSelectedItem] = useState<PastWorkItem | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   
   const loadItems = useCallback(() => {
