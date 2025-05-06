@@ -137,7 +137,7 @@ export default function KeyTermsPage() {
                 </button>
               </div>
               <p className="text-sm text-[#BBC7B6] mb-6 px-6 pt-2">
-                Edit your team's key terms and definitions. Changes are saved automatically.
+                Edit your team&apos;s key terms and definitions. Changes are saved automatically.
               </p>
               <div className="px-6 pb-4 flex items-center justify-between">
                 <input
