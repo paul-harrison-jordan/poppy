@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Toast from './Toast';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from "framer-motion";
+import { CheckCircle, ArrowRight, ChevronRight, PartyPopper } from "lucide-react";
 
 interface FormData {
   teamStrategy: string;
@@ -30,6 +33,9 @@ export default function ContextForm() {
   const [currentStep, setCurrentStep] = useState(0);
   const [showEditor, setShowEditor] = useState(false);
   const [editorValue, setEditorValue] = useState('');
+  const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const router = useRouter();
 
   // Constants
   const steps: Step[] = [
@@ -53,45 +59,33 @@ export default function ContextForm() {
     },
     {
       id: 'examplesOfHowYouThink',
-      label: 'Examples of how you think',
-      placeholder: 'Past the markdown text of an example PRD that has additional context written by you explaining why you wrote things the way you did, and why the structure of the document is important. The more you provide about how you think and why the PRD looks the way it does, the better your results will be.',
+      label: 'Annotated Example PRD',
+      placeholder: 'Paste the markdown text of an example PRD that has additional context written by you explaining why you wrote things the way you did, and why the structure of the document is important. The more you provide about how you think and why the PRD looks the way it does, the better your results will be.',
       rows: 4
     }
   ];
 
-  // Effects
+  // Resume logic
   useEffect(() => {
     const storedContext = localStorage.getItem('personalContext');
     if (storedContext) {
       try {
         const parsedContext = JSON.parse(storedContext);
-        setFormData(prev => ({
-          ...prev,
-          ...parsedContext
-        }));
+        const isComplete = steps.every(step => parsedContext[step.id]?.trim());
+        if (!isComplete && Object.values(parsedContext).some(Boolean)) {
+          setShowResumePrompt(true);
+        }
+        setFormData(prev => ({ ...prev, ...parsedContext }));
       } catch (error) {
         console.error('Error parsing stored context:', error);
       }
     }
   }, []);
 
+  // Auto-save progress
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft' && currentStep > 0) {
-        e.preventDefault();
-        setCurrentStep(prev => prev - 1);
-      } else if (e.key === 'ArrowRight' && currentStep < steps.length - 1) {
-        e.preventDefault();
-        setCurrentStep(prev => prev + 1);
-      } else if (e.key === 'Enter' && e.metaKey) {
-        e.preventDefault();
-        handleSubmit(e as unknown as React.FormEvent);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep, formData]);
+    localStorage.setItem('personalContext', JSON.stringify(formData));
+  }, [formData]);
 
   // Handlers
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -108,47 +102,132 @@ export default function ContextForm() {
     }
   };
 
+  const handlePrevious = () => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
+
   const handleStepClick = (index: number) => {
     setCurrentStep(index);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      localStorage.setItem('personalContext', JSON.stringify(formData));
-      setToastMessage('Context updated successfully!');
-      setShowToast(true);
-    } catch (error) {
-      console.error('Error storing context:', error);
-      setToastMessage('Failed to update context');
-      setShowToast(true);
-    }
+    localStorage.setItem('personalContext', JSON.stringify(formData));
+    setShowCelebration(true);
+    setToastMessage('Context updated successfully!');
+    setShowToast(true);
+    setTimeout(() => {
+      setShowCelebration(false);
+      router.replace('/');
+    }, 2000);
   };
 
-  const handleOpenEditor = () => {
-    setEditorValue(formData[currentStepData.id]);
-    setShowEditor(true);
+  const handleResume = () => {
+    setShowResumePrompt(false);
   };
 
-  const handleCloseEditor = () => {
-    setFormData(prev => ({
-      ...prev,
-      [currentStepData.id]: editorValue
-    }));
-    setShowEditor(false);
+  const handleStartOver = () => {
+    setFormData({
+      teamStrategy: '',
+      howYouThinkAboutProduct: '',
+      pillarGoalsKeyTermsBackground: '',
+      examplesOfHowYouThink: '',
+    });
+    setCurrentStep(0);
+    setShowResumePrompt(false);
+    localStorage.removeItem('personalContext');
   };
 
   // Derived values
   const currentStepData = steps[currentStep];
   const currentValue = formData[currentStepData.id];
   const isLastStep = currentStep === steps.length - 1;
+  const isFirstStep = currentStep === 0;
+  const allComplete = steps.every(step => formData[step.id]?.trim());
 
   // Render
   return (
-    <>
-      <form onSubmit={handleSubmit} className="space-y-4 mx-auto">
-        <div className="space-y-2">
-          <p className="text-4xl font-medium text-[#232426] mb-8 text-center">{currentStepData.label}</p>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="space-y-8 max-w-2xl mx-auto"
+    >
+      {/* Resume Prompt Modal */}
+      <AnimatePresence>
+        {showResumePrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          >
+            <div className="bg-white/90 rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+              <h2 className="text-2xl font-bold mb-4 text-[#232426]">Resume your context?</h2>
+              <p className="mb-6 text-gray-600">We found saved progress for your context. Would you like to continue where you left off or start over?</p>
+              <div className="flex justify-center gap-4">
+                <button
+                  className="px-4 py-2 rounded-full bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold shadow-sm hover:from-rose-600 hover:to-pink-500 transition-colors"
+                  onClick={handleResume}
+                >
+                  Resume
+                </button>
+                <button
+                  className="px-4 py-2 rounded-full bg-white border border-rose-200 text-rose-500 font-medium hover:bg-rose-50/70 transition-colors"
+                  onClick={handleStartOver}
+                >
+                  Start Over
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Celebration Modal */}
+      <AnimatePresence>
+        {showCelebration && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          >
+            <div className="bg-white/90 rounded-2xl shadow-lg p-8 max-w-md w-full text-center flex flex-col items-center">
+              <PartyPopper className="w-12 h-12 text-rose-500 mb-4 animate-bounce" />
+              <h2 className="text-2xl font-bold mb-2 text-[#232426]">You're ready to draft your first PRD!</h2>
+              <p className="mb-4 text-gray-600">Your context is complete. You can now start drafting PRDs with the best possible results.</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6"
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <motion.h1
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-3xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent mb-2 text-center"
+          >
+            {currentStepData.label}
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="text-sm text-gray-500 text-center mb-4"
+          >
+            {currentStepData.placeholder}
+          </motion.p>
           <div className="relative">
             <textarea
               id={currentStepData.id}
@@ -156,105 +235,81 @@ export default function ContextForm() {
               value={currentValue}
               onChange={handleInputChange}
               rows={8}
-              className="flex-1 w-full rounded-md border border-[#E9DCC6] bg-white px-3 py-2 text-[#232426] shadow-sm focus:border-[#EF6351] focus:outline-none focus:ring-1 focus:ring-[#EF6351] pr-12 pb-12"
+              className="w-full rounded-xl border border-rose-100 bg-white/90 backdrop-blur-sm px-4 py-3 text-gray-800 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200 pr-12 pb-12 resize-none"
               placeholder={currentStepData.placeholder}
               required
               autoFocus
             />
-            <button
-              type="button"
-              onClick={handleOpenEditor}
-              className="absolute bottom-4 right-4 w-8 h-8 rounded-full flex items-center justify-center shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors bg-[#E9DCC6] text-white hover:bg-[#d4c8b0] cursor-pointer focus:ring-[#E9DCC6]"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </button>
           </div>
-          <button
-            type={isLastStep ? 'submit' : 'button'}
-            onClick={isLastStep ? undefined : handleNext}
-            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors
-              ${currentValue.trim() ? 'bg-[#EF6351] text-white hover:bg-[#d94d38] cursor-pointer focus:ring-[#EF6351]' : 'bg-[#E9DCC6] text-white cursor-not-allowed'}
-            `}
-            disabled={!currentValue.trim()}
-          >
-            <svg
-              className="w-5 h-5 transition-transform duration-300 rotate-[-90deg]"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-        <div className="flex justify-center gap-2">
-          {steps.map((_, index) => (
-            <button
-              key={index}
-              type="button"
-              onClick={() => handleStepClick(index)}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                index === currentStep ? 'bg-[#EF6351]' : 'bg-[#E9DCC6]'
-              }`}
-              aria-label={`Go to step ${index + 1}`}
-            />
-          ))}
-        </div>
-      </form>
-
-      {showEditor && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-4xl w-full max-h-[80vh] flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-[#232426]">{currentStepData.label}</h3>
-              <button
-                onClick={handleCloseEditor}
-                className="text-[#232426] hover:text-[#EF6351]"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              {!isFirstStep && (
+                <motion.button
+                  whileHover={{ scale: 1.05, x: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  type="button"
+                  onClick={handlePrevious}
+                  className="text-xs text-rose-500 hover:text-rose-600 flex items-center gap-1"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+                  <ChevronRight className="w-3 h-3 rotate-180" />
+                  <span>Previous</span>
+                </motion.button>
+              )}
             </div>
-            <textarea
-              value={editorValue}
-              onChange={(e) => setEditorValue(e.target.value)}
-              className="flex-1 rounded-md border border-[#E9DCC6] px-3 py-2 text-[#232426] shadow-sm focus:border-[#EF6351] focus:outline-none focus:ring-1 focus:ring-[#EF6351] resize-none"
-              rows={20}
-            />
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={handleCloseEditor}
-                className="px-4 py-2 bg-[#EF6351] text-white rounded-md hover:bg-[#d94d38] transition-colors"
-              >
-                Save Changes
-              </button>
+            <div className="flex justify-center gap-2">
+              {steps.map((_, index) => (
+                <motion.button
+                  key={index}
+                  whileHover={{ scale: 1.2 }}
+                  whileTap={{ scale: 0.8 }}
+                  type="button"
+                  onClick={() => handleStepClick(index)}
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    index === currentStep
+                      ? 'bg-gradient-to-r from-rose-500 to-rose-400 shadow-sm'
+                      : index < currentStep
+                        ? 'bg-rose-200'
+                        : 'bg-rose-100'
+                  }`}
+                  aria-label={`Go to step ${index + 1}`}
+                />
+              ))}
             </div>
+            <motion.button
+              whileHover={currentValue.trim() ? { scale: 1.05 } : {}}
+              whileTap={currentValue.trim() ? { scale: 0.95 } : {}}
+              type={isLastStep ? "submit" : "button"}
+              onClick={isLastStep ? undefined : handleNext}
+              disabled={!currentValue.trim()}
+              className={`rounded-full flex items-center justify-center shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all px-4 py-2 ${
+                currentValue.trim()
+                  ? isLastStep
+                    ? 'bg-gradient-to-r from-rose-500 to-pink-400 text-white hover:from-rose-600 hover:to-pink-500 focus:ring-rose-200'
+                    : 'bg-gradient-to-r from-rose-500 to-pink-400 text-white hover:from-rose-600 hover:to-pink-500 focus:ring-rose-200'
+                  : 'bg-rose-100 text-rose-300 cursor-not-allowed'
+              }`}
+            >
+              {isLastStep ? (
+                <>
+                  <span className="mr-2">Finish</span>
+                  <CheckCircle className="w-4 h-4" />
+                </>
+              ) : (
+                <>
+                  <span className="mr-2">Next</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </motion.button>
           </div>
-        </div>
-      )}
-
+        </form>
+      </motion.div>
       {showToast && (
         <Toast
           message={toastMessage}
           onClose={() => setShowToast(false)}
         />
       )}
-    </>
+    </motion.div>
   );
 } 
