@@ -15,45 +15,45 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const folderId = body.folderId;
+    const { driveFolderId = '', documentId = '' } = await request.json();
 
-    if (!folderId) {
-      return NextResponse.json(
-        { error: 'Folder ID is required' },
-        { status: 400 }
-      );
-    }
-
-    // Initialize the OAuth2 client
+    // Initialize OAuth2 client with current user's access token
     const auth = new OAuth2Client({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       redirectUri: process.env.GOOGLE_REDIRECT_URI,
     });
-
-    // Set the access token from the session
     if (!authSession.accessToken) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
+    auth.setCredentials({ access_token: authSession.accessToken });
 
-    auth.setCredentials({
-      access_token: authSession.accessToken,
-    });
-
-    // Initialize the Drive API
     const drive = google.drive({ version: 'v3', auth });
 
-    // List all files in the specified folder
-    const response = await drive.files.list({
-      q: `'${folderId}' in parents and mimeType='application/vnd.google-apps.document'`,
+    // If a documentId was passed, return just that document
+    if (documentId) {
+      const { data } = await drive.files.get({
+        fileId: documentId,
+        fields: 'id, name',
+        supportsAllDrives: true,
+      });
+
+      const document: GoogleDoc = {
+        id: data.id!,
+        name: data.name || 'Untitled Document',
+      };
+
+      return NextResponse.json({ document });
+    }
+
+    // Otherwise, we know folderId must be present — list its docs
+    const listRes = await drive.files.list({
+      q: `'${driveFolderId}' in parents and mimeType='application/vnd.google-apps.document'`,
       fields: 'files(id, name)',
+      supportsAllDrives: true,
     });
 
-    const documents: GoogleDoc[] = (response.data.files || []).map(doc => ({
+    const documents: GoogleDoc[] = (listRes.data.files || []).map((doc) => ({
       id: doc.id!,
       name: doc.name || 'Untitled Document',
     }));
@@ -69,4 +69,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}

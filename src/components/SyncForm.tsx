@@ -19,8 +19,13 @@ interface PineconeEmbedding {
   metadata?: Record<string, unknown>;
 }
 
+interface DriveIds {
+  folderId?: string;
+  documentId?: string;
+}
+
 export default function SyncForm({ onSyncComplete }: SyncFormProps) {
-  const [folderId, setFolderId] = useState('');
+  const [driveLink, setDriveLink] = useState('');
   const [syncStatus, setSyncStatus] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -30,13 +35,17 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
     setIsSyncing(true);
     
     try {
-      // First, fetch all documents from the folder
+
+      // 2) Regex-match the ID in the pathname
+      //    Matches either "…/d/<id>" or "…/folders/<id>"
+      const { folderId, documentId } = extractDriveIds(driveLink);
+
       const docsResponse = await fetch('/api/fetch-docs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ folderId }),
+        body: JSON.stringify({ driveFolderId: folderId, documentId: documentId }),
       });
 
       if (!docsResponse.ok) {
@@ -143,16 +152,42 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
     }
   };
 
+  function extractDriveIds(input: string): DriveIds {
+    let folderId: string | undefined;
+    let documentId: string | undefined;
+
+    try {
+      const url = new URL(input);
+
+      // Extract folder ID
+      const folderMatch = url.pathname.match(/\/folders\/([A-Za-z0-9_-]+)/);
+      console.log(folderMatch);
+      if (folderMatch) folderId = folderMatch[1];
+
+      // Extract document ID
+      const docMatch = url.pathname.match(/\/document\/d\/([A-Za-z0-9_-]+)/);
+      if (docMatch) documentId = docMatch[1];
+    } catch {
+      // Not a URL, check if input is a raw ID
+      if (/^[A-Za-z0-9_-]{10,}$/.test(input)) {
+        // Could be either, but let's assume documentId for this case
+        documentId = input;
+      }
+    }
+
+    return { folderId, documentId };
+  }
+
   return (
     <div className="space-y-4">
       <form onSubmit={handleSyncPRDs} className="flex items-center gap-2">
         <input
           type="text"
-          id="folderId"
-          value={folderId}
-          onChange={(e) => setFolderId(e.target.value)}
+          id="url"
+          value={driveLink}
+          onChange={(e) => setDriveLink(e.target.value)}
           className="flex-1 rounded-md border border-[#E9DCC6] bg-white px-3 py-2 text-[#232426] shadow-sm focus:border-[#EF6351] focus:outline-none focus:ring-1 focus:ring-[#EF6351]"
-          placeholder="Add Drive Folder ID so we can use it to train ChatPRD"
+          placeholder="Paste Google Drive folder or document URL or ID"
           required
           disabled={isSyncing}
         />
