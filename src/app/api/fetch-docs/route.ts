@@ -43,7 +43,7 @@ export async function POST(request: Request) {
         name: data.name || 'Untitled Document',
       };
 
-      return NextResponse.json({ document });
+      return NextResponse.json({ documents: [document] });
     }
 
     // Otherwise, we know folderId must be present — list its docs
@@ -51,6 +51,8 @@ export async function POST(request: Request) {
       q: `'${driveFolderId}' in parents and mimeType='application/vnd.google-apps.document'`,
       fields: 'files(id, name)',
       supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      corpora: 'allDrives',
     });
 
     const documents: GoogleDoc[] = (listRes.data.files || []).map((doc) => ({

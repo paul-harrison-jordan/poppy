@@ -54,6 +54,7 @@ export async function POST(request: Request) {
     const docResponse = await drive.files.get({
       fileId: documentId,
       fields: 'id, name',
+      supportsAllDrives: true
     });
 
     const doc = docResponse.data;
