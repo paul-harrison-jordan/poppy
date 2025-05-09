@@ -40,9 +40,6 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
   if (status === 'loading') {
     return <div>Loading...</div>;
   }
-  if (!session) {
-    return <div>Please log in to sync documents.</div>;
-  }
 
   const handleSyncPRDs = async (e: React.FormEvent) => {
     e.preventDefault();
