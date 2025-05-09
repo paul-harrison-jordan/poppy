@@ -1,7 +1,6 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import SyncForm from '@/components/SyncForm';
 import { useEffect, useState } from 'react';
