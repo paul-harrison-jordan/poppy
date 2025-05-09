@@ -81,9 +81,6 @@ export default function Onboarding() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent mb-4">
             Welcome to ChatPRD
           </h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Let's get you set up to start writing better PRDs with AI assistance.
-          </p>
         </div>
 
         {!currentStep ? (

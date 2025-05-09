@@ -19,8 +19,7 @@ export default function KeyTermsPage() {
   const [editValue, setEditValue] = useState<string>("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newTerm, setNewTerm] = useState("");
   const [newDefinition, setNewDefinition] = useState("");
@@ -77,10 +76,6 @@ export default function KeyTermsPage() {
     setAddError("");
   };
 
-  // Reset to page 1 on search
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
 
   if (status === "loading") {
     return (
