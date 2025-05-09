@@ -242,7 +242,6 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
           documents={documents}
           onComplete={() => {
             setDocuments([]);
-            setSyncStatus('');
             setIsSyncing(false);
           }}
           position="top-center"
