@@ -29,7 +29,6 @@ interface DriveIds {
 export default function SyncForm({ onComplete }: SyncFormProps) {
   const router = useRouter();
   const [driveLink, setDriveLink] = useState('');
-  const [setSyncStatus] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [showToast, setShowToast] = useState(false);
