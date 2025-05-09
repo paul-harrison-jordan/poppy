@@ -66,7 +66,6 @@ export default function SyncPage() {
       completedSteps.push('sync');
       localStorage.setItem('completedSteps', JSON.stringify(completedSteps));
     }
-    router.push('/onboarding');
   };
 
   return (
