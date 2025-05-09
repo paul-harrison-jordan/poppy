@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { ProgressNotification, type Document } from '@/components/progress-notification';
 import Toast from './Toast';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 
 interface SyncFormProps {
   onComplete?: () => void;
