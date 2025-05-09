@@ -11,7 +11,11 @@ interface Question {
   reasoning: string;
 }
 
-export default function BrandMessagingForm() {
+interface BrandMessagingFormProps {
+  onComplete?: () => void;
+}
+
+export default function BrandMessagingForm({ onComplete }: BrandMessagingFormProps) {
   const [title, setTitle] = useState('');
   const [query, setQuery] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -127,6 +131,11 @@ export default function BrandMessagingForm() {
       setShowSuccessModal(true);
       setLoadingState({ isOpen: false, title: '', message: '' });
       setShowPastWork(false);
+
+      // Call onComplete if provided
+      if (onComplete) {
+        onComplete();
+      }
     } catch (error) {
       console.error('Error generating brand messaging:', error);
       setError('Failed to generate brand messaging. Please try again.');

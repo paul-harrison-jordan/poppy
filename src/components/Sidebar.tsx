@@ -44,19 +44,9 @@ export default function Sidebar() {
       icon: <RefreshCw className="w-4 h-4" />,
     },
     {
-      href: "/brand-messaging",
-      label: "Brand Messaging",
-      icon: <Mic className="w-4 h-4" />,
-    },
-    {
       href: "/key-terms",
       label: "Key Terms",
       icon: <BookOpen className="w-4 h-4" />,
-    },
-    {
-      href: "/co-pilot",
-      label: "Co-Pilot",
-      icon: <Compass className="w-4 h-4" />,
     },
     {
       href: "/instructions",

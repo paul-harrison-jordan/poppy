@@ -2,9 +2,11 @@
 
 import React, { useState } from 'react';
 import { ProgressNotification, type Document } from '@/components/progress-notification';
+import Toast from './Toast';
+import { useRouter } from 'next/navigation';
 
 interface SyncFormProps {
-  onSyncComplete?: () => void;
+  onComplete?: () => void;
 }
 
 interface GoogleDoc {
@@ -24,20 +26,21 @@ interface DriveIds {
   documentId?: string;
 }
 
-export default function SyncForm({ onSyncComplete }: SyncFormProps) {
+export default function SyncForm({ onComplete }: SyncFormProps) {
+  const router = useRouter();
   const [driveLink, setDriveLink] = useState('');
   const [syncStatus, setSyncStatus] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [showReturnPrompt, setShowReturnPrompt] = useState(false);
 
   const handleSyncPRDs = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSyncing(true);
     
     try {
-
-      // 2) Regex-match the ID in the pathname
-      //    Matches either "…/d/<id>" or "…/folders/<id>"
       const { folderId, documentId } = extractDriveIds(driveLink);
 
       const docsResponse = await fetch('/api/fetch-docs', {
@@ -54,7 +57,6 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
 
       const { documents: fetchedDocs } = await docsResponse.json();
       
-      // Initialize documents state with all documents marked as not synced
       const initialDocs: Document[] = fetchedDocs.map((doc: GoogleDoc) => ({
         id: doc.id,
         name: doc.name,
@@ -62,7 +64,6 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
       }));
       setDocuments(initialDocs);
 
-      // Create an array of promises for each document sync
       const syncPromises = fetchedDocs.map(async (doc: GoogleDoc) => {
         try {
           const response = await fetch('/api/chunk-docs', {
@@ -110,14 +111,12 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
             return null;
           }
 
-          // Update the document's sync status
           setDocuments(prevDocs => 
             prevDocs.map(d => 
               d.id === doc.id ? { ...d, synced: true } : d
             )
           );
 
-          // Store the document name in prds localStorage
           const storedPrds = localStorage.getItem('prds');
           const prds = storedPrds ? JSON.parse(storedPrds) : [];
           prds.push({
@@ -135,18 +134,22 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
         }
       });
 
-      // Wait for all sync operations to complete
       const results = await Promise.all(syncPromises);
-      
-      // Filter out any failed syncs
       const successfulSyncs = results.filter((doc): doc is string => doc !== null);
       
       if (successfulSyncs.length > 0) {
-        onSyncComplete?.();
+        setToastMessage('Documents synced successfully!');
+        setShowToast(true);
+        setShowReturnPrompt(true);
+        if (onComplete) {
+          onComplete();
+        }
       }
 
     } catch (error) {
       console.error('Error in sync process:', error);
+      setToastMessage('Failed to sync documents. Please try again.');
+      setShowToast(true);
     } finally {
       setIsSyncing(false);
     }
@@ -159,18 +162,13 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
     try {
       const url = new URL(input);
 
-      // Extract folder ID
       const folderMatch = url.pathname.match(/\/folders\/([A-Za-z0-9_-]+)/);
-      console.log(folderMatch);
       if (folderMatch) folderId = folderMatch[1];
 
-      // Extract document ID
       const docMatch = url.pathname.match(/\/document\/d\/([A-Za-z0-9_-]+)/);
       if (docMatch) documentId = docMatch[1];
     } catch {
-      // Not a URL, check if input is a raw ID
       if (/^[A-Za-z0-9_-]{10,}$/.test(input)) {
-        // Could be either, but let's assume documentId for this case
         documentId = input;
       }
     }
@@ -179,36 +177,62 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <form onSubmit={handleSyncPRDs} className="flex items-center gap-2">
-        <input
-          type="text"
-          id="url"
-          value={driveLink}
-          onChange={(e) => setDriveLink(e.target.value)}
-          className="flex-1 rounded-md border border-[#E9DCC6] bg-white px-3 py-2 text-[#232426] shadow-sm focus:border-[#EF6351] focus:outline-none focus:ring-1 focus:ring-[#EF6351]"
-          placeholder="Paste Google Drive folder or document URL or ID"
-          required
-          disabled={isSyncing}
-        />
-        <button
-          type="submit"
-          className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-            isSyncing 
-              ? 'bg-[#BBC7B6] cursor-not-allowed' 
-              : 'bg-[#EF6351] hover:bg-[#d94d38] focus:ring-[#EF6351]'
-          }`}
-          disabled={isSyncing}
-        >
-          <svg className="w-5 h-5 rotate-[-90deg]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </form>
+    <div className="space-y-8 max-w-2xl mx-auto">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6">
+        <form onSubmit={handleSyncPRDs} className="space-y-6">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent mb-2 text-center">
+            Sync Documents
+          </h1>
+          <p className="text-sm text-gray-500 text-center mb-4">
+            Connect your Google Drive to access and manage your PRDs. We'll use these documents to provide better context for your PRDs.
+          </p>
+          <div className="space-y-6">
+            <div>
+              <label htmlFor="driveLink" className="block font-medium text-gray-900 mb-1">
+                Google Drive Link
+              </label>
+              <div className="flex gap-2 items-start">
+                <input
+                  type="text"
+                  id="driveLink"
+                  value={driveLink}
+                  onChange={(e) => setDriveLink(e.target.value)}
+                  className="w-full rounded-xl border border-rose-100 bg-white/90 backdrop-blur-sm px-4 py-3 text-gray-800 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200"
+                  placeholder="Paste Google Drive folder or document URL or ID"
+                  required
+                  disabled={isSyncing}
+                />
+                <button
+                  type="submit"
+                  className={`px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold shadow-sm hover:from-rose-600 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-rose-200 ${
+                    isSyncing ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  disabled={isSyncing}
+                >
+                  {isSyncing ? 'Syncing...' : 'Sync'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
 
-      {syncStatus && (
-        <div className="text-sm text-[#232426]">
-          {syncStatus}
+      {showToast && (
+        <Toast
+          message={toastMessage}
+          onClose={() => setShowToast(false)}
+        />
+      )}
+
+      {showReturnPrompt && (
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6 text-center">
+          <p className="text-gray-700 mb-4">Great! You've synced your documents. Ready to continue with the setup?</p>
+          <button
+            onClick={() => router.push('/onboarding')}
+            className="px-6 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold shadow-sm hover:from-rose-600 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-rose-200"
+          >
+            Return to Setup
+          </button>
         </div>
       )}
 
@@ -217,13 +241,13 @@ export default function SyncForm({ onSyncComplete }: SyncFormProps) {
           isLoading={isSyncing}
           documents={documents}
           onComplete={() => {
-            setDocuments([]); // Clear documents after completion
-            setSyncStatus(''); // Clear status message
-            setIsSyncing(false); // Ensure syncing state is set to false
+            setDocuments([]);
+            setSyncStatus('');
+            setIsSyncing(false);
           }}
           position="top-center"
         />
-        </div>
+      </div>
     </div>
   );
 } 

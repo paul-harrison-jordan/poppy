@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Toast from './Toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 
@@ -18,13 +19,18 @@ const defaultFormData: FormData = {
   examplesOfHowYouThink: '',
 };
 
-export default function ContextForm() {
-  // State
+interface ContextFormProps {
+  onComplete?: () => void;
+}
+
+export default function ContextForm({ onComplete }: ContextFormProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [editField, setEditField] = useState<keyof FormData | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [showGetStarted, setShowGetStarted] = useState(false);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -43,11 +49,17 @@ export default function ContextForm() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     localStorage.setItem('personalContext', JSON.stringify(formData));
     setToastMessage('Context updated successfully!');
     setShowToast(true);
+    setShowGetStarted(true);
+    
+    // Call onComplete if provided
+    if (onComplete) {
+      onComplete();
+    }
   };
 
   const handleEditClick = (field: keyof FormData) => {
@@ -66,10 +78,15 @@ export default function ContextForm() {
     setEditValue("");
   };
 
+  const handleGetStarted = () => {
+    localStorage.setItem('onboardingComplete', 'true');
+    router.push('/');
+  };
+
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6">
-        <form onSubmit={handleSave} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent mb-2 text-center">
             Personal Context
           </h1>
@@ -237,6 +254,17 @@ export default function ContextForm() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+      {showGetStarted && (
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6 text-center">
+          <p className="text-gray-700 mb-4">Great! Your context has been saved. Ready to start writing PRDs?</p>
+          <button
+            onClick={handleGetStarted}
+            className="px-8 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold shadow-sm hover:from-rose-600 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-rose-200"
+          >
+            Get Started
+          </button>
+        </div>
       )}
     </div>
   );

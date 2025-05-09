@@ -1,6 +1,21 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 
 export default function Instructions() {
+  const router = useRouter();
+
+  const handleComplete = () => {
+    // Mark the learn step as complete
+    const completedSteps = JSON.parse(localStorage.getItem('completedSteps') || '[]');
+    if (!completedSteps.includes('learn')) {
+      completedSteps.push('learn');
+      localStorage.setItem('completedSteps', JSON.stringify(completedSteps));
+    }
+    router.push('/onboarding');
+  };
+
   return (
     <div className="min-h-screen bg-[#FFFAF3]">
       <Sidebar />
@@ -56,6 +71,15 @@ export default function Instructions() {
                 <li>Review and edit generated PRDs as needed</li>
               </ul>
             </section>
+
+            <div className="pt-6 border-t border-gray-200">
+              <button
+                onClick={handleComplete}
+                className="w-full px-4 py-2 text-sm font-medium text-white bg-rose-500 rounded-md hover:bg-rose-600"
+              >
+                Complete Setup
+              </button>
+            </div>
           </div>
         </div>
       </div>

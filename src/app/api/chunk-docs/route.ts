@@ -11,6 +11,25 @@ interface DocumentContent {
   content: string;
 }
 
+function streamTextResponse(iterable: AsyncIterable<any>) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async pull(controller) {
+      for await (const chunk of iterable) {
+        controller.enqueue(encoder.encode(chunk.choices[0]?.delta?.content ?? ''));
+      }
+      controller.close();
+    },
+  });
+
+  return new NextResponse(stream, {
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-cache',
+    },
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const authSession = await getAuthServerSession();

@@ -1,6 +1,7 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import SyncForm from '@/components/SyncForm';
 import { useEffect, useState } from 'react';
@@ -15,6 +16,7 @@ interface PRD {
 
 export default function SyncPage() {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const [syncedPrds, setSyncedPrds] = useState<PRD[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -57,13 +59,23 @@ export default function SyncPage() {
     return null;
   }
 
+  const handleSyncComplete = () => {
+    // Mark the sync step as complete
+    const completedSteps = JSON.parse(localStorage.getItem('completedSteps') || '[]');
+    if (!completedSteps.includes('sync')) {
+      completedSteps.push('sync');
+      localStorage.setItem('completedSteps', JSON.stringify(completedSteps));
+    }
+    router.push('/onboarding');
+  };
+
   return (
     <div className="min-h-screen bg-[#FFFAF3]">
       <Sidebar />
       <div className={`ml-64 flex items-center justify-center min-h-screen bg-[#FFFAF3]`}>
         <div className="max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-8 flex justify-center">
             <div className="w-full max-w-4xl space-y-8">
-            <SyncForm onSyncComplete={refreshSyncedPrds} />
+            <SyncForm onComplete={handleSyncComplete} />
             {/* Synced PRDs Table - match width with other cards */}
             <div className="bg-white rounded-xl shadow-lg border border-[#E9DCC6] overflow-x-auto">
               <h2 className="text-2xl font-bold text-[#232426] px-6 pt-6">Synced Documents</h2>
