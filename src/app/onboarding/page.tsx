@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 
 
 export default function OnboardingPage() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
 if (!session) {
   return (
     <div className="min-h-screen bg-[#FFFAF3] flex items-center justify-center">
