@@ -29,7 +29,7 @@ interface DriveIds {
 export default function SyncForm({ onComplete }: SyncFormProps) {
   const router = useRouter();
   const [driveLink, setDriveLink] = useState('');
-  const [syncStatus, setSyncStatus] = useState('');
+  const [setSyncStatus] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [showToast, setShowToast] = useState(false);
@@ -184,7 +184,7 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
             Sync Documents
           </h1>
           <p className="text-sm text-gray-500 text-center mb-4">
-            Connect your Google Drive to access and manage your PRDs. We'll use these documents to provide better context for your PRDs.
+            Connect your Google Drive to access and manage your PRDs. We&apos;ll use these documents to provide better context for your PRDs.
           </p>
           <div className="space-y-6">
             <div>
@@ -198,7 +198,7 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
                   value={driveLink}
                   onChange={(e) => setDriveLink(e.target.value)}
                   className="w-full rounded-xl border border-rose-100 bg-white/90 backdrop-blur-sm px-4 py-3 text-gray-800 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200"
-                  placeholder="Paste Google Drive folder or document URL or ID"
+                  placeholder="Paste Google Drive folder or document URL"
                   required
                   disabled={isSyncing}
                 />
@@ -226,7 +226,7 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
 
       {showReturnPrompt && (
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6 text-center">
-          <p className="text-gray-700 mb-4">Great! You've synced your documents. Ready to continue with the setup?</p>
+          <p className="text-gray-700 mb-4">Great! You&apos;ve synced your documents. Ready to continue with the setup?</p>
           <button
             onClick={() => router.push('/onboarding')}
             className="px-6 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold shadow-sm hover:from-rose-600 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-rose-200"

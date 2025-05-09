@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Pencil, Settings, RefreshCw, Mic, BookOpen, LogOut, GraduationCap, Compass } from "lucide-react"
+import { Pencil, Settings, RefreshCw, BookOpen, LogOut, GraduationCap } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function Sidebar() {

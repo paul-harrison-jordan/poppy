@@ -18,7 +18,7 @@ export default function KeyTermsPage() {
   const [editingTerm, setEditingTerm] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -42,12 +42,6 @@ export default function KeyTermsPage() {
     }
   }, []);
 
-  const handleEdit = (term: string, currentDefinition: string) => {
-    setEditingTerm(term);
-    setEditValue(currentDefinition);
-    setIsEditModalOpen(true);
-  };
-
   const handleSave = (term: string) => {
     const updatedTerms = { ...terms, [term]: editValue };
     setTerms(updatedTerms);
@@ -61,20 +55,6 @@ export default function KeyTermsPage() {
     setEditingTerm(null);
     setEditValue("");
     setIsEditModalOpen(false);
-  };
-
-  const handleDelete = (term: string) => {
-    const updatedTerms = { ...terms };
-    delete updatedTerms[term];
-    setTerms(updatedTerms);
-    localStorage.setItem("teamTerms", JSON.stringify(updatedTerms));
-  };
-
-  const handleAddNew = () => {
-    setNewTerm("");
-    setNewDefinition("");
-    setAddError("");
-    setIsAddModalOpen(true);
   };
 
   const handleSaveNew = () => {
@@ -96,15 +76,6 @@ export default function KeyTermsPage() {
     setNewDefinition("");
     setAddError("");
   };
-
-  // Filtered and paginated terms
-  const filteredEntries = Object.entries(terms)
-    .filter(([term, definition]) =>
-      term.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      definition.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
-  const paginatedEntries = filteredEntries.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // Reset to page 1 on search
   useEffect(() => {
