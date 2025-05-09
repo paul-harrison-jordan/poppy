@@ -18,8 +18,8 @@ export default function KeyTermsPage() {
   const [editingTerm, setEditingTerm] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [searchQuery] = useState("");
-  const [setCurrentPage] = useState(1);
+  // const [searchQuery] = useState("");
+  // const [setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newTerm, setNewTerm] = useState("");
   const [newDefinition, setNewDefinition] = useState("");
