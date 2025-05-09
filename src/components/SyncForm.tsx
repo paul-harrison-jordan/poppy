@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ProgressNotification, type Document } from '@/components/progress-notification';
 import Toast from './Toast';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 interface SyncFormProps {
   onComplete?: () => void;
@@ -28,12 +29,20 @@ interface DriveIds {
 
 export default function SyncForm({ onComplete }: SyncFormProps) {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [driveLink, setDriveLink] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [showReturnPrompt, setShowReturnPrompt] = useState(false);
+
+  if (status === 'loading') {
+    return <div>Loading...</div>;
+  }
+  if (!session) {
+    return <div>Please log in to sync documents.</div>;
+  }
 
   const handleSyncPRDs = async (e: React.FormEvent) => {
     e.preventDefault();
