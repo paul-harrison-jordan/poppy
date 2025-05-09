@@ -16,7 +16,6 @@ interface PRD {
 
 export default function SyncPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const [syncedPrds, setSyncedPrds] = useState<PRD[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
