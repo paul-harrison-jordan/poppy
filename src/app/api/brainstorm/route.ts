@@ -141,6 +141,9 @@ export async function POST(request: Request) {
       Here is how the user wants you think about writing the PRD:
       ${ctx.prdInstructions}
 
+      Here is a list of key terms about core features of our company:
+      ${terms}
+
       Your summary should be a few paragraphs that capture the key questions and information the user was working with, and the decisions they made during the conversation. Your Summary must include the best Job to be done statement that the user is trying to achieve.
 
       you must also add a title to the PRD that captures the key idea of the PRD.

@@ -1,3 +1,4 @@
+"use client";
 import AppShell from '@/components/AppShell';
 import BrainstormChat from '@/components/BrainstormChat';
 

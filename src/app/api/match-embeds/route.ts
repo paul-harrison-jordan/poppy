@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIndex } from '@/lib/pinecone';
 import { getAuthServerSession } from '@/lib/auth';
-import { getEmbedding } from '@/lib/embeddings';
 
 export async function POST(req: NextRequest) {
   try {

@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Sparkles, Pencil, Settings, RefreshCw, BookOpen, LogOut, GraduationCap, Home, FileText } from "lucide-react"
+import { Sparkles, Settings, RefreshCw, BookOpen, LogOut, GraduationCap, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const [collapsed, setCollapsed] = useState(() => {
+  const [collapsed] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("sidebarCollapsed") === "true"
     }
@@ -29,7 +29,7 @@ export default function Sidebar() {
 
   const navItems = [
     {
-      href: "/",
+      href: "/draft-prd",
       label: "Draft PRD",
       icon: <FileText size={28} strokeWidth={2.2} />,
     },
@@ -70,15 +70,7 @@ export default function Sidebar() {
       className="fixed left-0 top-0 h-screen bg-white/90 backdrop-blur-sm border-r border-neutral pt-16 z-10"
     >
       <div className="flex flex-col items-center mb-6 select-none">
-        <motion.div
-          className="flex items-center justify-center cursor-pointer"
-          onClick={() => setCollapsed((c) => !c)}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          tabIndex={0}
-          role="button"
-          aria-label="Toggle sidebar"
-        >
+        <Link href="/" className="flex items-center justify-center cursor-pointer" tabIndex={0} aria-label="Go to homepage">
           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-poppy/10 text-poppy">
             <span className="font-bold text-lg">🌺</span>
           </div>
@@ -95,7 +87,7 @@ export default function Sidebar() {
               </motion.span>
             )}
           </AnimatePresence>
-        </motion.div>
+        </Link>
       </div>
       <nav className="p-4 h-full flex flex-col">
         <ul className="space-y-2 flex flex-col h-full">

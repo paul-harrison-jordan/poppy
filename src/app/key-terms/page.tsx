@@ -2,9 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import KeyTermsForm from "@/components/KeyTermsForm";
 import AppShell from '@/components/AppShell';
 
@@ -16,13 +14,13 @@ export default function KeyTermsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [terms, setTerms] = useState<TeamTerms>({});
-  const [editingTerm, setEditingTerm] = useState<string | null>(null);
+  const [setEditingTerm] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [setIsEditModalOpen] = useState(false);
+  const [setIsAddModalOpen] = useState(false);
   const [newTerm, setNewTerm] = useState("");
   const [newDefinition, setNewDefinition] = useState("");
-  const [addError, setAddError] = useState("");
+  const [setAddError] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -39,42 +37,6 @@ export default function KeyTermsPage() {
       }
     }
   }, []);
-
-  const handleSave = (term: string) => {
-    const updatedTerms = { ...terms, [term]: editValue };
-    setTerms(updatedTerms);
-    localStorage.setItem("teamTerms", JSON.stringify(updatedTerms));
-    setEditingTerm(null);
-    setEditValue("");
-    setIsEditModalOpen(false);
-  };
-
-  const handleCancel = () => {
-    setEditingTerm(null);
-    setEditValue("");
-    setIsEditModalOpen(false);
-  };
-
-  const handleSaveNew = () => {
-    const trimmedTerm = newTerm.trim();
-    const trimmedDef = newDefinition.trim();
-    if (!trimmedTerm || !trimmedDef) {
-      setAddError("Both term and definition are required.");
-      return;
-    }
-    if (terms.hasOwnProperty(trimmedTerm)) {
-      setAddError("This term already exists.");
-      return;
-    }
-    const updatedTerms = { ...terms, [trimmedTerm]: trimmedDef };
-    setTerms(updatedTerms);
-    localStorage.setItem("teamTerms", JSON.stringify(updatedTerms));
-    setIsAddModalOpen(false);
-    setNewTerm("");
-    setNewDefinition("");
-    setAddError("");
-  };
-
 
   if (status === "loading") {
     return (
@@ -103,7 +65,7 @@ export default function KeyTermsPage() {
       <div className="w-full max-w-3xl mx-auto space-y-10">
         <div className="text-center mt-8">
           <h1 className="text-4xl font-semibold text-primary font-sans tracking-tight mb-2">Key Terms for <span className="text-poppy">Poppy</span></h1>
-          <p className="text-base text-primary/80 font-sans mb-6">Define and manage your team's key terms and definitions. These help Poppy understand your product language and context.</p>
+          <p className="text-base text-primary/80 font-sans mb-6">Define and manage your team&apos;s key terms and definitions. These help Poppy understand your product language and context.</p>
         </div>
         <div className="flex justify-center">
           <KeyTermsForm onComplete={handleKeyTermsComplete} />
