@@ -13,14 +13,7 @@ interface TeamTerms {
 export default function KeyTermsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [terms, setTerms] = useState<TeamTerms>({});
-  const [setEditingTerm] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>("");
-  const [setIsEditModalOpen] = useState(false);
-  const [setIsAddModalOpen] = useState(false);
-  const [newTerm, setNewTerm] = useState("");
-  const [newDefinition, setNewDefinition] = useState("");
-  const [setAddError] = useState("");
+  const [, setTerms] = useState<TeamTerms>({});
 
   useEffect(() => {
     if (typeof window !== "undefined") {
