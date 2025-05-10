@@ -108,10 +108,10 @@ export default function BrainstormChat() {
    }
    localStorage.setItem('prdDraft', JSON.stringify(prd));
    router.push(`/`);
- } catch (error) {
-   alert('Failed to generate PRD summary.');
- }
-  };
+  } catch (error) {
+    alert('Failed to generate PRD summary.');
+  }
+};
 
   return (
     <div className="flex flex-col h-[85vh] w-full max-w-5xl mx-auto p-0 mt-8 bg-white/90 rounded-2xl shadow-sm border border-neutral font-sans">

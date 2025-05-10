@@ -4,13 +4,11 @@ import DraftForm from '@/components/DraftForm';
 import SignIn from '@/app/auth/signin/page';
 import { useEffect, useState } from 'react';
 import PastWork from '@/components/PastWork';
-import { useRouter } from 'next/navigation';
 import AppShell from '@/components/AppShell';
 
 export default function DraftPrdPage() {
   const { data: session, status } = useSession();
   const [showPastWorkFull, setShowPastWorkFull] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     const initializePinecone = async () => {

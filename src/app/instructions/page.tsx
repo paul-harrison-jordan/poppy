@@ -17,7 +17,7 @@ export default function InstructionsPage() {
               <span className="font-semibold text-poppy">Sync your documents:</span> Connect your Google Drive or upload docs so Poppy can reference your latest specs, PRDs, and resources.
             </li>
             <li>
-              <span className="font-semibold text-poppy">Define key terms:</span> Add and manage your team's vocabulary so Poppy always speaks your language.
+              <span className="font-semibold text-poppy">Define key terms:</span> Add and manage your team&apos;s vocabulary so Poppy always speaks your language.
             </li>
             <li>
               <span className="font-semibold text-poppy">Brainstorm with Poppy:</span> Use the Brainstorm page to chat, ideate, and clarify requirements in real time.
