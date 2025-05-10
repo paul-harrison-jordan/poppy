@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { Sparkles, Settings, RefreshCw, BookOpen, LogOut, GraduationCap, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 
