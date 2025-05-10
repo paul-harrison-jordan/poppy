@@ -115,34 +115,34 @@ export default function BrainstormChat() {
 };
 
   return (
-    <div className="flex flex-col h-[85vh] w-full max-w-5xl mx-auto p-0 mt-8 bg-white/90 rounded-2xl shadow-sm border border-neutral font-sans">
+    <div className="flex flex-col flex-1 min-h-0 w-full max-w-5xl mx-auto font-sans" style={{ background: 'none' }}>
       <div className="w-full flex justify-center pt-2 pb-4">
         <div className="text-lg font-semibold text-primary tracking-tight">Brainstorm</div>
       </div>
-      <div className="relative flex-1 overflow-y-auto px-0 py-2 space-y-2" style={{ minHeight: '60vh', maxHeight: '65vh' }}>
+      <div className="flex-1 min-h-0 overflow-y-auto px-0 py-2 space-y-2">
         <div className="relative z-0 flex flex-col space-y-2">
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} transition-all duration-300`}>
               <div className={
                 msg.role === 'user'
-                  ? 'px-4 py-2 rounded-2xl max-w-[70%] text-base bg-poppy/10 text-primary font-sans'
-                  : 'px-4 py-2 rounded-2xl max-w-[70%] text-base bg-sprout/10 text-primary font-sans'
-              } style={{whiteSpace: 'pre-line', boxShadow: 'none', border: 'none', fontFamily: msg.role === 'assistant' ? 'JetBrains Mono, monospace' : undefined}}>
+                  ? 'px-5 py-3 rounded-2xl max-w-[70%] text-base bg-poppy/20 text-primary font-sans shadow-md'
+                  : 'px-5 py-3 rounded-2xl max-w-[70%] text-base bg-sprout/20 text-primary font-mono shadow-md'
+              } style={{whiteSpace: 'pre-line'}}>
                 {msg.content}
               </div>
             </div>
           ))}
           {loading && (
             <div className="flex justify-start">
-              <div className="px-4 py-2 rounded-2xl bg-neutral text-primary/60 text-base font-sans animate-pulse">Thinking…</div>
+              <div className="px-5 py-3 rounded-2xl bg-neutral text-primary/60 text-base font-sans animate-pulse shadow-md">Thinking…</div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
       </div>
-      <form onSubmit={sendMessage} className="flex gap-2 items-center px-0 py-4 bg-transparent">
+      <form onSubmit={sendMessage} className="flex gap-2 items-center px-0 py-6 bg-transparent" style={{ flexShrink: 0 }}>
         <input
-          className="flex-1 rounded-full border border-neutral px-4 py-3 shadow-none focus:ring-2 focus:ring-poppy focus:outline-none text-base bg-white/90 placeholder-gray-400 transition-all font-sans"
+          className="flex-1 rounded-full border border-neutral px-5 py-3 shadow-md focus:ring-2 focus:ring-poppy focus:outline-none text-base bg-neutral/80 placeholder-gray-400 transition-all font-sans"
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder="Like talking to a version of you who remembers everything"
@@ -150,14 +150,14 @@ export default function BrainstormChat() {
         />
         <button
           type="submit"
-          className="px-5 py-3 rounded-full bg-poppy text-white font-medium text-base hover:bg-poppy/90 transition-all duration-150 shadow-none border-0 font-sans"
+          className="w-12 h-12 rounded-full bg-poppy text-white font-medium text-base hover:bg-poppy/90 transition-all duration-150 shadow-md border-0 flex items-center justify-center"
           disabled={loading}
         >
-          Send
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
         </button>
         <button
           type="button"
-          className="px-5 py-3 rounded-full bg-neutral text-primary font-medium text-base hover:bg-neutral/80 transition-all duration-150 shadow-none border-0 ml-2 font-sans"
+          className="px-5 py-3 rounded-full bg-neutral text-primary font-medium text-base hover:bg-neutral/80 transition-all duration-150 shadow-md border-0 ml-2 font-sans"
           onClick={handleSummarizeAndSave}
           disabled={loading || !messages.length}
         >

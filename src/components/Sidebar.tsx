@@ -3,25 +3,12 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Sparkles, Settings, RefreshCw, BookOpen, LogOut, GraduationCap, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const [collapsed] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("sidebarCollapsed") === "true"
-    }
-    return false
-  })
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("sidebarCollapsed", collapsed ? "true" : "false")
-    }
-  }, [collapsed])
 
   const isActive = (path: string) => {
     return pathname === path
@@ -61,32 +48,15 @@ export default function Sidebar() {
   ]
 
   return (
-    <motion.div
-      initial={false}
-      animate={{
-        width: collapsed ? "5rem" : "16rem",
-      }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed left-0 top-0 h-screen bg-white/90 backdrop-blur-sm border-r border-neutral pt-16 z-10"
-    >
+    <div className="fixed left-0 top-0 w-64 h-screen bg-white/90 backdrop-blur-sm border-r border-neutral pt-16 z-10">
       <div className="flex flex-col items-center mb-6 select-none">
         <Link href="/" className="flex items-center justify-center cursor-pointer" tabIndex={0} aria-label="Go to homepage">
           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-poppy/10 text-poppy">
             <span className="font-bold text-lg">🌺</span>
           </div>
-          <AnimatePresence initial={false}>
-            {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: "auto" }}
-                exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.2 }}
-                className="ml-2 text-base font-semibold text-poppy whitespace-nowrap overflow-hidden tracking-tight"
-              >
-                Poppy
-              </motion.span>
-            )}
-          </AnimatePresence>
+          <span className="ml-2 text-base font-semibold text-poppy whitespace-nowrap overflow-hidden tracking-tight">
+            Poppy
+          </span>
         </Link>
       </div>
       <nav className="p-4 h-full flex flex-col">
@@ -112,19 +82,9 @@ export default function Sidebar() {
                   >
                     {item.icon}
                   </div>
-                  <AnimatePresence initial={false}>
-                    {!collapsed && (
-                      <motion.span
-                        initial={{ opacity: 0, width: 0 }}
-                        animate={{ opacity: 1, width: "auto" }}
-                        exit={{ opacity: 0, width: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="ml-3 whitespace-nowrap overflow-hidden"
-                      >
-                        {item.label}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
+                  <span className="ml-3 whitespace-nowrap overflow-hidden">
+                    {item.label}
+                  </span>
                 </motion.div>
               </Link>
             </li>
@@ -139,24 +99,14 @@ export default function Sidebar() {
                 <div className="flex items-center justify-center text-poppy/80">
                   <LogOut className="w-4 h-4" />
                 </div>
-                <AnimatePresence initial={false}>
-                  {!collapsed && (
-                    <motion.span
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: "auto" }}
-                      exit={{ opacity: 0, width: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="ml-3 whitespace-nowrap overflow-hidden"
-                    >
-                      Sign Out
-                    </motion.span>
-                  )}
-                </AnimatePresence>
+                <span className="ml-3 whitespace-nowrap overflow-hidden">
+                  Sign Out
+                </span>
               </motion.div>
             </Link>
           </li>
         </ul>
       </nav>
-    </motion.div>
+    </div>
   )
 }

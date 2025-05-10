@@ -36,6 +36,7 @@ export default function BrandMessagingForm({ onComplete }: BrandMessagingFormPro
   const [showQuery, setShowQuery] = useState(false);
   const [showTitle, setShowTitle] = useState(true);
   const [showPastWork, setShowPastWork] = useState(true);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   const handleInitialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,13 +171,13 @@ export default function BrandMessagingForm({ onComplete }: BrandMessagingFormPro
           <form onSubmit={handleQuestionSubmit} className="space-y-6">
             {questions.map((question) => (
               <div key={question.id} className="space-y-2">
-                <p className="text-2xl font-medium text-[#232426] mb-4">{question.text}</p>
-                <p className="text-sm text-[#BBC7B6] mb-2">{question.reasoning}</p>
+                <p className="text-2xl font-medium text-gray-800 mb-4">{question.text}</p>
+                <p className="text-sm text-gray-500 mb-2">{question.reasoning}</p>
                 <div className="relative">
                   <textarea
                     value={answers[question.id] || ''}
                     onChange={(e) => setAnswers({ ...answers, [question.id]: e.target.value })}
-                    className="flex-1 w-full rounded-md border border-[#E9DCC6] bg-white px-3 py-2 text-[#232426] shadow-sm focus:border-[#EF6351] focus:outline-none focus:ring-1 focus:ring-[#EF6351] pr-12 pb-12"
+                    className="flex-1 w-full rounded-xl border border-neutral backdrop-blur-sm px-4 py-3 text-gray-800 shadow-sm focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy/20 pr-12 pb-12"
                     rows={6}
                     required
                   />
@@ -186,7 +187,7 @@ export default function BrandMessagingForm({ onComplete }: BrandMessagingFormPro
                       const textarea = document.getElementById(question.id) as HTMLTextAreaElement;
                       textarea.focus();
                     }}
-                    className="absolute bottom-4 right-4 w-8 h-8 rounded-full flex items-center justify-center shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors bg-[#E9DCC6] text-white hover:bg-[#d4c8b0] cursor-pointer focus:ring-[#E9DCC6]"
+                    className="absolute bottom-4 right-4 w-8 h-8 rounded-full flex items-center justify-center shadow-sm focus:outline-none focus:ring-2 focus:ring-poppy/20 transition-colors bg-poppy/10 text-poppy hover:bg-poppy/20"
                   >
                     <svg
                       className="w-4 h-4"
@@ -202,22 +203,38 @@ export default function BrandMessagingForm({ onComplete }: BrandMessagingFormPro
               </div>
             ))}
             <div className="flex justify-between pt-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentStep('initial');
-                  setShowTitle(true);
-                  setShowQuery(false);
-                }}
-                className="inline-flex items-center px-4 py-2 border border-[#E9DCC6] rounded-md shadow-sm text-sm font-medium text-[#232426] bg-white hover:bg-[#F5F5F5] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E9DCC6]"
-              >
-                Back
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentQuestionIndex > 0) {
+                      setCurrentQuestionIndex(prev => prev - 1);
+                    } else {
+                      setCurrentStep('initial');
+                      setShowTitle(true);
+                      setShowQuery(false);
+                    }
+                  }}
+                  className="inline-flex items-center px-4 py-2 border border-neutral rounded-xl shadow-sm text-sm font-medium text-gray-800 bg-white hover:bg-neutral/5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-poppy/20"
+                >
+                  Back
+                </button>
+                <div className="flex space-x-1">
+                  {questions.map((_, index) => (
+                    <div
+                      key={index}
+                      className={`w-2 h-2 rounded-full ${
+                        index === currentQuestionIndex ? 'bg-poppy' : 'bg-poppy/10'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
               <button
                 type="submit"
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#EF6351] hover:bg-[#d94d38] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#EF6351]"
+                className="px-4 py-2 rounded-full bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 transition-colors"
               >
-                Generate Brand Messaging
+                Submit
               </button>
             </div>
           </form>
@@ -306,7 +323,7 @@ export default function BrandMessagingForm({ onComplete }: BrandMessagingFormPro
                 />
                 <button
                   type="submit"
-                  className="w-10 h-10 rounded-full bg-[#EF6351] flex items-center justify-center text-white shadow-md hover:bg-[#d94d38] focus:outline-none focus:ring-2 focus:ring-[#EF6351] focus:ring-offset-2 transition-colors"
+                  className="w-10 h-10 rounded-full bg-[#EF6351] flex items-center justify-center text-white shadow-md hover:bg-[#d94d38] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#EF6351] focus:ring-offset-2 transition-colors"
                 >
                   <svg className="w-5 h-5 transition-transform duration-300 rotate-[-90deg]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

@@ -324,7 +324,7 @@ export default function DraftForm() {
   if (step === "title") {
     // Render title/query form
     return (
-      <div>
+      <div className="flex items-center justify-center">
         <AnimatePresence mode="wait">
           {!submitted ? (
             <motion.form
@@ -334,7 +334,7 @@ export default function DraftForm() {
               initial="initial"
               animate="animate"
               exit="exit"
-              className="space-y-4"
+              className="space-y-4 w-full max-w-xl"
             >
               <AnimatePresence mode="wait">
                 {!showQuery ? (
@@ -353,7 +353,7 @@ export default function DraftForm() {
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       onKeyDown={handleTitleKeyDown}
-                      className="flex-1 h-12 text-base rounded-full border-rose-100 bg-white/80 backdrop-blur-sm shadow-sm focus-visible:ring-rose-200"
+                      className="flex-1 h-12 text-base rounded-full border-neutral bg-white/90 backdrop-blur-sm shadow-sm focus-visible:ring-poppy"
                       placeholder="Give your PRD a title..."
                       required
                     />
@@ -361,7 +361,7 @@ export default function DraftForm() {
                       type="button"
                       onClick={() => title.trim() && setShowQuery(true)}
                       className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors
-                        ${title.trim() ? 'bg-[#EF6351] text-white hover:bg-[#d94d38] cursor-pointer focus:ring-[#EF6351]' : 'bg-[#E9DCC6] text-white cursor-not-allowed'}
+                        ${title.trim() ? 'bg-poppy text-white hover:bg-poppy/90 cursor-pointer focus:ring-poppy' : 'bg-neutral text-white cursor-not-allowed'}
                       `}
                       tabIndex={-1}
                       disabled={!title.trim()}
@@ -396,7 +396,7 @@ export default function DraftForm() {
                                 onClick={() => {
                                   setShowQuery(false);
                                 }}
-                                className="text-2xl font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 transition  px-3 py-2 flex items-center"
+                                className="text-2xl font-bold text-poppy bg-poppy/10 hover:bg-poppy/20 transition px-3 py-2 flex items-center rounded-full"
                                 aria-label="Edit PRD title"
                               >
                                 <motion.div
@@ -405,7 +405,7 @@ export default function DraftForm() {
                                   transition={{ delay: 0.1, type: "spring", stiffness: 400, damping: 30 }}
                                   className="flex items-center gap-2 mb-2"
                                 >
-                                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-500">
+                                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-poppy/10 text-poppy">
                                     <FilePlus className="h-3 w-3" />
                                   </div>
                                 </motion.div>
@@ -418,14 +418,14 @@ export default function DraftForm() {
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 rows={4}
-                                className="flex-1 rounded-md border border-[#E9DCC6] bg-white px-3 py-2 text-[#232426] shadow-sm focus:border-[#EF6351] focus:outline-none focus:ring-1 focus:ring-[#EF6351]"
-                                placeholder="Ask ChatPRD to help draft your PRD..."
+                                className="flex-1 rounded-xl border border-neutral px-3 py-2 text-gray-800 shadow-sm focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy/20"
+                                placeholder="Ask Poppy to help draft your PRD..."
                                 required
                                 autoFocus
                               />
                               <button
                                 type="submit"
-                                className="w-10 h-10 rounded-full bg-[#EF6351] flex items-center justify-center text-white shadow-md hover:bg-[#d94d38] focus:outline-none focus:ring-2 focus:ring-[#EF6351] focus:ring-offset-2 transition-colors"
+                                className="w-10 h-10 rounded-full bg-poppy text-white flex items-center justify-center shadow-md hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy focus:ring-offset-2 transition-colors"
                               >
                                 <svg className="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -491,7 +491,7 @@ export default function DraftForm() {
                   </a>
                   <button
                     onClick={handleDraftAnother}
-                    className="inline-block rounded-full bg-white px-6 py-2 text-rose-500 font-medium border border-rose-200 hover:bg-rose-50/70 transition-colors"
+                    className="inline-block rounded-full bg-poppy text-white px-6 py-2 font-medium shadow-sm hover:bg-poppy/90 transition-colors"
                   >
                     Draft Another
                   </button>
@@ -500,7 +500,7 @@ export default function DraftForm() {
               {!isGenerating && !prdLink && (
                 <button
                   onClick={handleDraftAnother}
-                  className="inline-block rounded-full bg-white px-6 py-2 text-rose-500 font-medium border border-rose-200 hover:bg-rose-50/70 transition-colors"
+                  className="inline-block rounded-full bg-poppy text-white px-6 py-2 font-medium shadow-sm hover:bg-poppy/90 transition-colors"
                 >
                   Try Again
                 </button>
@@ -526,25 +526,25 @@ export default function DraftForm() {
         }}
         className="space-y-4 max-w-xl mx-auto"
       >
-        <h2 className="text-lg font-bold text-rose-600 mb-2">Define Key Terms</h2>
+        <h2 className="text-lg font-bold text-poppy mb-2">Define Key Terms</h2>
         <p className="text-sm text-gray-500 mb-4">Please provide a definition for each key term below so your team is aligned on language.</p>
         {pendingTerms.map((term) => (
           <div key={term} className="flex flex-col gap-1">
-            <label htmlFor={`term-${term}`} className="font-semibold text-rose-600">{term}</label>
+            <label htmlFor={`term-${term}`} className="font-semibold text-poppy">{term}</label>
             <input
               id={`term-${term}`}
               type="text"
               value={pendingTermDefs[term] || ''}
               onChange={e => setPendingTermDefs(defs => ({ ...defs, [term]: e.target.value }))}
-              className="rounded-md border border-rose-100 px-3 py-2 text-[#232426] shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-200 bg-white"
-              placeholder={`Define "${term}"...`}
+              className="rounded-xl border border-neutral px-3 py-2 text-gray-800 shadow-sm focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy/20"
+              placeholder={`Define \"${term}\"...`}
               required
             />
           </div>
         ))}
         <button
           type="submit"
-          className="mt-4 px-4 py-2 rounded-full bg-gradient-to-r from-rose-500 to-rose-400 text-white font-semibold w-full shadow-sm hover:from-rose-600 hover:to-rose-500 transition-colors"
+          className="mt-4 px-4 py-2 rounded-full bg-poppy text-white font-semibold w-full shadow-sm hover:bg-poppy/90 transition-colors"
           disabled={pendingTerms.some(term => !pendingTermDefs[term] || !pendingTermDefs[term].trim())}
         >
           Continue
@@ -567,13 +567,13 @@ export default function DraftForm() {
   if (step === "generating") {
     // Show loading spinner
     return (
-      <div className="text-center flex flex-col items-center gap-4 bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm p-8 max-w-xl mx-auto mt-8 border border-rose-100/30">
+      <div className="text-center flex flex-col items-center gap-4 backdrop-blur-sm rounded-2xl shadow-sm p-8 max-w-xl mx-auto mt-8 border border-neutral">
         <div className="text-lg font-semibold text-gray-800">
           <div className="flex flex-col items-center justify-center gap-3" aria-live="polite">
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 2, ease: "linear", repeat: Number.POSITIVE_INFINITY }}
-              className="w-10 h-10 rounded-full border-2 border-rose-100 border-t-rose-500"
+              className="w-10 h-10 rounded-full border-2 border-neutral border-t-poppy"
             />
             <span>
               {isGeneratingQuestions ? (
@@ -636,7 +636,7 @@ export default function DraftForm() {
             </a>
             <button
               onClick={handleDraftAnother}
-              className="inline-block rounded-full bg-white px-6 py-2 text-rose-500 font-medium border border-rose-200 hover:bg-rose-50/70 transition-colors"
+              className="inline-block rounded-full bg-poppy text-white px-6 py-2 font-medium shadow-sm hover:bg-poppy/90 transition-colors"
               type="button"
             >
               Draft Another
@@ -646,7 +646,7 @@ export default function DraftForm() {
         {!isGenerating && !prdLink && (
           <button
             onClick={handleDraftAnother}
-            className="inline-block rounded-full bg-white px-6 py-2 text-rose-500 font-medium border border-rose-200 hover:bg-rose-50/70 transition-colors"
+            className="inline-block rounded-full bg-poppy text-white px-6 py-2 font-medium shadow-sm hover:bg-poppy/90 transition-colors"
           >
             Try Again
           </button>

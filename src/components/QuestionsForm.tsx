@@ -97,20 +97,20 @@ export default function QuestionsForm({ questions, onSubmit, internalTerms = [] 
     >
       {/* Internal Terms Definitions Section */}
       {internalTerms.length > 0 && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6 mb-4">
-          <h2 className="text-lg font-bold text-rose-600 mb-2">Define Key Terms</h2>
+        <div className="backdrop-blur-sm rounded-2xl shadow-sm border border-neutral p-6 mb-4">
+          <h2 className="text-lg font-bold text-poppy mb-2">Define Key Terms</h2>
           <p className="text-sm text-gray-500 mb-4">Please provide a definition for each key term below so your team is aligned on language.</p>
           <div className="space-y-4">
             {internalTerms.map(term => (
               <div key={term} className="flex flex-col gap-1">
-                <label htmlFor={`term-${term}`} className="font-semibold text-rose-600">{term}</label>
+                <label htmlFor={`term-${term}`} className="font-semibold text-poppy">{term}</label>
                 <input
                   id={`term-${term}`}
                   type="text"
                   value={termDefs[term] || ''}
                   onChange={e => handleTermChange(term, e.target.value)}
-                  className="rounded-md border border-rose-100 px-3 py-2 text-[#232426] shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-200 bg-white"
-                  placeholder={`Define "${term}"...`}
+                  className="rounded-xl border border-neutral px-3 py-2 text-gray-800 shadow-sm focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy/20"
+                  placeholder={`Define \"${term}\"...`}
                   required
                 />
               </div>
@@ -123,7 +123,7 @@ export default function QuestionsForm({ questions, onSubmit, internalTerms = [] 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-4xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent mb-2"
+          className="text-4xl font-bold text-gray-800 mb-2"
         >
           Just a few questions
         </motion.h1>
@@ -141,12 +141,12 @@ export default function QuestionsForm({ questions, onSubmit, internalTerms = [] 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4 }}
-        className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6"
+        className="backdrop-blur-sm rounded-2xl shadow-sm border border-neutral p-6"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Prevent proceeding to questions until all terms are defined */}
           {!allTermsDefined && (
-            <div className="text-rose-600 font-semibold text-center mb-4">Please define all key terms above to continue.</div>
+            <div className="text-poppy font-semibold text-center mb-4">Please define all key terms above to continue.</div>
           )}
           <div className="space-y-4">
             <AnimatePresence mode="wait">
@@ -176,7 +176,7 @@ export default function QuestionsForm({ questions, onSubmit, internalTerms = [] 
                     value={currentValue}
                     onChange={(e) => handleInputChange(currentQuestion.id, e.target.value)}
                     rows={6}
-                    className="w-full rounded-xl border border-rose-100 bg-white/90 backdrop-blur-sm px-4 py-3 text-gray-800 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200 pr-12 pb-12 resize-none"
+                    className="w-full rounded-xl border border-neutral backdrop-blur-sm px-4 py-3 text-gray-800 shadow-sm focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy/20 pr-12 pb-12 resize-none"
                     placeholder="Type your answer here..."
                     required
                   />
@@ -188,7 +188,7 @@ export default function QuestionsForm({ questions, onSubmit, internalTerms = [] 
                       const textarea = document.getElementById(currentQuestion.id) as HTMLTextAreaElement
                       textarea.focus()
                     }}
-                    className="absolute bottom-4 right-4 w-8 h-8 rounded-full flex items-center justify-center shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-200 transition-colors bg-rose-100 text-rose-500 hover:bg-rose-200"
+                    className="absolute bottom-4 right-4 w-8 h-8 rounded-full flex items-center justify-center shadow-sm focus:outline-none focus:ring-2 focus:ring-poppy/20 transition-colors bg-poppy/10 text-poppy hover:bg-poppy/20"
                   >
                     <Edit2 className="w-4 h-4" />
                   </motion.button>
@@ -204,7 +204,7 @@ export default function QuestionsForm({ questions, onSubmit, internalTerms = [] 
                   whileTap={{ scale: 0.95 }}
                   type="button"
                   onClick={handlePrevious}
-                  className="text-xs text-rose-500 hover:text-rose-600 flex items-center gap-1"
+                  className="text-xs text-poppy hover:text-poppy/80 flex items-center gap-1"
                 >
                   <ChevronRight className="w-3 h-3 rotate-180" />
                   <span>Previous</span>
@@ -223,10 +223,10 @@ export default function QuestionsForm({ questions, onSubmit, internalTerms = [] 
                   className={cn(
                     "w-2 h-2 rounded-full transition-colors",
                     index === currentStep
-                      ? "bg-gradient-to-r from-rose-500 to-rose-400 shadow-sm"
+                      ? "bg-poppy shadow-sm"
                       : index < currentStep
-                        ? "bg-rose-200"
-                        : "bg-rose-100",
+                        ? "bg-poppy/20"
+                        : "bg-poppy/10",
                   )}
                   aria-label={`Go to step ${index + 1}`}
                 />
@@ -243,9 +243,9 @@ export default function QuestionsForm({ questions, onSubmit, internalTerms = [] 
                 "rounded-full flex items-center justify-center shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all px-4 py-2",
                 hasAnswer && allTermsDefined
                   ? isLastStep
-                    ? "bg-gradient-to-r from-rose-500 to-rose-400 text-white hover:from-rose-600 hover:to-rose-500 focus:ring-rose-200"
-                    : "bg-gradient-to-r from-rose-500 to-rose-400 text-white hover:from-rose-600 hover:to-rose-500 focus:ring-rose-200"
-                  : "bg-rose-100 text-rose-300 cursor-not-allowed",
+                    ? "bg-poppy text-white hover:bg-poppy/90 focus:ring-poppy/20"
+                    : "bg-poppy text-white hover:bg-poppy/90 focus:ring-poppy/20"
+                  : "bg-poppy/10 text-poppy/50 cursor-not-allowed",
               )}
             >
               {isSubmitting ? (
