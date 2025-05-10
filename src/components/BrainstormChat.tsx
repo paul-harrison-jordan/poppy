@@ -107,8 +107,9 @@ export default function BrainstormChat() {
      return;
    }
    localStorage.setItem('prdDraft', JSON.stringify(prd));
-   router.push(`/`);
+   router.push(`/draft-prd`);
   } catch (error) {
+    console.error(error);
     alert('Failed to generate PRD summary.');
   }
 };
