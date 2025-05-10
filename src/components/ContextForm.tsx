@@ -85,9 +85,9 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-neutral p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent mb-2 text-center">
+          <h1 className="text-3xl font-bold text-primary font-sans mb-2 text-center">
             Personal Context
           </h1>
           <p className="text-sm text-gray-500 text-center mb-4">
@@ -105,14 +105,14 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
                   value={formData.teamStrategy}
                   onChange={handleInputChange}
                   rows={4}
-                  className="w-full rounded-xl border border-rose-100 bg-white/90 backdrop-blur-sm px-4 py-3 text-gray-800 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200 resize-vertical"
+                  className="w-full rounded-xl border border-neutral bg-white/90 backdrop-blur-sm px-4 py-3 text-primary shadow-sm focus:ring-2 focus:ring-poppy focus:outline-none resize-vertical"
                   placeholder="Provide the text of the best strategy document you have for your product area, or provide a view of where you want your product to be a year from now"
                   required
                   readOnly
                 />
                 <button
                   type="button"
-                  className="ml-2 px-3 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold shadow-sm hover:from-rose-600 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                  className="ml-2 px-3 py-2 rounded-xl bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy"
                   onClick={() => handleEditClick("teamStrategy")}
                 >
                   Edit
@@ -130,14 +130,14 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
                   value={formData.howYouThinkAboutProduct}
                   onChange={handleInputChange}
                   rows={4}
-                  className="w-full rounded-xl border border-rose-100 bg-white/90 backdrop-blur-sm px-4 py-3 text-gray-800 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200 resize-vertical"
+                  className="w-full rounded-xl border border-neutral bg-white/90 backdrop-blur-sm px-4 py-3 text-primary shadow-sm focus:ring-2 focus:ring-poppy focus:outline-none resize-vertical"
                   placeholder="Give a few examples of how you've solved problems in the past with your product area, and how you generally approach developing your product area. This will help give ChatPRD of how you think about developing your product area."
                   required
                   readOnly
                 />
                 <button
                   type="button"
-                  className="ml-2 px-3 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold shadow-sm hover:from-rose-600 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                  className="ml-2 px-3 py-2 rounded-xl bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy"
                   onClick={() => handleEditClick("howYouThinkAboutProduct")}
                 >
                   Edit
@@ -155,14 +155,14 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
                   value={formData.pillarGoalsKeyTermsBackground}
                   onChange={handleInputChange}
                   rows={2}
-                  className="w-full rounded-xl border border-rose-100 bg-white/90 backdrop-blur-sm px-4 py-3 text-gray-800 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200 resize-vertical"
+                  className="w-full rounded-xl border border-neutral bg-white/90 backdrop-blur-sm px-4 py-3 text-primary shadow-sm focus:ring-2 focus:ring-poppy focus:outline-none resize-vertical"
                   placeholder="Provide context about the teams in your pillar, how you're product area fits into that pillar achieving the business goals, and any other background information that will help ChatPRD understand the bigger picture and write a better PRD."
                   required
                   readOnly
                 />
                 <button
                   type="button"
-                  className="ml-2 px-3 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold shadow-sm hover:from-rose-600 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                  className="ml-2 px-3 py-2 rounded-xl bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy"
                   onClick={() => handleEditClick("pillarGoalsKeyTermsBackground")}
                 >
                   Edit
@@ -180,14 +180,14 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
                   value={formData.examplesOfHowYouThink}
                   onChange={handleInputChange}
                   rows={4}
-                  className="w-full rounded-xl border border-rose-100 bg-white/90 backdrop-blur-sm px-4 py-3 text-gray-800 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200 resize-vertical"
+                  className="w-full rounded-xl border border-neutral bg-white/90 backdrop-blur-sm px-4 py-3 text-primary shadow-sm focus:ring-2 focus:ring-poppy focus:outline-none resize-vertical"
                   placeholder="Paste the markdown text of an example PRD that has additional context written by you explaining why you wrote things the way you did, and why the structure of the document is important. The more you provide about how you think and why the PRD looks the way it does, the better your results will be."
                   required
                   readOnly
                 />
                 <button
                   type="button"
-                  className="ml-2 px-3 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold shadow-sm hover:from-rose-600 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                  className="ml-2 px-3 py-2 rounded-xl bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy"
                   onClick={() => handleEditClick("examplesOfHowYouThink")}
                 >
                   Edit
@@ -198,7 +198,7 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
           <div className="flex justify-center">
             <button
               type="submit"
-              className="rounded-full bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold px-6 py-2 shadow-sm hover:from-rose-600 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-200 transition-all"
+              className="rounded-full bg-poppy text-white font-semibold px-6 py-3 shadow-sm hover:bg-poppy/90 transition-all font-sans"
             >
               Save
             </button>
@@ -213,7 +213,7 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
       )}
       {editField && (
         <Dialog open={!!editField} onOpenChange={handleEditCancel}>
-          <DialogContent className="sm:max-w-[600px] bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6">
+          <DialogContent className="sm:max-w-[600px] bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-neutral p-6">
             <DialogHeader>
               <DialogTitle className="text-xl font-semibold text-[#232426]">
                 Edit {(() => {
@@ -228,7 +228,7 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
               </DialogTitle>
             </DialogHeader>
             <textarea
-              className="w-full rounded-xl border border-rose-100 bg-white/90 px-4 py-3 text-gray-800 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200 resize-vertical min-h-[10rem]"
+              className="w-full rounded-xl border border-neutral bg-white/90 px-4 py-3 text-primary shadow-sm focus:ring-2 focus:ring-poppy focus:outline-none resize-vertical min-h-[10rem]"
               value={editValue}
               onChange={e => setEditValue(e.target.value)}
               rows={10}
@@ -246,7 +246,7 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
               </DialogClose>
               <button
                 type="button"
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold shadow-sm hover:from-rose-600 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                className="px-4 py-2 rounded-xl bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy"
                 onClick={handleEditSave}
               >
                 Save
@@ -256,11 +256,11 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
         </Dialog>
       )}
       {showGetStarted && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6 text-center">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-neutral p-6 text-center">
           <p className="text-gray-700 mb-4">Great! Your context has been saved. Ready to start writing PRDs?</p>
           <button
             onClick={handleGetStarted}
-            className="px-8 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold shadow-sm hover:from-rose-600 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-rose-200"
+            className="px-8 py-3 rounded-xl bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy"
           >
             Get Started
           </button>

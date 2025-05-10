@@ -1,88 +1,36 @@
-'use client';
+import AppShell from '@/components/AppShell';
 
-import { useRouter } from 'next/navigation';
-import Sidebar from '@/components/Sidebar';
-
-export default function Instructions() {
-  const router = useRouter();
-
-  const handleComplete = () => {
-    // Mark the learn step as complete
-    const completedSteps = JSON.parse(localStorage.getItem('completedSteps') || '[]');
-    if (!completedSteps.includes('learn')) {
-      completedSteps.push('learn');
-      localStorage.setItem('completedSteps', JSON.stringify(completedSteps));
-    }
-    router.push('/onboarding');
-  };
-
+export default function InstructionsPage() {
   return (
-    <div className="min-h-screen bg-[#FFFAF3]">
-      <Sidebar />
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-xl shadow-sm p-8">
-          <h1 className="text-3xl font-semibold text-[#232426] mb-8">How to Use ChatPRD</h1>
-          
-          <div className="space-y-8">
-            <section>
-              <h2 className="text-2xl font-semibold text-[#232426] mb-4">1. Store Your Information</h2>
-              <p className="text-[#232426] mb-4">
-                Start by providing your personal context in the Store Information section. This helps ChatPRD understand your background and preferences.
-              </p>
-              <ul className="list-disc pl-6 space-y-2 text-[#232426]">
-                <li>Enter your personal background and experience</li>
-                <li>Describe your team goals and objectives</li>
-                <li>List key terms and background information</li>
-                <li>Share examples of your thinking process</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-semibold text-[#232426] mb-4">2. Query Information</h2>
-              <p className="text-[#232426] mb-4">
-                Use the query section to ask questions or request information. ChatPRD will use your stored context to provide relevant responses.
-              </p>
-              <ul className="list-disc pl-6 space-y-2 text-[#232426]">
-                <li>Enter your question or request in the search box</li>
-                <li>Click Search to get a response</li>
-                <li>View the generated response in the results section</li>
-                <li>Click the link to view your generated PRD</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-semibold text-[#232426] mb-4">3. Sync PRDs</h2>
-              <p className="text-[#232426] mb-4">
-                Connect your Google Drive to sync and manage your PRDs.
-              </p>
-              <ul className="list-disc pl-6 space-y-2 text-[#232426]">
-                <li>Enter your Google Drive folder ID</li>
-                <li>Click Sync PRDs to connect</li>
-                <li>View your synced documents in the list below</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-semibold text-[#232426] mb-4">Tips for Best Results</h2>
-              <ul className="list-disc pl-6 space-y-2 text-[#232426]">
-                <li>Be specific in your queries to get more relevant responses</li>
-                <li>Update your stored information regularly to keep it current</li>
-                <li>Use clear and concise language in your queries</li>
-                <li>Review and edit generated PRDs as needed</li>
-              </ul>
-            </section>
-
-            <div className="pt-6 border-t border-gray-200">
-              <button
-                onClick={handleComplete}
-                className="w-full px-4 py-2 text-sm font-medium text-white bg-rose-500 rounded-md hover:bg-rose-600"
-              >
-                Complete Setup
-              </button>
-            </div>
+    <AppShell>
+      <div className="w-full max-w-3xl mx-auto space-y-10">
+        <div className="text-center mt-8">
+          <h1 className="text-4xl font-semibold text-primary font-sans tracking-tight mb-2">How to Use <span className="text-poppy">Poppy</span></h1>
+          <p className="text-base text-primary/80 font-sans mb-6">Get the most out of Poppy: your all-in-one product management workspace for chatting, collaborating, and shipping PRDs with AI.</p>
+        </div>
+        <div className="bg-white/90 rounded-2xl shadow-sm p-8 text-primary font-sans space-y-6">
+          <ol className="list-decimal list-inside space-y-4 text-lg">
+            <li>
+              <span className="font-semibold text-poppy">Set up your context:</span> Go to <span className="font-semibold">Tune Poppy</span> and fill in your team strategy, product thinking, and background. This helps Poppy understand your goals and language.
+            </li>
+            <li>
+              <span className="font-semibold text-poppy">Sync your documents:</span> Connect your Google Drive or upload docs so Poppy can reference your latest specs, PRDs, and resources.
+            </li>
+            <li>
+              <span className="font-semibold text-poppy">Define key terms:</span> Add and manage your team's vocabulary so Poppy always speaks your language.
+            </li>
+            <li>
+              <span className="font-semibold text-poppy">Brainstorm with Poppy:</span> Use the Brainstorm page to chat, ideate, and clarify requirements in real time.
+            </li>
+            <li>
+              <span className="font-semibold text-poppy">Draft PRDs:</span> Use the Draft PRD tool to turn your ideas and context into actionable product documents.
+            </li>
+          </ol>
+          <div className="mt-8 text-center text-primary/70 text-base">
+            Need help? Ask Poppy in the chat or check the documentation for tips and best practices.
           </div>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 } 

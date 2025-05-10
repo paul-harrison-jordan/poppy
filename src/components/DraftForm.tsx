@@ -47,12 +47,23 @@ export default function DraftForm() {
 
   // Load saved state from localStorage
   useEffect(() => {
+    // Check for prdDraft from brainstorm
+    const prdDraft = localStorage.getItem("prdDraft");
+    if (prdDraft) {
+      try {
+        const { title, summary } = JSON.parse(prdDraft);
+        setTitle(title);
+        setQuery(summary);
+      } catch {}
+      localStorage.removeItem("prdDraft");
+    }
+    // Then check for saved draftFormState
     const savedState = localStorage.getItem("draftFormState")
     if (savedState) {
-      const { title, query, showQuery, questions, showQuestions, submitted, showPrdsLink, prdLink } =
+      const { title: savedTitle, query: savedQuery, showQuery, questions, showQuestions, submitted, showPrdsLink, prdLink } =
         JSON.parse(savedState)
-      setTitle(title)
-      setQuery(query)
+      if (!title && savedTitle) setTitle(savedTitle)
+      if (!query && savedQuery) setQuery(savedQuery)
       setShowQuery(showQuery)
       setQuestions(questions)
       setShowQuestions(showQuestions)

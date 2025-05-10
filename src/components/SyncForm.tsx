@@ -177,17 +177,11 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-neutral-300 p-6">
         <form onSubmit={handleSyncPRDs} className="space-y-6">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent mb-2 text-center">
-            Sync Documents
-          </h1>
-          <p className="text-sm text-gray-500 text-center mb-4">
-            Connect your Google Drive to access and manage your PRDs. We&apos;ll use these documents to provide better context for your PRDs.
-          </p>
           <div className="space-y-6">
             <div>
-              <label htmlFor="driveLink" className="block font-medium text-gray-900 mb-1">
+              <label htmlFor="driveLink" className="block font-medium text-primary mb-1">
                 Google Drive Link
               </label>
               <div className="flex gap-2 items-start">
@@ -196,14 +190,14 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
                   id="driveLink"
                   value={driveLink}
                   onChange={(e) => setDriveLink(e.target.value)}
-                  className="w-full rounded-xl border border-rose-100 bg-white/90 backdrop-blur-sm px-4 py-3 text-gray-800 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200"
+                  className="w-full rounded-xl border border-neutral-300 bg-white/90 backdrop-blur-sm px-4 py-3 text-primary shadow-sm focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy"
                   placeholder="Paste Google Drive folder or document URL"
                   required
                   disabled={isSyncing}
                 />
                 <button
                   type="submit"
-                  className={`px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold shadow-sm hover:from-rose-600 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-rose-200 ${
+                  className={`px-4 py-2 rounded-xl bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy ${
                     isSyncing ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                   disabled={isSyncing}
@@ -224,11 +218,11 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
       )}
 
       {showReturnPrompt && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-rose-100/30 p-6 text-center">
-          <p className="text-gray-700 mb-4">Great! You&apos;ve synced your documents. Ready to continue with the setup?</p>
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-neutral-300 p-6 text-center">
+          <p className="text-primary mb-4">Great! You&apos;ve synced your documents. Ready to continue with the setup?</p>
           <button
             onClick={() => router.push('/onboarding')}
-            className="px-6 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold shadow-sm hover:from-rose-600 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-rose-200"
+            className="px-6 py-2 rounded-xl bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy"
           >
             Return to Setup
           </button>

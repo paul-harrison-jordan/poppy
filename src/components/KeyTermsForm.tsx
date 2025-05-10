@@ -84,17 +84,17 @@ export default function KeyTermsForm({ onComplete }: KeyTermsFormProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-[#E9DCC6] overflow-x-auto">
+    <div className="bg-white rounded-2xl shadow-sm border border-neutral overflow-x-auto">
       <div className="flex items-center justify-between px-6 pt-6">
-        <h2 className="text-2xl font-bold text-[#232426]">Key Terms</h2>
+        <h2 className="text-2xl font-bold text-primary">Key Terms</h2>
         <button
-          className="px-4 py-2 rounded-full bg-gradient-to-r from-rose-500 to-pink-400 text-white font-semibold shadow-sm hover:from-rose-600 hover:to-pink-500 transition-colors"
+          className="px-4 py-2 rounded-full bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 transition-colors"
           onClick={handleAddNew}
         >
           + New Key Term
         </button>
       </div>
-      <p className="text-sm text-[#BBC7B6] mb-6 px-6 pt-2">
+      <p className="text-sm text-neutral mb-6 px-6 pt-2">
         Edit your team&apos;s key terms and definitions. Changes are saved automatically.
       </p>
       <div className="px-6 pb-4 flex items-center justify-between">
@@ -103,7 +103,7 @@ export default function KeyTermsForm({ onComplete }: KeyTermsFormProps) {
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
           placeholder="Search terms or definitions..."
-          className="w-full max-w-xs rounded-full border border-rose-100 bg-white/80 px-4 py-2 text-sm text-gray-800 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200"
+          className="w-full max-w-xs rounded-full border border-neutral bg-white/90 px-4 py-2 text-primary shadow-sm focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy"
         />
       </div>
       <table className="min-w-full divide-y divide-gray-200">
@@ -130,7 +130,7 @@ export default function KeyTermsForm({ onComplete }: KeyTermsFormProps) {
               </td>
               <td className="px-6 py-4 text-right flex gap-2 justify-end">
                 <button
-                  className="text-poppy-600 hover:underline text-sm"
+                  className="text-poppy hover:underline text-sm"
                   onClick={() => handleEdit(term, definition)}
                 >
                   Edit
@@ -151,7 +151,7 @@ export default function KeyTermsForm({ onComplete }: KeyTermsFormProps) {
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 py-4">
           <button
-            className="px-3 py-1 rounded-full bg-white border border-rose-100 text-rose-500 font-medium hover:bg-rose-50/70 transition-colors disabled:opacity-50"
+            className="px-3 py-1 rounded-full bg-white border border-neutral text-poppy font-medium hover:bg-white/70 transition-colors disabled:opacity-50"
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1}
           >
@@ -161,7 +161,7 @@ export default function KeyTermsForm({ onComplete }: KeyTermsFormProps) {
             Page {currentPage} of {totalPages}
           </span>
           <button
-            className="px-3 py-1 rounded-full bg-white border border-rose-100 text-rose-500 font-medium hover:bg-rose-50/70 transition-colors disabled:opacity-50"
+            className="px-3 py-1 rounded-full bg-white border border-neutral text-poppy font-medium hover:bg-white/70 transition-colors disabled:opacity-50"
             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
           >
@@ -186,7 +186,7 @@ export default function KeyTermsForm({ onComplete }: KeyTermsFormProps) {
                 id="term"
                 value={newTerm}
                 onChange={e => setNewTerm(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-rose-100 px-3 py-2 text-gray-900 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200"
+                className="mt-1 block w-full rounded-full border border-neutral bg-white/90 px-3 py-2 text-primary shadow-sm focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy"
                 placeholder="Enter term..."
               />
             </div>
@@ -198,7 +198,7 @@ export default function KeyTermsForm({ onComplete }: KeyTermsFormProps) {
                 id="definition"
                 value={newDefinition}
                 onChange={e => setNewDefinition(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-rose-100 px-3 py-2 text-gray-900 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200"
+                className="mt-1 block w-full rounded-full border border-neutral bg-white/90 px-3 py-2 text-primary shadow-sm focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy"
                 placeholder="Enter definition..."
                 rows={3}
               />
@@ -216,7 +216,7 @@ export default function KeyTermsForm({ onComplete }: KeyTermsFormProps) {
             <button
               type="button"
               onClick={handleAddTerm}
-              className="px-4 py-2 text-sm font-medium text-white bg-rose-500 rounded-md hover:bg-rose-600"
+              className="px-4 py-2 text-sm font-medium text-white bg-poppy rounded-md hover:bg-poppy/90"
             >
               Add Term
             </button>
@@ -240,7 +240,7 @@ export default function KeyTermsForm({ onComplete }: KeyTermsFormProps) {
                 id="edit-term"
                 value={editingTerm || ''}
                 onChange={e => setEditingTerm(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-rose-100 px-3 py-2 text-gray-900 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200"
+                className="mt-1 block w-full rounded-full border border-neutral bg-white/90 px-3 py-2 text-primary shadow-sm focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy"
               />
             </div>
             <div>
@@ -251,7 +251,7 @@ export default function KeyTermsForm({ onComplete }: KeyTermsFormProps) {
                 id="edit-definition"
                 value={editingDefinition}
                 onChange={e => setEditingDefinition(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-rose-100 px-3 py-2 text-gray-900 shadow-sm focus:border-rose-200 focus:outline-none focus:ring-1 focus:ring-rose-200"
+                className="mt-1 block w-full rounded-full border border-neutral bg-white/90 px-3 py-2 text-primary shadow-sm focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy"
                 rows={3}
               />
             </div>
@@ -268,7 +268,7 @@ export default function KeyTermsForm({ onComplete }: KeyTermsFormProps) {
             <button
               type="button"
               onClick={handleSaveEdit}
-              className="px-4 py-2 text-sm font-medium text-white bg-rose-500 rounded-md hover:bg-rose-600"
+              className="px-4 py-2 text-sm font-medium text-white bg-poppy rounded-md hover:bg-poppy/90"
             >
               Save Changes
             </button>
@@ -280,7 +280,7 @@ export default function KeyTermsForm({ onComplete }: KeyTermsFormProps) {
       <div className="px-6 py-4 border-t border-gray-200">
         <button
           onClick={handleComplete}
-          className="w-full px-4 py-2 text-sm font-medium text-white bg-rose-500 rounded-md hover:bg-rose-600"
+          className="w-full px-4 py-2 text-sm font-medium text-white bg-poppy rounded-md hover:bg-poppy/90"
         >
           Complete Setup
         </button>

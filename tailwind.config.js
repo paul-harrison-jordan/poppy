@@ -53,8 +53,16 @@ module.exports = {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
-  			}
-  		}
+  			},
+  			neutral: '#F9FAFB',
+  			poppy: '#FF5757',
+  			sprout: '#3DDC97',
+  			primary: '#111827',
+  		},
+  		fontFamily: {
+  			sans: ['Inter', 'sans-serif'],
+  			mono: ['JetBrains Mono', 'monospace'],
+  		},
   	}
   },
   plugins: [require("tailwindcss-animate")],

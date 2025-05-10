@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Pencil, Settings, RefreshCw, BookOpen, LogOut, GraduationCap } from "lucide-react"
+import { Sparkles, Pencil, Settings, RefreshCw, BookOpen, LogOut, GraduationCap, Home, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function Sidebar() {
@@ -31,11 +31,16 @@ export default function Sidebar() {
     {
       href: "/",
       label: "Draft PRD",
-      icon: <Pencil className="w-4 h-4" />,
+      icon: <FileText size={28} strokeWidth={2.2} />,
+    },
+    {
+      href: "/brainstorm",
+      label: "Brainstorm",
+      icon: <Sparkles className="w-4 h-4" />,
     },
     {
       href: "/setup",
-      label: "Tune ChatPRD",
+      label: "Tune Poppy",
       icon: <Settings className="w-4 h-4" />,
     },
     {
@@ -62,7 +67,7 @@ export default function Sidebar() {
         width: collapsed ? "5rem" : "16rem",
       }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed left-0 top-0 h-screen bg-white/90 backdrop-blur-sm border-r border-rose-100/30 pt-16 z-10"
+      className="fixed left-0 top-0 h-screen bg-white/90 backdrop-blur-sm border-r border-neutral pt-16 z-10"
     >
       <div className="flex flex-col items-center mb-6 select-none">
         <motion.div
@@ -74,8 +79,8 @@ export default function Sidebar() {
           role="button"
           aria-label="Toggle sidebar"
         >
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-rose-100 text-rose-500">
-            <img src="/klaviyo-logo.svg" alt="Logo" className="w-4 h-4" />
+          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-poppy/10 text-poppy">
+            <span className="font-bold text-lg">🌺</span>
           </div>
           <AnimatePresence initial={false}>
             {!collapsed && (
@@ -84,9 +89,9 @@ export default function Sidebar() {
                 animate={{ opacity: 1, width: "auto" }}
                 exit={{ opacity: 0, width: 0 }}
                 transition={{ duration: 0.2 }}
-                className="ml-2 text-base font-medium text-rose-500 whitespace-nowrap overflow-hidden"
+                className="ml-2 text-base font-semibold text-poppy whitespace-nowrap overflow-hidden tracking-tight"
               >
-                Chat PRD
+                Poppy
               </motion.span>
             )}
           </AnimatePresence>
@@ -103,14 +108,14 @@ export default function Sidebar() {
                   className={cn(
                     "flex items-center px-3 py-2 rounded-xl transition-colors",
                     isActive(item.href)
-                      ? "text-poppy-600 bg-white"
-                      : "text-gray-700 hover:bg-poppy-50/70"
+                      ? "text-poppy bg-white"
+                      : "text-gray-700 hover:bg-poppy/10"
                   )}
                 >
                   <div
                     className={cn(
                       "flex items-center justify-center",
-                      isActive(item.href) ? "text-poppy-600" : "text-poppy-500",
+                      isActive(item.href) ? "text-poppy" : "text-poppy/80",
                     )}
                   >
                     {item.icon}
@@ -137,9 +142,9 @@ export default function Sidebar() {
               <motion.div
                 whileHover={{ scale: 1.03, x: 3 }}
                 whileTap={{ scale: 0.97 }}
-                className="flex items-center px-3 py-2 rounded-xl text-gray-700 hover:bg-poppy-50/70 transition-colors"
+                className="flex items-center px-3 py-2 rounded-xl text-gray-700 hover:bg-poppy/10 transition-colors"
               >
-                <div className="flex items-center justify-center text-poppy-500">
+                <div className="flex items-center justify-center text-poppy/80">
                   <LogOut className="w-4 h-4" />
                 </div>
                 <AnimatePresence initial={false}>
