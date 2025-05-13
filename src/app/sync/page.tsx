@@ -57,15 +57,6 @@ export default function SyncPage() {
     return null;
   }
 
-  const handleSyncComplete = () => {
-    // Mark the sync step as complete
-    const completedSteps = JSON.parse(localStorage.getItem('completedSteps') || '[]');
-    if (!completedSteps.includes('sync')) {
-      completedSteps.push('sync');
-      localStorage.setItem('completedSteps', JSON.stringify(completedSteps));
-    }
-  };
-
   return (
     <AppShell>
       <div className="w-full max-w-3xl mx-auto space-y-10">
@@ -74,12 +65,12 @@ export default function SyncPage() {
           <p className="text-base text-primary/80 font-sans mb-6">Connect and manage your product docs, specs, and resources to keep Poppy up to date and context-aware.</p>
         </div>
         <div className="flex justify-center">
-          <SyncForm onComplete={handleSyncComplete} />
+          <SyncForm />
         </div>
         <div className="bg-white rounded-xl shadow-lg border border-[#E9DCC6] overflow-x-auto">
-          <h2 className="text-2xl font-bold text-[#232426] px-6 pt-6">Synced Documents</h2>
+          <h2 className="text-2xl font-bold text-[#232426] px-6 pt-6">Documents</h2>
           <h3 className="text-sm text-[#BBC7B6] mb-6 px-6 pt-6">
-            Whenever you write a PRD, we&apos;ll query these documents to find relevant information to provide ChatPRD
+           Poppy will read these to get smarter.
           </h3>
           <table className="min-w-full divide-y divide-[#E9DCC6]">
             <thead>
@@ -90,7 +81,7 @@ export default function SyncPage() {
             <tbody className="divide-y divide-[#E9DCC6]">
               {syncedPrds.length === 0 ? (
                 <tr>
-                  <td className="px-6 py-4 text-[#EF6351] text-center font-semibold">No synced PRDs found.</td>
+                  <td className="px-6 py-4 text-[#EF6351] text-center font-semibold">No documents found.</td>
                 </tr>
               ) : (
                 currentPrds.map((prd, idx) => (

@@ -43,16 +43,6 @@ export default function KeyTermsPage() {
     return null;
   }
 
-  const handleKeyTermsComplete = () => {
-    // Mark the key terms step as complete
-    const completedSteps = JSON.parse(localStorage.getItem('completedSteps') || '[]');
-    if (!completedSteps.includes('terms')) {
-      completedSteps.push('terms');
-      localStorage.setItem('completedSteps', JSON.stringify(completedSteps));
-    }
-    router.push('/onboarding');
-  };
-
   return (
     <AppShell>
       <div className="w-full max-w-3xl mx-auto space-y-10">
@@ -61,7 +51,7 @@ export default function KeyTermsPage() {
           <p className="text-base text-primary/80 font-sans mb-6">Define and manage your team&apos;s key terms and definitions. These help Poppy understand your product language and context.</p>
         </div>
         <div className="flex justify-center">
-          <KeyTermsForm onComplete={handleKeyTermsComplete} />
+          <KeyTermsForm />
         </div>
       </div>
     </AppShell>

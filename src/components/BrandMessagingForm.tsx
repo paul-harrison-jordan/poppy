@@ -270,16 +270,16 @@ export default function BrandMessagingForm({ onComplete }: BrandMessagingFormPro
           <div>
             {showTitle && (
               <div className="flex items-center gap-2">
-                <input
+                <textarea
                   id="title"
-                  type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   onKeyDown={handleTitleKeyDown}
-                  className="flex-1 rounded-md border border-[#E9DCC6] bg-white px-3 py-2 text-[#232426] shadow-sm focus:border-[#EF6351] focus:outline-none focus:ring-1 focus:ring-[#EF6351]"
+                  className="flex-1 rounded-md border border-[#E9DCC6] bg-white px-3 py-2 text-[#232426] shadow-sm focus:border-[#EF6351] focus:outline-none focus:ring-1 focus:ring-[#EF6351] resize-vertical"
                   placeholder="Give your brand messaging a title..."
                   required
                   autoFocus
+                  rows={5}
                 />
                 <button
                   type="button"

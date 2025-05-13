@@ -30,7 +30,6 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
   const [toastMessage, setToastMessage] = useState('');
   const [editField, setEditField] = useState<keyof FormData | null>(null);
   const [editValue, setEditValue] = useState("");
-  const [showGetStarted, setShowGetStarted] = useState(false);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -54,7 +53,6 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
     localStorage.setItem('personalContext', JSON.stringify(formData));
     setToastMessage('Context updated successfully!');
     setShowToast(true);
-    setShowGetStarted(true);
     
     // Call onComplete if provided
     if (onComplete) {
@@ -254,17 +252,6 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      )}
-      {showGetStarted && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-neutral p-6 text-center">
-          <p className="text-gray-700 mb-4">Great! Your context has been saved. Ready to start writing PRDs?</p>
-          <button
-            onClick={handleGetStarted}
-            className="px-8 py-3 rounded-xl bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy"
-          >
-            Get Started
-          </button>
-        </div>
       )}
     </div>
   );

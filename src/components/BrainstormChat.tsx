@@ -116,10 +116,11 @@ export default function BrainstormChat() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 w-full max-w-5xl mx-auto font-sans" style={{ background: 'none' }}>
-      <div className="w-full flex justify-center pt-2 pb-4">
-        <div className="text-lg font-semibold text-primary tracking-tight">Brainstorm</div>
-      </div>
       <div className="flex-1 min-h-0 overflow-y-auto px-0 py-2 space-y-2">
+      <div className="text-center">
+            <h1 className="text-5xl font-semibold text-primary font-sans tracking-tight">Brainstorm with <span className="text-poppy">Poppy</span></h1>
+            <p className="text-lg text-primary/80 font-sans">Start with an idea or JTDB and let Poppy help you brainstorm. Hit "Draft" when you have enough clarity, and Poppy will turn your conversation into a PRD Prompt.</p>
+          </div>
         <div className="relative z-0 flex flex-col space-y-2">
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} transition-all duration-300`}>
@@ -141,12 +142,19 @@ export default function BrainstormChat() {
         </div>
       </div>
       <form onSubmit={sendMessage} className="flex gap-2 items-center px-0 py-6 bg-transparent" style={{ flexShrink: 0 }}>
-        <input
-          className="flex-1 rounded-full border border-neutral px-5 py-3 shadow-md focus:ring-2 focus:ring-poppy focus:outline-none text-base bg-neutral/80 placeholder-gray-400 transition-all font-sans"
+        <textarea
+          className="flex-1 rounded-xl border border-neutral px-5 py-3 shadow-md focus:ring-2 focus:ring-poppy focus:outline-none text-base bg-neutral/80 placeholder-gray-400 transition-all font-sans resize-none"
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder="Like talking to a version of you who remembers everything"
           disabled={loading}
+          rows={4}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage(e);
+            }
+          }}
         />
         <button
           type="submit"
