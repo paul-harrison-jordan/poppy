@@ -2,8 +2,6 @@
 
 import React, { useState } from 'react';
 import { ProgressNotification, type Document } from '@/components/progress-notification';
-import Toast from './Toast';
-import { useRouter } from 'next/navigation';
 
 interface SyncFormProps {
   onComplete?: () => void;
@@ -27,12 +25,11 @@ interface DriveIds {
 }
 
 export default function SyncForm({ onComplete }: SyncFormProps) {
-  const router = useRouter();
-  const [driveLink, setDriveLink] = useState('');
+  const [driveLink] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const [, setShowToast] = useState(false);
+  const [, setToastMessage] = useState('');
   const [showReturnPrompt, setShowReturnPrompt] = useState(false);
 
   const handleSyncPRDs = async (e: React.FormEvent) => {
@@ -175,13 +172,6 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
     return { folderId, documentId };
   }
 
-  const handleSyncComplete = () => {
-    setShowReturnPrompt(true);
-    if (onComplete) {
-      onComplete();
-    }
-  };
-
   return (
     <div className="w-full space-y-6">
       {!showReturnPrompt ? (
@@ -203,7 +193,7 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
         </div>
       ) : (
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-neutral-300 p-6 text-center">
-          <p className="text-primary mb-4">Great! You've synced your documents.</p>
+          <p className="text-primary mb-4">Great! You&apos;`ve synced your documents.</p>
         </div>
       )}
 

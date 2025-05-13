@@ -76,11 +76,6 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
     setEditValue("");
   };
 
-  const handleGetStarted = () => {
-    localStorage.setItem('onboardingComplete', 'true');
-    router.push('/');
-  };
-
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-neutral p-6">

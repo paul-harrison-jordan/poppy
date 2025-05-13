@@ -119,7 +119,7 @@ export default function BrainstormChat() {
       <div className="flex-1 min-h-0 overflow-y-auto px-0 py-2 space-y-2">
       <div className="text-center">
             <h1 className="text-5xl font-semibold text-primary font-sans tracking-tight">Brainstorm with <span className="text-poppy">Poppy</span></h1>
-            <p className="text-lg text-primary/80 font-sans">Start with an idea or JTDB and let Poppy help you brainstorm. Hit "Draft" when you have enough clarity, and Poppy will turn your conversation into a PRD Prompt.</p>
+            <p className="text-lg text-primary/80 font-sans">Start with an idea or JTDB and let Poppy help you brainstorm. Hit &quot;Summarize &amp; Start as PRD&quot; when you have enough clarity, and Poppy will turn your conversation into a PRD Prompt.</p>
           </div>
         <div className="relative z-0 flex flex-col space-y-2">
           {messages.map((msg, idx) => (
@@ -169,7 +169,7 @@ export default function BrainstormChat() {
           onClick={handleSummarizeAndSave}
           disabled={loading || !messages.length}
         >
-          Summarize &amp; Save as PRD
+          Summarize &amp; Start as PRD
         </button>
       </form>
     </div>

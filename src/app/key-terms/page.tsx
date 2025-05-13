@@ -12,7 +12,6 @@ interface TeamTerms {
 
 export default function KeyTermsPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const [, setTerms] = useState<TeamTerms>({});
 
   useEffect(() => {
