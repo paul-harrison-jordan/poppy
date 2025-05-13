@@ -30,7 +30,6 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [, setShowToast] = useState(false);
   const [, setToastMessage] = useState('');
-  const [showReturnPrompt, setShowReturnPrompt] = useState(false);
 
   const handleSyncPRDs = async (e: React.FormEvent) => {
     e.preventDefault();
