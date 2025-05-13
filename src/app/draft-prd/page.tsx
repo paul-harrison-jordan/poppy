@@ -54,7 +54,7 @@ export default function DraftPrdPage() {
       <div className="w-full max-w-4xl mx-auto">
         <div className="flex flex-col items-center justify-center min-h-screen">
           <div className="text-center">
-            <h1 className="text-5xl font-semibold text-primary font-sans tracking-tight">Draft a PRD with <span className="text-poppy">Poppy</span></h1>
+            <h1 className="text-5xl font-semibold text-primary font-sans tracking-tight">Write with <span className="text-poppy">Poppy</span></h1>
             <p className="text-lg text-primary/80 font-sans">Turn your ideas and context into actionable product documents with AI-powered drafting.</p>
           </div>
           <div className="w-full max-w-xl mt-2">

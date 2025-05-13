@@ -76,19 +76,25 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
           const chunks = chunksResponse.chunks;
           const documentId = chunksResponse.id;
 
-          const embeddedChunks = await fetch('/api/embed-chunks', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chunks, documentId }),
+          // Process chunks individually to avoid timeouts
+          const embeddedChunksPromises = chunks.map(async (chunk: string) => {
+            const embeddedChunk = await fetch('/api/embed-chunks', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chunks: [chunk], documentId }),
+            });
+
+            if (!embeddedChunk.ok) {
+              console.error(`Failed to embed chunk for document: ${documentId}`);
+              return null;
+            }
+
+            const embeddedChunkResponse = await embeddedChunk.json();
+            return embeddedChunkResponse.formattedEmbeddings[0];
           });
 
-          if (!embeddedChunks.ok) {
-            console.error(`Failed to embed document: ${documentId}`);
-            return null;
-          }
-
-          const embeddedChunksResponse = await embeddedChunks.json();
-          const formattedEmbeddings = embeddedChunksResponse.formattedEmbeddings;
+          const embeddedChunksResults = await Promise.all(embeddedChunksPromises);
+          const formattedEmbeddings = embeddedChunksResults.filter((result): result is PineconeEmbedding => result !== null);
 
           const sanitizedEmbeddings = formattedEmbeddings.map((embedding: PineconeEmbedding) => {
             const { id, values, sparseValues, metadata } = embedding;
