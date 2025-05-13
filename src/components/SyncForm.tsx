@@ -25,7 +25,7 @@ interface DriveIds {
 }
 
 export default function SyncForm({ onComplete }: SyncFormProps) {
-  const [driveLink] = useState('');
+  const [driveLink, setDriveLink] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [, setShowToast] = useState(false);
@@ -178,15 +178,37 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-900">Sync Documents</h2>
-            <button
-              onClick={handleSyncPRDs}
-              className="px-4 py-2 rounded-xl bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy"
-            >
-              Sync Now
-            </button>
           </div>
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-neutral-300 p-6">
-            <p className="text-gray-700">
+            <form onSubmit={handleSyncPRDs} className="space-y-4">
+              <div>
+                <label htmlFor="driveLink" className="block font-medium text-primary mb-1">
+                  Google Drive Link
+                </label>
+                <div className="flex gap-2 items-start">
+                  <input
+                    type="text"
+                    id="driveLink"
+                    value={driveLink}
+                    onChange={(e) => setDriveLink(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-300 bg-white/90 backdrop-blur-sm px-4 py-3 text-primary shadow-sm focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy"
+                    placeholder="Paste Google Drive folder or document URL"
+                    required
+                    disabled={isSyncing}
+                  />
+                  <button
+                    type="submit"
+                    className={`px-4 py-2 rounded-xl bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy ${
+                      isSyncing ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    disabled={isSyncing}
+                  >
+                    {isSyncing ? 'Syncing...' : 'Sync'}
+                  </button>
+                </div>
+              </div>
+            </form>
+            <p className="text-gray-700 mt-4">
               Connect your Google Drive to sync your PRDs and other documents. This helps Poppy understand your product context better.
             </p>
           </div>

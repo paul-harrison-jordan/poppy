@@ -1,7 +1,6 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import KeyTermsForm from "@/components/KeyTermsForm";
 import AppShell from '@/components/AppShell';

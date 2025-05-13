@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Toast from './Toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 
@@ -24,7 +23,6 @@ interface ContextFormProps {
 }
 
 export default function ContextForm({ onComplete }: ContextFormProps) {
-  const router = useRouter();
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
