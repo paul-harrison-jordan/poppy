@@ -84,6 +84,12 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
         });
         const sheetData = await sheetResponse.json();
         console.log('Sheet response:', sheetData);
+        
+        // Store the sheet ID in localStorage for the Scheduler component
+        if (documentId) {
+          localStorage.setItem('currentSheetId', documentId);
+        }
+        
         const formattedRows = formatRows(sheetData);
         console.log('Formatted rows:', formattedRows);
         
