@@ -23,7 +23,7 @@ export default function Scheduler() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [driveLink, setDriveLink] = useState('');
+  const [driveLink] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const sendMessage = async (e: React.FormEvent) => {
