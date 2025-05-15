@@ -11,13 +11,13 @@ export default function InstructionsPage() {
         <div className="bg-white/90 rounded-2xl shadow-sm p-8 text-primary font-sans space-y-8">
           <div className="space-y-4">
             <h2 className="text-2xl font-semibold text-poppy">Draft PRDs Effectively</h2>
-            <p className="text-lg">To get the best results from Poppy's PRD drafting:</p>
+            <p className="text-lg">To get the best results from Poppy&apos;s PRD drafting:</p>
             <ul className="list-disc list-inside space-y-2 text-lg">
-              <li>First, <span className="font-semibold">Tune Poppy</span> with your team's strategy and product thinking</li>
+              <li>First, <span className="font-semibold">Tune Poppy</span> with your team&apos;s strategy and product thinking</li>
               <li>Add your <span className="font-semibold">Key Terms</span> to ensure consistent terminology</li>
               <li>Use the <span className="font-semibold">Brainstorm</span> feature to explore ideas before drafting</li>
               <li><span className="font-semibold text-poppy">Required:</span> Include a clear Job-to-be-Done (JTBD) statement that describes:
-                <p className="text-lg">When I'm [blank], I want to [blank] so that I can [blank]. 
+                <p className="text-lg">When I&apos;m [blank], I want to [blank] so that I can [blank]. 
                   <br />
                   today, I cannot do [blank] because of [blank]
                   <br />
@@ -39,7 +39,7 @@ export default function InstructionsPage() {
             <h2 className="text-2xl font-semibold text-poppy">Brainstorm with Context</h2>
             <p className="text-lg">Poppy has access to:</p>
             <ul className="list-disc list-inside space-y-2 text-lg">
-              <li>Your team's strategy and product thinking from <span className="font-semibold">Tune Poppy</span></li>
+              <li>Your team&apos;s strategy and product thinking from <span className="font-semibold">Tune Poppy</span></li>
               <li>All synced documents including:
                 <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
                   <li>Previous PRDs and specs</li>
@@ -48,7 +48,7 @@ export default function InstructionsPage() {
                   <li>Product roadmaps</li>
                 </ul>
               </li>
-              <li>Your team's key terms and definitions</li>
+              <li>Your team&apos;`s key terms and definitions</li>
               <li>Historical context from past conversations</li>
             </ul>
           </div>
