@@ -39,14 +39,14 @@ export async function POST(request: Request) {
       includeGridData: false,
     });
 
-    // Get the second sheet's data
+    // Get the second sheet's data (for email)
     const firstSheet = sheetsData.sheets?.[1];
     if (!firstSheet) {
       return NextResponse.json({ error: 'No sheets found' }, { status: 404 });
     }
 
     const sheetTitle = firstSheet.properties?.title || 'Sheet1';
-    const range = `${sheetTitle}!A${rowNumber}:ZZ${rowNumber}`; // Get the specific row
+    const range = `${sheetTitle}!A${rowNumber}:ZZ${rowNumber}`;
 
     const { data: valuesData } = await sheets.spreadsheets.values.get({
       spreadsheetId: documentId,
@@ -58,9 +58,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No data found at specified location' }, { status: 404 });
     }
 
+    const email = rowData[columnIndex];
+
+    // Check third sheet for recent outreach
+    const thirdSheet = sheetsData.sheets?.[2];
+    if (!thirdSheet) {
+      return NextResponse.json({ error: 'Third sheet not found' }, { status: 404 });
+    }
+
+    const thirdSheetTitle = thirdSheet.properties?.title || 'Sheet3';
+    const thirdSheetRange = `${thirdSheetTitle}!A:Z`; // Get all columns
+
+    const { data: thirdSheetData } = await sheets.spreadsheets.values.get({
+      spreadsheetId: documentId,
+      range: thirdSheetRange,
+    });
+
+    const rows = thirdSheetData.values || [];
+    const now = new Date();
+    const twentyEightDaysAgo = new Date(now.getTime() - (28 * 24 * 60 * 60 * 1000));
+
+    // Check for recent outreach (email in column 2, date in column 4)
+    const hasRecentOutreach = rows.some(row => {
+      if (row[1] === email) { // Column B (index 1) contains email
+        const outreachDate = new Date(row[3]); // Column D (index 3) contains date
+        return outreachDate > twentyEightDaysAgo;
+      }
+      return false;
+    });
+
     return NextResponse.json({ 
-      email: rowData[columnIndex],
-      rowData: rowData // Include full row data for context
+      email,
+      hasRecentOutreach,
+      rowData // Include full row data for context
     });
   } catch (error) {
     console.error('Error fetching email:', error);

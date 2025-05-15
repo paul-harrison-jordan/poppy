@@ -118,73 +118,91 @@ export default function Scheduler() {
               }>
                 {msg.content}
                 {msg.role === 'assistant' && (
-                  <button
-                    className={`absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 px-3 py-1.5 rounded-full bg-poppy text-white hover:bg-poppy/90 text-sm font-medium flex items-center gap-2 ${
-                      schedulingMessageId === idx ? 'opacity-100' : ''
-                    }`}
-                    onClick={async () => {
-                      try {
-                        setSchedulingMessageId(idx);
-                        // Extract row number from the message content
-                        const rowMatch = msg.content.match(/Row: (\d+)/);
-                        if (!rowMatch) {
-                          console.error("Could not find row number in message");
-                          return;
-                        }
-                        const rowNumber = parseInt(rowMatch[1]);
+                  <>
+                    {msg.content.includes('hasRecentOutreach: true') ? (
+                      <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
+                        ⚠️ Someone has reached out to them in the last 28 days
+                      </div>
+                    ) : (
+                      <button
+                        className={`absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 px-3 py-1.5 rounded-full text-white hover:opacity-90 text-sm font-medium flex items-center gap-2 ${
+                          schedulingMessageId === idx ? 'opacity-100' : ''
+                        } bg-poppy`}
+                        onClick={async () => {
+                          try {
+                            setSchedulingMessageId(idx);
+                            // Extract row number from the message content
+                            const rowMatch = msg.content.match(/Row: (\d+)/);
+                            if (!rowMatch) {
+                              console.error("Could not find row number in message");
+                              return;
+                            }
+                            const rowNumber = parseInt(rowMatch[1]);
 
-                        // Extract Klaviyo Account ID from the message content
-                        const klaviyoMatch = msg.content.match(/Klaviyo Account ID: ([^\n]+)/);
-                        if (!klaviyoMatch) {
-                          console.error("Could not find Klaviyo Account ID in message");
-                          return;
-                        }
-                        const klaviyoAccountId = klaviyoMatch[1];
+                            // Extract Klaviyo Account ID from the message content
+                            const klaviyoMatch = msg.content.match(/Klaviyo Account ID: ([^\n]+)/);
+                            if (!klaviyoMatch) {
+                              console.error("Could not find Klaviyo Account ID in message");
+                              return;
+                            }
+                            const klaviyoAccountId = klaviyoMatch[1];
 
-                        // Extract feedback data from the message
-                        const feedbackData = {
-                          NPS_VERBATIM: msg.content.match(/Feedback: ([^\n]+)/)?.[1] || '',
-                          NPS_SCORE_RAW: msg.content.match(/Score: ([^\n]+)/)?.[1] || '',
-                          SURVEY_END_DATE: msg.content.match(/Date: ([^\n]+)/)?.[1] || '',
-                          RECIPIENT_EMAIL: msg.content.match(/Email: ([^\n]+)/)?.[1] || '',
-                          GMV: msg.content.match(/GMV: ([^\n]+)/)?.[1] || ''
-                        };
+                            // Extract feedback data from the message
+                            const feedbackData = {
+                              NPS_VERBATIM: msg.content.match(/Feedback: ([^\n]+)/)?.[1] || '',
+                              NPS_SCORE_RAW: msg.content.match(/Score: ([^\n]+)/)?.[1] || '',
+                              SURVEY_END_DATE: msg.content.match(/Date: ([^\n]+)/)?.[1] || '',
+                              RECIPIENT_EMAIL: msg.content.match(/Email: ([^\n]+)/)?.[1] || '',
+                              GMV: msg.content.match(/GMV: ([^\n]+)/)?.[1] || ''
+                            };
 
-                        // Get the email first
-                        const response = await fetch('/api/get-email', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            documentId: '1OTgVU9sTa2D8QFiDhYy-NuYAN3fQnKQQgrD1iR63jUo',
-                            rowNumber: rowNumber,
-                            columnIndex: 1 // Email is in column B (index 1)
-                          })
-                        });
+                            // Get the email first
+                            const response = await fetch('/api/get-email', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                documentId: '1OTgVU9sTa2D8QFiDhYy-NuYAN3fQnKQQgrD1iR63jUo',
+                                rowNumber: rowNumber,
+                                columnIndex: 1 // Email is in column B (index 1)
+                              })
+                            });
 
-                        if (!response.ok) {
-                          console.error("Failed to fetch email");
-                          return;
-                        }
-                        const { email } = await response.json();
-                        console.log('Got email:', email);
+                            if (!response.ok) {
+                              console.error("Failed to fetch email");
+                              return;
+                            }
+                            const { email, hasRecentOutreach } = await response.json();
+                            console.log('Got email:', email, 'Has recent outreach:', hasRecentOutreach);
 
-                        // Update the sheet with the feedback data
-                        const updateResponse = await fetch('/api/update-sheet', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            documentId: '1OTgVU9sTa2D8QFiDhYy-NuYAN3fQnKQQgrD1iR63jUo',
-                            klaviyoAccountId,
-                            feedbackData
-                          })
-                        });
+                            if (hasRecentOutreach) {
+                              // Update the message content to include the outreach status
+                              setMessages(prev => prev.map((m, i) => 
+                                i === idx 
+                                  ? { ...m, content: m.content + '\n\nhasRecentOutreach: true' }
+                                  : m
+                              ));
+                              setSchedulingMessageId(null);
+                              return;
+                            }
 
-                        if (!updateResponse.ok) {
-                          console.error("Failed to update sheet");
-                          return;
-                        }
+                            // Update the sheet with the feedback data
+                            const updateResponse = await fetch('/api/update-sheet', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                documentId: '1OTgVU9sTa2D8QFiDhYy-NuYAN3fQnKQQgrD1iR63jUo',
+                                klaviyoAccountId,
+                                feedbackData,
+                                email
+                              })
+                            });
 
-                        const emailContent = `Hi there,
+                            if (!updateResponse.ok) {
+                              console.error("Failed to update sheet");
+                              return;
+                            }
+
+                            const emailContent = `Hi there,
 
 Thank you for taking the time to share your thoughts!
 
@@ -199,32 +217,36 @@ I'd love to schedule some time to discuss this further. Would you be available f
 Best regards,
 Your Name`;
 
-                        console.log('Email content:', emailContent);
-                        const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&body=${encodeURIComponent(emailContent)}`;
-                        console.log('Opening Gmail URL:', gmailUrl);
-                        
-                        // Try to open the window
-                        window.open(gmailUrl, '_blank', 'noopener,noreferrer');
-                      } catch (error) {
-                        console.error('Error:', error);
-                      } finally {
-                        setSchedulingMessageId(null);
-                      }
-                    }}
-                    disabled={schedulingMessageId === idx}
-                  >
-                    {schedulingMessageId === idx ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Scheduling...
-                      </>
-                    ) : (
-                      'Schedule Time'
+                            console.log('Email content:', emailContent);
+                            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&body=${encodeURIComponent(emailContent)}`;
+                            console.log('Opening Gmail URL:', gmailUrl);
+                            
+                            // Try to open the window
+                            window.open(gmailUrl, '_blank', 'noopener,noreferrer');
+                          } catch (error) {
+                            console.error('Error:', error);
+                          } finally {
+                            setSchedulingMessageId(null);
+                          }
+                        }}
+                        disabled={schedulingMessageId === idx || msg.content.includes('hasRecentOutreach: true')}
+                      >
+                        {schedulingMessageId === idx ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Scheduling...
+                          </>
+                        ) : msg.content.includes('hasRecentOutreach: true') ? (
+                          'Already Contacted'
+                        ) : (
+                          'Schedule Time'
+                        )}
+                      </button>
                     )}
-                  </button>
+                  </>
                 )}
               </div>
             </div>

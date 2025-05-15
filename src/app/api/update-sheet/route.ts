@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { documentId, klaviyoAccountId, feedbackData } = await request.json();
+    const { documentId, klaviyoAccountId, feedbackData, email } = await request.json();
     
     if (!documentId || !klaviyoAccountId || !feedbackData) {
       return NextResponse.json({ 
@@ -50,11 +50,11 @@ export async function POST(request: Request) {
     // Prepare the row data
     const rowData = [
       klaviyoAccountId,
-      new Date().toISOString(), // Timestamp
+      email,
       feedbackData.NPS_VERBATIM,
+      new Date().toISOString(),
       feedbackData.NPS_SCORE_RAW,
       feedbackData.SURVEY_END_DATE,
-      feedbackData.RECIPIENT_EMAIL,
       feedbackData.GMV
     ];
 
