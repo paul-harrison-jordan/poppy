@@ -1,6 +1,19 @@
 'use client';
 import React, { useState, useRef } from 'react';
 
+function extractDriveIds(input: string): { documentId?: string } {
+  try {
+    const url = new URL(input);
+    const docMatch = url.pathname.match(/\/(?:document|spreadsheets)\/d\/([A-Za-z0-9_-]+)/);
+    if (docMatch) return { documentId: docMatch[1] };
+  } catch {
+    if (/^[A-Za-z0-9_-]{10,}$/.test(input)) {
+      return { documentId: input };
+    }
+  }
+  return {};
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -10,6 +23,7 @@ export default function Scheduler() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [driveLink, setDriveLink] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const sendMessage = async (e: React.FormEvent) => {
@@ -59,6 +73,9 @@ export default function Scheduler() {
       }
 
       const { documentId } = extractDriveIds(driveLink);
+      if (!documentId) {
+        throw new Error("Invalid document ID");
+      }
       console.log('Schedule form submitted with:', documentId);
       const sheetResponse = await fetch('/api/fetch-sheets', {
         method: 'POST',
