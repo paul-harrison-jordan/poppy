@@ -72,8 +72,6 @@ export default function Scheduler() {
       
       // Store the sheet ID for later use
       localStorage.setItem('currentSheetId', documentId);
-      
-      const formattedRows = formatRows(sheetData);
     } catch (error) {
       console.error("Error:", error);
       setMessages(prev => [...prev, { 
@@ -157,7 +155,7 @@ export default function Scheduler() {
 
                         const emailContent = `Hi there,
 
-I noticed your feedback about our Magento 2 integration. Thank you for taking the time to share your thoughts!
+ Thank you for taking the time to share your thoughts!
 
 Here are the details from your feedback:
 - Feedback: ${msg.content.match(/Feedback: ([^\n]+)/)?.[1] || ''}
