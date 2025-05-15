@@ -24,6 +24,7 @@ export default function Scheduler() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [driveLink] = useState('');
+  const [schedulingMessageId, setSchedulingMessageId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const sendMessage = async (e: React.FormEvent) => {
@@ -118,17 +119,26 @@ export default function Scheduler() {
                 {msg.content}
                 {msg.role === 'assistant' && (
                   <button
-                    className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 px-3 py-1.5 rounded-full bg-poppy text-white hover:bg-poppy/90 text-sm font-medium"
+                    className={`absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 px-3 py-1.5 rounded-full bg-poppy text-white hover:bg-poppy/90 text-sm font-medium flex items-center gap-2 ${
+                      schedulingMessageId === idx ? 'opacity-100' : ''
+                    }`}
                     onClick={async () => {
                       try {
+                        setSchedulingMessageId(idx);
                         // Extract row number from the message content
                         const rowMatch = msg.content.match(/Row: (\d+)/);
-                        if (!rowMatch) throw new Error("Could not find row number in message");
+                        if (!rowMatch) {
+                          console.error("Could not find row number in message");
+                          return;
+                        }
                         const rowNumber = parseInt(rowMatch[1]);
 
                         // Extract Klaviyo Account ID from the message content
                         const klaviyoMatch = msg.content.match(/Klaviyo Account ID: ([^\n]+)/);
-                        if (!klaviyoMatch) throw new Error("Could not find Klaviyo Account ID in message");
+                        if (!klaviyoMatch) {
+                          console.error("Could not find Klaviyo Account ID in message");
+                          return;
+                        }
                         const klaviyoAccountId = klaviyoMatch[1];
 
                         // Extract feedback data from the message
@@ -151,7 +161,10 @@ export default function Scheduler() {
                           })
                         });
 
-                        if (!response.ok) throw new Error("Failed to fetch email");
+                        if (!response.ok) {
+                          console.error("Failed to fetch email");
+                          return;
+                        }
                         const { email } = await response.json();
                         console.log('Got email:', email);
 
@@ -167,12 +180,13 @@ export default function Scheduler() {
                         });
 
                         if (!updateResponse.ok) {
-                          throw new Error("Failed to update sheet");
+                          console.error("Failed to update sheet");
+                          return;
                         }
 
                         const emailContent = `Hi there,
 
- Thank you for taking the time to share your thoughts!
+Thank you for taking the time to share your thoughts!
 
 Here are the details from your feedback:
 - Feedback: ${msg.content.match(/Feedback: ([^\n]+)/)?.[1] || ''}
@@ -189,23 +203,27 @@ Your Name`;
                         const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&body=${encodeURIComponent(emailContent)}`;
                         console.log('Opening Gmail URL:', gmailUrl);
                         
-                        // Try to open the window and handle popup blocking
-                        const newWindow = window.open(gmailUrl, '_blank', 'noopener,noreferrer');
-                        if (newWindow === null) {
-                          // Popup was blocked
-                          alert('Please allow popups for this site to open Gmail');
-                          // Fallback: copy the URL to clipboard
-                          navigator.clipboard.writeText(gmailUrl)
-                            .then(() => alert('Gmail URL copied to clipboard. Please paste it in a new tab.'))
-                            .catch(() => alert('Failed to copy URL. Please manually copy this URL: ' + gmailUrl));
-                        }
+                        // Try to open the window
+                        window.open(gmailUrl, '_blank', 'noopener,noreferrer');
                       } catch (error) {
                         console.error('Error:', error);
-                        alert('Failed to schedule time. Please try again.');
+                      } finally {
+                        setSchedulingMessageId(null);
                       }
                     }}
+                    disabled={schedulingMessageId === idx}
                   >
-                    Schedule Time
+                    {schedulingMessageId === idx ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Scheduling...
+                      </>
+                    ) : (
+                      'Schedule Time'
+                    )}
                   </button>
                 )}
               </div>
