@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       // For schedule page, use feedback namespace and get up to 4 matches
       const queryResponse = await index.namespace('feedback').query({
         vector: embedding,
-        topK: 4,
+        topK: 10,
         includeMetadata: true
       });
 

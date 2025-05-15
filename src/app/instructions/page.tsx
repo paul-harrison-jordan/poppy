@@ -8,24 +8,73 @@ export default function InstructionsPage() {
           <h1 className="text-4xl font-semibold text-primary font-sans tracking-tight mb-2">How to Use <span className="text-poppy">Poppy</span></h1>
           <p className="text-base text-primary/80 font-sans mb-6">Get the most out of Poppy: your all-in-one product management workspace for chatting, collaborating, and shipping PRDs with AI.</p>
         </div>
-        <div className="bg-white/90 rounded-2xl shadow-sm p-8 text-primary font-sans space-y-6">
-          <ol className="list-decimal list-inside space-y-4 text-lg">
-            <li>
-              <span className="font-semibold text-poppy">Set up your context:</span> Go to <span className="font-semibold">Tune Poppy</span> and fill in your team strategy, product thinking, and background. This helps Poppy understand your goals and language.
-            </li>
-            <li>
-              <span className="font-semibold text-poppy">Sync your documents:</span> Connect your Google Drive or upload docs so Poppy can reference your latest specs, PRDs, and resources.
-            </li>
-            <li>
-              <span className="font-semibold text-poppy">Define key terms:</span> Add and manage your team&apos;s vocabulary so Poppy always speaks your language.
-            </li>
-            <li>
-              <span className="font-semibold text-poppy">Brainstorm with Poppy:</span> Use the Brainstorm page to chat, ideate, and clarify requirements in real time.
-            </li>
-            <li>
-              <span className="font-semibold text-poppy">Draft PRDs:</span> Use the Draft PRD tool to turn your ideas and context into actionable product documents.
-            </li>
-          </ol>
+        <div className="bg-white/90 rounded-2xl shadow-sm p-8 text-primary font-sans space-y-8">
+          <div className="space-y-4">
+            <h2 className="text-2xl font-semibold text-poppy">Draft PRDs Effectively</h2>
+            <p className="text-lg">To get the best results from Poppy's PRD drafting:</p>
+            <ul className="list-disc list-inside space-y-2 text-lg">
+              <li>First, <span className="font-semibold">Tune Poppy</span> with your team's strategy and product thinking</li>
+              <li>Add your <span className="font-semibold">Key Terms</span> to ensure consistent terminology</li>
+              <li>Use the <span className="font-semibold">Brainstorm</span> feature to explore ideas before drafting</li>
+              <li><span className="font-semibold text-poppy">Required:</span> Include a clear Job-to-be-Done (JTBD) statement that describes:
+                <p className="text-lg">When I'm [blank], I want to [blank] so that I can [blank]. 
+                  <br />
+                  today, I cannot do [blank] because of [blank]
+                  <br />
+                  this is suboptimal because [blank]
+                </p>
+              </li>
+              <li>Include specific details about:
+                <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
+                  <li>User problems and pain points</li>
+                  <li>Success metrics and KPIs</li>
+                  <li>Technical constraints or requirements</li>
+                  <li>Timeline and dependencies</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+
+          <div className="space-y-4">
+            <h2 className="text-2xl font-semibold text-poppy">Brainstorm with Context</h2>
+            <p className="text-lg">Poppy has access to:</p>
+            <ul className="list-disc list-inside space-y-2 text-lg">
+              <li>Your team's strategy and product thinking from <span className="font-semibold">Tune Poppy</span></li>
+              <li>All synced documents including:
+                <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
+                  <li>Previous PRDs and specs</li>
+                  <li>Customer feedback and surveys</li>
+                  <li>Team documentation</li>
+                  <li>Product roadmaps</li>
+                </ul>
+              </li>
+              <li>Your team's key terms and definitions</li>
+              <li>Historical context from past conversations</li>
+            </ul>
+          </div>
+
+          <div className="space-y-4">
+            <h2 className="text-2xl font-semibold text-poppy">Schedule Customer Feedback</h2>
+            <p className="text-lg">Use the Schedule page to:</p>
+            <ul className="list-disc list-inside space-y-2 text-lg">
+              <li>Search for specific customer feedback using natural language queries</li>
+              <li>Find customers based on:
+                <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
+                  <li>NPS scores and verbatim feedback</li>
+                  <li>GMV and account size</li>
+                  <li>Survey dates and response patterns</li>
+                </ul>
+              </li>
+              <li>Schedule outreach with one click:
+                <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
+                  <li>Automatically checks for recent outreach (last 28 days)</li>
+                  <li>Opens Gmail compose with pre-filled feedback details</li>
+                  <li>Tracks outreach in the feedback sheet</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+
           <div className="mt-8 text-center text-primary/70 text-base">
             Need help? Ask Poppy in the chat or check the documentation for tips and best practices.
           </div>

@@ -45,7 +45,7 @@ export default function KeyTermsPage() {
     <AppShell>
       <div className="w-full max-w-3xl mx-auto space-y-10">
         <div className="text-center mt-8">
-          <h1 className="text-4xl font-semibold text-primary font-sans tracking-tight mb-2">Key Terms for <span className="text-poppy">Poppy</span></h1>
+          <h1 className="text-5xl font-semibold text-primary font-sans tracking-tight">Key Terms for <span className="text-poppy">Poppy</span></h1>
           <p className="text-base text-primary/80 font-sans mb-6">Define and manage your team&apos;s key terms and definitions. These help Poppy understand your product language and context.</p>
         </div>
         <div className="flex justify-center">

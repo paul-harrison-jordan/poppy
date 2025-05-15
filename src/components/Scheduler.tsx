@@ -105,8 +105,8 @@ export default function Scheduler() {
     <div className="flex flex-col flex-1 min-h-0 w-full max-w-5xl mx-auto font-sans" style={{ background: 'none' }}>
       <div className="flex-1 min-h-0 overflow-y-auto px-0 py-2 space-y-2">
         <div className="text-center">
-          <h1 className="text-5xl font-semibold text-primary font-sans tracking-tight">Feedback Search</h1>
-          <p className="text-lg text-primary/80 font-sans">Search through your feedback to find relevant responses.</p>
+          <h1 className="text-5xl font-semibold text-primary font-sans tracking-tight">Get feedback with <span className="text-poppy">Poppy</span></h1>
+          <p className="text-lg text-primary/80 font-sans">Search for feedback and send outreach emails with one click</p>
         </div>
         <div className="relative z-0 flex flex-col space-y-2">
           {messages.map((msg, idx) => (
@@ -264,7 +264,7 @@ Your Name`;
           className="flex-1 rounded-xl border border-neutral px-5 py-3 shadow-md focus:ring-2 focus:ring-poppy focus:outline-none text-base bg-neutral/80 placeholder-gray-400 transition-all font-sans resize-none"
           value={input}
           onChange={e => setInput(e.target.value)}
-          placeholder="Describe what you're looking for in the feedback..."
+          placeholder="Customers who hate our list import, customers who need more django filters, customers who will help me build a new feature..."
           disabled={loading}
           rows={4}
           onKeyDown={(e) => {
