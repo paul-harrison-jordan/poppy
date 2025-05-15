@@ -1,20 +1,9 @@
 'use client';
 import React, { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
-}
-
-interface FeedbackMatch {
-  RECIPIENT_EMAIL: string;
-  GMV: string;
-  NPS_VERBATIM: string;
-  NPS_SCORE_RAW: string;
-  SURVEY_END_DATE: Date;
-  row_number: number;
-  KLAVIYO_ACCOUNT_ID: string;
 }
 
 export default function Scheduler() {
@@ -59,7 +48,7 @@ export default function Scheduler() {
       if (!matchedContext || !Array.isArray(matchedContext)) throw new Error("Invalid matched context response");
 
       // Format each match as a text response
-      const responses = matchedContext.map((match: any) => {
+      const responses = matchedContext.map((match) => {
         const metadata = match.metadata;
         return `Feedback: ${metadata.NPS_VERBATIM}\nScore: ${metadata.NPS_SCORE_RAW}\nDate: ${metadata.SURVEY_END_DATE}\nEmail: ${metadata.RECIPIENT_EMAIL}\nGMV: ${metadata.GMV}\nKlaviyo Account ID: ${metadata.KLAVIYO_ACCOUNT_ID}\nRow: ${metadata.row_number}`;
       });

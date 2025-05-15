@@ -8,7 +8,7 @@ interface SheetData {
   name: string;
   data: Array<{
     rowNumber: number;
-    values: any[];
+    values: string[];
   }>;
 }
 

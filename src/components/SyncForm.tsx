@@ -30,14 +30,23 @@ interface FormattedRow {
   GMV: string;
   NPS_VERBATIM: string;
   NPS_SCORE_RAW: string;
-  SURVEY_END_DATE: Date;
+  SURVEY_END_DATE: string;
   row_number: number;
   KLAVIYO_ACCOUNT_ID: string;
 }
 
-function formatRows(sheetData: any): FormattedRow[] {
+interface SheetData {
+  id: string;
+  name: string;
+  data: Array<{
+    rowNumber: number;
+    values: string[];
+  }>;
+}
+
+function formatRows(sheetData: { sheet: SheetData }): FormattedRow[] {
   // Skip the header row (rowNumber 1)
-  return sheetData.sheet.data.slice(2).map((row: any) => ({
+  return sheetData.sheet.data.slice(2).map((row) => ({
     RECIPIENT_EMAIL: row.values[1],
     GMV: row.values[7],
     NPS_VERBATIM: row.values[13],
