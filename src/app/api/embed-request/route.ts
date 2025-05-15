@@ -13,17 +13,24 @@ export async function POST(request: Request) {
     const headersList = await headers();
     const referer = headersList.get('referer') || '';
     const isSchedulePage = referer.includes('/schedule');
-
+    const isBrainstormPage = referer.includes('/brainstorm');
     const body = await request.json();
     
     if (isSchedulePage) {
       const input = body.input || '';
       const queryEmbedding = await embedChunks([input]);
       return NextResponse.json({ queryEmbedding });
-    } else {
-      const input = body.query || '';
+    } 
+    else if (isBrainstormPage) {
+
+      const input = body.input || '';
+      const queryEmbedding = await embedChunks([input])
+      return NextResponse.json({ queryEmbedding });
+    }
+    else {
+      const query = body.query || '';
       const title = body.title || '';
-      const queryEmbedding = await embedChunks([title ? `${title}\n${input}` : input]);
+      const queryEmbedding = await embedChunks([title ? `${title}\n${query}` : query ]);
       return NextResponse.json({ queryEmbedding });
     }
   } catch (error) {

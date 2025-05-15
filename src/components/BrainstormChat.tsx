@@ -31,7 +31,9 @@ export default function BrainstormChat() {
         const embedRes = await fetch("/api/embed-request", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ input }),
+            body: JSON.stringify({
+              input
+            }),
           })
           if (!embedRes.ok) throw new Error("Failed to get embedding")
           const { queryEmbedding } = await embedRes.json()
