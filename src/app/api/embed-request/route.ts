@@ -1,19 +1,31 @@
 import { NextResponse } from 'next/server';
 import { embedChunks } from '@/app/embed';
 import { getAuthServerSession } from '@/lib/auth';
+import { headers } from 'next/headers';
 
 export async function POST(request: Request) {
   try {
     const authSession = await getAuthServerSession();
     if (!authSession?.user?.name) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+    }
+
+    const headersList = await headers();
+    const referer = headersList.get('referer') || '';
+    const isSchedulePage = referer.includes('/schedule');
 
     const body = await request.json();
-
-    const queryEmbedding = await embedChunks([`${body.title}\n${body.query}`]);
     
-    return NextResponse.json({ queryEmbedding });
+    if (isSchedulePage) {
+      const input = body.input || '';
+      const queryEmbedding = await embedChunks([input]);
+      return NextResponse.json({ queryEmbedding });
+    } else {
+      const input = body.query || '';
+      const title = body.title || '';
+      const queryEmbedding = await embedChunks([title ? `${title}\n${input}` : input]);
+      return NextResponse.json({ queryEmbedding });
+    }
   } catch (error) {
     console.error('Error processing query:', error);
     return NextResponse.json(

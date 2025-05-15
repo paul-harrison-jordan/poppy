@@ -36,22 +36,6 @@ export interface PineconeVector {
   values: number[];
   metadata: { text: string };
 }
-
-// export async function formatEmbeddings(
-//   embeddings: OpenAIEmbedding[], 
-//   documentId: string
-// ): Promise<PineconeVector[]> {
-//   return embeddings.map((e) => ({
-//     id: nanoid(),
-//     values: e.embedding, // float32[]
-//     metadata: { text: "" },
-//     documentId: documentId // fill later if needed
-//   }));
-// }
-
-/**
- * Enhance → embed → package for Pinecone (id, values, metadata).
- */
 export async function buildPineconeRecords(
   rawChunks: string[],
   documentId: string

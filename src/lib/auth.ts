@@ -34,7 +34,8 @@ export const authOptions: NextAuthOptions = {
           scope:
             "openid email profile " +
             "https://www.googleapis.com/auth/drive " +
-            "https://www.googleapis.com/auth/documents",
+            "https://www.googleapis.com/auth/documents " +
+            "https://www.googleapis.com/auth/spreadsheets.readonly",
           access_type: "offline",
           prompt: "consent",
         },
