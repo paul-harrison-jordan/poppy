@@ -14,6 +14,7 @@ export async function POST(request: Request) {
     const referer = headersList.get('referer') || '';
     const isSchedulePage = referer.includes('/schedule');
     const isBrainstormPage = referer.includes('/brainstorm');
+    const isChatPage = referer.includes('/chat');
     const body = await request.json();
     
     if (isSchedulePage) {
@@ -21,6 +22,12 @@ export async function POST(request: Request) {
       const queryEmbedding = await embedChunks([input]);
       return NextResponse.json({ queryEmbedding });
     } 
+
+    if (isChatPage) {
+      const input = body.text || '';
+      const queryEmbedding = await embedChunks([input])
+      return NextResponse.json({ queryEmbedding });
+    }
     else if (isBrainstormPage) {
 
       const input = body.input || '';

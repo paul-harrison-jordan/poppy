@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { motion } from "framer-motion"
-import { Sparkles, Settings, RefreshCw, BookOpen, LogOut, GraduationCap, FileText, Calendar } from "lucide-react"
+import { Sparkles, Settings, RefreshCw, BookOpen, LogOut, GraduationCap, FileText, Calendar, Target, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function Sidebar() {
@@ -21,9 +21,19 @@ export default function Sidebar() {
       icon: <FileText size={28} strokeWidth={2.2} />,
     },
     {
+      href: "/strategy",
+      label: "Strategic Doc",
+      icon: <Target className="w-4 h-4" />,
+    },
+    {
       href: "/brainstorm",
       label: "Brainstorm",
       icon: <Sparkles className="w-4 h-4" />,
+    },
+    {
+      href: "/chat",
+      label: "Chat",
+      icon: <MessageSquare className="w-4 h-4" />,
     },
     {
       href: "/schedule",

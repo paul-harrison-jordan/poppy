@@ -28,9 +28,9 @@ export async function POST(req: NextRequest) {
       .replace(/^-|-$/g, '');
 
    
-    const embedding = await req.json();
+    const { embedding, useCase } = await req.json();
 
-    if (isSchedulePage) {
+    if (isSchedulePage || useCase === 'schedule') {
       const index = pc.index('feedback')
       // For schedule page, use feedback namespace and get up to 4 matches
       const queryResponse = await index.namespace('feedback').query({

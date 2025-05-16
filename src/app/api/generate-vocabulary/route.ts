@@ -104,7 +104,7 @@ const terms = {
   "Customer Hub": "Service console that surfaces profile data, order history, and engagements for support.",
   "Reviews": "Native review request flow and dashboard feeding user content back into segmentation.",
   "Helpdesk ticket sync": "Apps like Zendesk push ticket events into Klaviyo for automated follow up.",
-  "Benchmarks tab in Customer Hub": "Compares a brand’s support metrics to industry peers once connected.",
+  "Benchmarks tab in Customer Hub": "Compares a brand's support metrics to industry peers once connected.",
   "Deliverability Health alerts": "Automated warnings that flag rising spam or bounces and recommend fixes"
 }
 
@@ -118,35 +118,74 @@ export async function POST(request: Request) {
     if (!authSession?.user?.name) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const {title, query, matchedContext} = await request.json();
+    const { title, query, matchedContext, type } = await request.json();
 
     const completion = await openai.chat.completions.create({
       messages: [
         {
           role: "system",
-          content: `
+          content: type === 'prd' ?
+            `You are a system that helps a product manager write a PRD. You will be given a title and query for a new PRD, as well as relevant context from previous PRDs or documents that the user has shared with you. 
 
-          You are a system that helps a product manager write a PRD. You will be given a title and query for a new PRD, as well as relevant context from previous PRDs or documents that the user has shared with you. 
+            Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of terms over time.
 
-        
-          Over time, you should become smarter and more procifient at your job, because of this, it's especially important that you build a better understanding of terms over time.
+            If the title, query, or context have words or terms you aren't 100% certain about, include them in the internalTerms array. You must always return the internalTerms array with string values of internal terms that you are unsure about.
 
-          If the title, query, or context have words or terms you aren't 100% certain about, include them in the internalTerms array. You must always return the internalTerms array with string values of internal terms that you are unsure about.
+            Example JSON object:
+            {
+              "internalTerms": [
+                "Profile",
+                "Active profile",
+                "Suppressed profile",
+                "Activity feed",
+              ]
+            }
 
-          Example JSON object:
-          {
-            "internalTerms": [
-              "Profile",
-              "Active profile",
-              "Suppressed profile",
-              "Activity feed",
-            ]
-          }
+            I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a product manager would ask.
+            ${Object.keys(terms).join(', ')}
+            
+            you must respond with a JSON object containing an array of teamTerms you need definitions of.` :
+            type === 'strategic' ?
+            `You are a system that helps a strategic product leader write a Strategic Document. You will be given a title and query for a new strategy, as well as relevant context from previous strategic documents that the user has shared with you. 
 
-          I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a product manager would ask.
-          ${Object.keys(terms).join(', ')}
-          
-          you must respond with a JSON object containing an array of teamTerms you need definitions of.`
+            Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of strategic terms over time.
+
+            If the title, query, or context have words or terms you aren't 100% certain about, include them in the internalTerms array. You must always return the internalTerms array with string values of internal terms that you are unsure about.
+
+            Example JSON object:
+            {
+              "internalTerms": [
+                "Market penetration",
+                "Competitive advantage",
+                "Strategic initiative",
+                "Value proposition",
+              ]
+            }
+
+            I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a strategic leader would ask.
+            ${Object.keys(terms).join(', ')}
+            
+            you must respond with a JSON object containing an array of teamTerms you need definitions of.` :
+            `You are a system that helps a strategic product leader write a Strategic Document. You will be given a title and query for a new strategy, as well as relevant context from previous strategic documents that the user has shared with you. 
+
+            Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of strategic terms over time.
+
+            If the title, query, or context have words or terms you aren't 100% certain about, include them in the internalTerms array. You must always return the internalTerms array with string values of internal terms that you are unsure about.
+
+            Example JSON object:
+            {
+              "internalTerms": [
+                "Market penetration",
+                "Competitive advantage",
+                "Strategic initiative",
+                "Value proposition",
+              ]
+            }
+
+            I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a strategic leader would ask.
+            ${Object.keys(terms).join(', ')}
+            
+            you must respond with a JSON object containing an array of teamTerms you need definitions of.`
         },
         {
           role: "user",
@@ -164,9 +203,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ teamTerms: teamTerms as TeamTerms });
   } catch (error) {
-    console.error('Error generating questions:', error);
+    console.error('Error generating vocabulary:', error);
     return NextResponse.json(
-      { error: 'Failed to generate questions' },
+      { error: 'Failed to generate vocabulary' },
       { status: 500 }
     );
   }
