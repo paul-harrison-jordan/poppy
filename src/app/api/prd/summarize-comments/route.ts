@@ -3,6 +3,13 @@ import OpenAI from 'openai'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
+interface CacheEntry {
+  lastModified: string
+  summary: string
+}
+
+const summaryCache = new Map<string, CacheEntry>()
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
@@ -14,7 +21,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { comments, teamTerms, context } = await request.json()
+    const { prdId, lastModified, comments, teamTerms, context } = await request.json()
+
+    if (!prdId || !lastModified) {
+      return NextResponse.json({ error: 'prdId and lastModified are required' }, { status: 400 })
+    }
+
+    const cached = summaryCache.get(prdId)
+    if (cached && cached.lastModified === String(lastModified)) {
+      return NextResponse.json({ summary: cached.summary })
+    }
 
     if (!comments || !Array.isArray(comments)) {
       return NextResponse.json({ error: 'Comments array is required' }, { status: 400 })
@@ -30,9 +46,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ summary: 'No unresolved comments to summarize.' })
     }
 
-    const prompt = `As a product manager, analyze this thread of team comments and identify the key themes and questions that need to be addressed. Consider the context and flow of the conversation, including any follow-up questions or clarifications. Focus on actionable insights and prioritize the most critical points that need the PM's attention. 
-    I have included relevant team terms ${teamTerms} and personal context ${context} that will help you understand the context of the conversation.
-    
+    const teamTermsPart = teamTerms ? `I have included relevant team terms ${teamTerms}` : ''
+    const contextPart = context ? ` and personal context ${context}` : ''
+
+    const prompt = `As a product manager, analyze this thread of team comments and identify the key themes and questions that need to be addressed. Consider the context and flow of the conversation, including any follow-up questions or clarifications. Focus on actionable insights and prioritize the most critical points that need the PM's attention.
+    ${teamTermsPart}${contextPart} that will help you understand the context of the conversation.
+
     Here is the comment thread:
 
 ${unresolvedComments}
@@ -60,6 +79,8 @@ Keep the summary focused and actionable.`
     })
 
     const summary = completion.choices[0].message.content
+
+    summaryCache.set(prdId, { lastModified: String(lastModified), summary })
 
     return NextResponse.json({ summary })
   } catch (error) {

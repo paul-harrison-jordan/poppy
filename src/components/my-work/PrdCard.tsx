@@ -17,8 +17,25 @@ interface CommentCount {
   count: number
 }
 
-export default function PrdCard({ prd }: { prd: Prd }) {
+export default function PrdCard({
+  prd,
+  loadSummary
+}: {
+  prd: Prd
+  loadSummary: () => Promise<string | undefined>
+}) {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [summary, setSummary] = useState<string | undefined>(
+    prd.metadata?.open_questions_summary
+  )
+
+  const ensureSummary = async () => {
+    if (!summary) {
+      const s = await loadSummary()
+      if (s) setSummary(s)
+    }
+  }
 
   const getDaysSinceLastEdit = () => {
     if (!prd.last_edited_at) return null;
@@ -60,7 +77,14 @@ export default function PrdCard({ prd }: { prd: Prd }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <Card className="bg-white hover:shadow-lg transition-shadow duration-200">
+        <Card
+          className="bg-white hover:shadow-lg transition-shadow duration-200"
+          onClick={() => {
+            const next = !isExpanded
+            setIsExpanded(next)
+            if (next) ensureSummary()
+          }}
+        >
           <CardHeader>
             <CardTitle className="flex justify-between items-center">
               <span className="text-lg font-semibold text-gray-900">{prd.title}</span>
@@ -69,7 +93,10 @@ export default function PrdCard({ prd }: { prd: Prd }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setIsModalOpen(true)}
+                  onClick={async () => {
+                    await ensureSummary()
+                    setIsModalOpen(true)
+                  }}
                   className="h-8 w-8"
                 >
                   <Expand className="h-4 w-4" />
@@ -112,12 +139,12 @@ export default function PrdCard({ prd }: { prd: Prd }) {
             )}
 
             {/* Open Questions Summary */}
-            {prd.metadata?.open_questions_summary && (
+            {isExpanded && summary && (
               <div className="flex items-start gap-2 text-sm text-gray-600">
                 <Lightbulb className="w-4 h-4 text-poppy mt-0.5 flex-shrink-0" />
                 <div className="space-y-1">
                   <p className="font-medium text-gray-900">Open Questions</p>
-                  <p className="line-clamp-3">{prd.metadata.open_questions_summary}</p>
+                  <p className="line-clamp-3">{summary}</p>
                 </div>
               </div>
             )}
@@ -135,6 +162,8 @@ export default function PrdCard({ prd }: { prd: Prd }) {
         prd={prd}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        summary={summary}
+        loadSummary={ensureSummary}
       />
     </>
   )
