@@ -9,17 +9,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Format username to comply with Pinecone naming requirements
     const formattedUsername = authSession.user.name
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, '-')
-      .replace(/-+/g, '-') // Replace multiple consecutive hyphens with a single one
-      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
 
     const indexName = `${formattedUsername}`;
-    
     const index = getUserIndex(indexName);
-    
+
     const body = await request.json();
     const documentId = body.documentId;
     const formattedEmbeddings = body.formattedEmbeddings;
@@ -30,7 +28,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Set the access token from the session
     if (!authSession.accessToken) {
       return NextResponse.json(
         { error: 'Not authenticated' },
@@ -46,16 +43,16 @@ export async function POST(request: Request) {
     }
 
     await namespace.upsert(formattedEmbeddings);
-    
+
     return NextResponse.json({
-      message: 'Document synced successfully',
+      message: 'Document resynced successfully',
       documentId: documentId,
     });
   } catch (error) {
-    console.error('Error syncing document:', error);
+    console.error('Error resyncing document:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
     );
   }
-} 
+}
