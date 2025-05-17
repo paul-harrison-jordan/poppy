@@ -1,0 +1,42 @@
+{
+  "prds": [
+    {
+      "id": "1",
+      "title": "Example PRD",
+      "status": "Draft",
+      "owner_id": "1",
+      "due_date": null,
+      "created_at": "2024-05-01T00:00:00Z"
+    }
+  ],
+  "prds_reviewers": [
+    {
+      "prd_id": "1",
+      "user_id": "2",
+      "role": "reviewer"
+    }
+  ],
+  "prds_tasks": [
+    {
+      "id": "1",
+      "prd_id": "1",
+      "title": "Draft",
+      "is_done": false,
+      "sort_order": 1
+    },
+    {
+      "id": "2",
+      "prd_id": "1",
+      "title": "Review",
+      "is_done": false,
+      "sort_order": 2
+    },
+    {
+      "id": "3",
+      "prd_id": "1",
+      "title": "Final",
+      "is_done": false,
+      "sort_order": 3
+    }
+  ]
+}
