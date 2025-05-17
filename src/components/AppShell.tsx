@@ -2,31 +2,47 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Home, Settings, RefreshCw, CheckCircle } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { Settings, RefreshCw, CheckCircle } from "lucide-react";
 import Sidebar from './Sidebar'
 import { cn } from "@/lib/utils";
 
-const stepsConfig = [
+interface PersonalContext {
+  teamStrategy: string;
+  howYouThinkAboutProduct: string;
+  pillarGoalsKeyTermsBackground: string;
+  examplesOfHowYouThink: string;
+}
+
+interface Step {
+  complete: boolean;
+}
+
+interface StepConfig {
+  title: string;
+  description: string;
+  checkComplete: (ctx: PersonalContext | string[]) => boolean;
+}
+
+const stepsConfig: StepConfig[] = [
   {
-    label: "Personal Context",
-    key: "personalContext",
-    link: "/tune-poppy",
-    icon: Settings,
-    cta: "Get Started",
-    message: "Add your personal context",
-    subtext: "Help Poppy understand your product and team.",
-    checkComplete: (ctx: any) => ctx && Object.values(ctx).every((v) => v && v !== "")
+    title: "Tune Poppy",
+    description: "Add your team's strategy and product thinking",
+    checkComplete: (ctx: PersonalContext | string[]) => {
+      if ('teamStrategy' in ctx) {
+        return Object.values(ctx as PersonalContext).every((v) => v && v !== "");
+      }
+      return Array.isArray(ctx) && ctx.length > 0;
+    }
   },
   {
-    label: "Sync Documents",
-    key: "syncedDocs",
-    link: "/sync-docs",
-    icon: RefreshCw,
-    cta: "Sync Now",
-    message: "Sync your first document",
-    subtext: "Give Poppy access to your docs for better results.",
-    checkComplete: (docs: any) => Array.isArray(docs) && docs.length > 0
+    title: "Sync Documents",
+    description: "Connect your team's documents",
+    checkComplete: (docs: PersonalContext | string[]) => {
+      if (Array.isArray(docs)) {
+        return docs.length > 0;
+      }
+      return false;
+    }
   }
 ];
 
@@ -37,7 +53,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // (If you want to use usePathname, you can, but window.location.pathname is fine for this case)
   const isHome = pathname === "/";
 
-  const [steps, setSteps] = useState([
+  const [steps, setSteps] = useState<Step[]>([
     { complete: false },
     { complete: false }
   ]);
@@ -54,7 +70,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const personalContext = JSON.parse(localStorage.getItem("personalContext") || "{}");
     const syncedDocs = JSON.parse(localStorage.getItem("syncedDocs") || "[]");
     setSteps([
-      { complete: stepsConfig[0].checkComplete(personalContext) },
+      { complete: stepsConfig[0].checkComplete(personalContext as PersonalContext) },
       { complete: stepsConfig[1].checkComplete(syncedDocs) }
     ]);
   }, []);
@@ -112,7 +128,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="fixed top-0 left-0 w-full px-0 py-4 bg-white/90 border-b border-poppy/10 shadow-sm flex items-center justify-center z-50">
           <div className="w-full max-w-2xl mx-auto flex items-center justify-center">
             <CheckCircle className="w-5 h-5 text-poppy mr-2" />
-            <span className="text-poppy font-semibold">You're all set! Head to Chat to get started.</span>
+            <span className="text-poppy font-semibold">You&apos;re all set! Head to Chat to get started.</span>
             <Link href="/" className="ml-4 px-4 py-2 rounded-full bg-poppy text-white font-semibold hover:bg-poppy/90 transition-colors text-sm shadow">
               Go to Chat
             </Link>

@@ -237,7 +237,7 @@ export async function POST(request: Request) {
         {
           role: "user",
           content: `
-          Title: ${title}\nQuery: ${query}, \nContext: ${matchedContext}`
+          Title: ${title}\nQuery: ${query}, \nContext: ${matchedContext}, teamTerms: ${teamTerms}, storedContext: ${storedContext}: klaviyoTerms: ${terms}`
         }
       ],
       model: "o4-mini",

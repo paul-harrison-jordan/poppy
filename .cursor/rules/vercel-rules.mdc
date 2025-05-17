@@ -1,0 +1,47 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+name: vercel-deploy
+description: Optimise all code the AI touches for successful, low-latency Vercel deployment
+alwaysApply: true
+globs:
+  - '**/*.ts'
+  - '**/*.tsx'
+  - '**/*.js'
+  - 'vercel.json'
+---
+
+# Build settings
+- Target **Next.js 15** (`^15.x`) and run `npx @next/codemod@canary upgrade latest` on every major bump.
+- Keep **Node 20** in `engines.node` to match Vercel’s default runtime.
+- Fail the build if `npm run type-check` or `next lint` raises an error.
+
+# API & function guidelines
+- Default each route to `Edge Runtime` unless it requires Node-only APIs; fall back to `export const runtime = "nodejs"` when you need `fs` or crypto.  
+- **Set `maxDuration` defensively** in `vercel.json`:  
+  `90` s for Pro, `60` s for Hobby.  
+- For tasks >90 s, wrap the heavy work in `after()` (Next.js) or `waitUntil()` and enable **Fluid Compute** in the dashboard.
+
+# Performance & size
+- Bundle-guard: If `pnpm export-size` > **200 MB uncompressed**, break the library out with `dynamic(() => import("lib"), { ssr:false })`.
+- Reject any dependency >200 kB min+gzip unless it replaces ≥200 kB of custom code.
+- Every PR must include `next build --profile` and attach the JSON to the MR for smoke-check.
+
+# Caching & ISR
+- Use `revalidate: 60` for marketing pages and `revalidate: 5` for dashboards.
+- Add `Cache-Control: s-maxage=60, stale-while-revalidate=120` to any API route that returns repeatable data.
+- Verify `x-vercel-cache: HIT` in preview before merging.
+
+# Observability & rollback
+- Log `requestId`, `functionDuration` and `memoryUsed` in every API handler.
+- Enforce **Instant Rollback**: block a production promotion until the deployment has ≥100 requests and 0 errors in logs.
+
+# Environment & secrets
+- Resolve secrets with `process.env.*` only; never hard-code fall-backs.
+- Deny deploy if a newly introduced env var is missing in **Preview** _or_ **Production** environments.
+
+# CI shortcut
+- When prompted to “fix deployment issue”, first run `pnpm vee` (`vercel build --token $VC_TOKEN`) locally and paste the last 100 lines of the log here before requesting code changes.

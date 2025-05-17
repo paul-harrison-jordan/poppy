@@ -39,7 +39,6 @@ export default function ChatInterface() {
   const [termDefinitions, setTermDefinitions] = useState<Record<string, string>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [schedulingMessageId, setSchedulingMessageId] = useState<number | null>(null);
-  const router = useRouter();
 
   // Add useEffect for auto-scrolling
   useEffect(() => {
@@ -116,19 +115,13 @@ export default function ChatInterface() {
         reasoning: q.reasoning,
         answer: questionAnswers[q.id]
       }));
-
-      // Format the questions and answers as a clear string for OpenAI
-      const qaContext = questionsWithAnswers
-        .map(q => `Question: ${q.text}\nReasoning: ${q.reasoning}\nAnswer: ${q.answer}`)
-        .join('\n\n');
-
       const storedContext = localStorage.getItem("personalContext");
       const teamTerms = JSON.parse(localStorage.getItem("teamTerms") || "{}");
 
       // Show writing message
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: <span className="animate-pulse">I'm writing your PRD document now...</span>
+        content: <span className="animate-pulse">I&apos;m writing your PRD document now...</span>
       }]);
 
       const contentResponse = await fetch("/api/generate-content", {
