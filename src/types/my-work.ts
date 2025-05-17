@@ -5,12 +5,42 @@ export interface Prd {
   due_date?: string | null
   owner_id: string
   created_at: string
+  last_edited_at?: string
+  metadata?: PrdMetadata
+}
+
+export interface PrdMetadata {
+  comments: Comment[]
+  edit_history: Edit[]
+  open_questions_summary?: string
+}
+
+export interface Comment {
+  id: string
+  prd_id: string
+  user_id: string
+  user_name: string
+  content: string
+  created_at: string
+  resolved: boolean
+}
+
+export interface Edit {
+  id: string
+  prd_id: string
+  user_id: string
+  user_name: string
+  timestamp: string
+  section: string
+  change_type: 'add' | 'modify' | 'delete'
 }
 
 export interface Reviewer {
+  id: string
   prd_id: string
   user_id: string
-  role: string
+  user_name: string
+  status: 'pending' | 'approved' | 'rejected'
 }
 
 export interface Task {
