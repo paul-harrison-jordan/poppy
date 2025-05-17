@@ -240,7 +240,7 @@ export async function POST(request: Request) {
           Title: ${title}\nQuery: ${query}, \nContext: ${matchedContext}, teamTerms: ${teamTerms}, storedContext: ${storedContext}: klaviyoTerms: ${terms}`
         }
       ],
-      model: "o4-mini",
+      model: "o3",
       response_format: { type: "json_object" },
     });
 
