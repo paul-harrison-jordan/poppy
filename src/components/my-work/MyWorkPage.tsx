@@ -16,7 +16,7 @@ export default function MyWorkPage() {
   const [prds, setPrds] = useState<Prd[]>([])
   const [filteredPrds, setFilteredPrds] = useState<Prd[]>([])
   const [loading, setLoading] = useState(true)
-  const [filters, setFilters] = useState<FilterState>({
+  const [, setFilters] = useState<FilterState>({
     minComments: 0,
     minCommentors: 0,
     maxDaysSinceEdit: 0

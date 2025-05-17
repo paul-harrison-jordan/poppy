@@ -3,8 +3,7 @@
 import { Prd } from '@/types/my-work'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { ExternalLink, MessageSquare, Clock, Lightbulb } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { ExternalLink, MessageSquare, Lightbulb } from 'lucide-react'
 
 interface PrdModalProps {
   prd: Prd
