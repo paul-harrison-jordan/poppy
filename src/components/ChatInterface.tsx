@@ -53,6 +53,33 @@ export default function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [schedulingMessageId, setSchedulingMessageId] = useState<number | null>(null);
 
+  // Add useEffect for initial message
+  useEffect(() => {
+    if (messages.length === 0) {
+      if (mode === 'draft') {
+        setMessages([{
+          role: 'assistant',
+          content: "I'll help you draft a PRD. Please share your product idea or concept, a JTDB, and any extra context you have that you want me to know"
+        }]);
+      } else if (mode === 'schedule') {
+        setMessages([{
+          role: 'assistant',
+          content: "I'll help you find and schedule customer feedback. What kind of customers are you looking for? For example: 'customers who hate our list import', 'customers who need more django filters', or 'customers who will help me build a new feature'"
+        }]);
+      } else if (mode === 'brainstorm') {
+        setMessages([{
+          role: 'assistant',
+          content: "I'll help you brainstorm ideas. Share your initial thoughts or questions, and I'll help you think through them."
+        }]);
+      } else if (mode === 'strategy') {
+        setMessages([{
+          role: 'assistant',
+          content: "I'll help you create a strategic document. Please share your strategic vision, goals, or the key areas you'd like to focus on."
+        }]);
+      }
+    }
+  }, [mode]);
+
   // Add useEffect for auto-scrolling
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -72,7 +99,7 @@ export default function ChatInterface() {
     if (newMode === 'draft') {
       setMessages([{
         role: 'assistant',
-        content: "I'll help you draft a PRD. Please share your product idea or concept, and I'll guide you through the process."
+        content: "I'll help you draft a PRD. Please share your product idea or concept, a JTDB, and any extra context you have that you want me to know"
       }]);
     } else if (newMode === 'schedule') {
       setMessages([{
@@ -93,6 +120,11 @@ export default function ChatInterface() {
   };
 
   const showNextQuestion = async () => {
+    if (!questions || questions.length === 0) {
+      console.error("No questions available");
+      return;
+    }
+    
     if (currentQuestionIndex < questions.length - 1) {
       const nextIndex = currentQuestionIndex + 1;
       setCurrentQuestionIndex(nextIndex);
@@ -477,6 +509,10 @@ export default function ChatInterface() {
           case 'questions':
             // Save the answer for the current question
             const currentQuestion = questions[currentQuestionIndex];
+            if (!currentQuestion) {
+              console.error("No current question found");
+              return;
+            }
             setQuestionAnswers(prev => ({
               ...prev,
               [currentQuestion.id]: input
