@@ -9,17 +9,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Format username to comply with Pinecone naming requirements
     const formattedUsername = authSession.user.name
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, '-')
-      .replace(/-+/g, '-') // Replace multiple consecutive hyphens with a single one
-      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
 
     const indexName = `${formattedUsername}`;
-    
     const index = getUserIndex(indexName);
-    
+
     const body = await request.json();
     const documentId = body.documentId;
     const formattedEmbeddings = body.formattedEmbeddings;
@@ -30,7 +28,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Set the access token from the session
     if (!authSession.accessToken) {
       return NextResponse.json(
         { error: 'Not authenticated' },
@@ -38,22 +35,6 @@ export async function POST(request: Request) {
       );
     }
 
-// <<<<<<< codex/verify-no-vectors-remain-after-deletemany
-//     // Remove any existing vectors associated with this document
-//     await index.namespace('ns1').deleteMany({ prefix: documentId });
-
-//     // Verify deletion succeeded before upserting
-//     const remaining = await index.namespace('ns1').listPaginated({ prefix: documentId });
-
-//     if (remaining.vectors && remaining.vectors.length > 0) {
-//       return NextResponse.json(
-//         { error: 'Failed to delete existing vectors for document' },
-//         { status: 500 }
-//       );
-//     }
-
-//     await index.namespace('ns1').upsert(formattedEmbeddings);
-// =======
     const namespace = index.namespace('ns1');
     const existingVectors = await namespace.listPaginated({ prefix: `${documentId}#` });
     const idsToDelete = existingVectors.vectors?.map(v => v.id) ?? [];
@@ -62,17 +43,16 @@ export async function POST(request: Request) {
     }
 
     await namespace.upsert(formattedEmbeddings);
-// >>>>>>> main
-    
+
     return NextResponse.json({
-      message: 'Document synced successfully',
+      message: 'Document resynced successfully',
       documentId: documentId,
     });
   } catch (error) {
-    console.error('Error syncing document:', error);
+    console.error('Error resyncing document:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
     );
   }
-} 
+}
