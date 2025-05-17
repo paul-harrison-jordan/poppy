@@ -38,6 +38,19 @@ export async function POST(request: Request) {
       );
     }
 
+    // Remove any existing vectors associated with this document
+    await index.namespace('ns1').deleteMany({ prefix: documentId });
+
+    // Verify deletion succeeded before upserting
+    const remaining = await index.namespace('ns1').listPaginated({ prefix: documentId });
+
+    if (remaining.vectors && remaining.vectors.length > 0) {
+      return NextResponse.json(
+        { error: 'Failed to delete existing vectors for document' },
+        { status: 500 }
+      );
+    }
+
     await index.namespace('ns1').upsert(formattedEmbeddings);
     
     return NextResponse.json({
