@@ -23,6 +23,13 @@ interface StepConfig {
   checkComplete: (ctx: PersonalContext | string[]) => boolean;
 }
 
+interface PRDDocument {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+}
+
 const stepsConfig: StepConfig[] = [
   {
     title: "Tune Poppy",
@@ -60,17 +67,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // On pageload, check if prds exists and update syncedDocs accordingly
-    const prds = JSON.parse(localStorage.getItem('prds') || '[]');
+    const prds = JSON.parse(localStorage.getItem('prds') || '[]') as PRDDocument[];
     if (Array.isArray(prds) && prds.length > 0) {
-      const prdDocIds = prds.map((doc: { id: string }) => doc.id);
-      const existing = JSON.parse(localStorage.getItem('syncedDocs') || '[]');
+      const prdDocIds = prds.map((doc) => doc.id);
+      const existing = JSON.parse(localStorage.getItem('syncedDocs') || '[]') as string[];
       const merged = Array.from(new Set([...existing, ...prdDocIds]));
       localStorage.setItem('syncedDocs', JSON.stringify(merged));
     }
-    const personalContext = JSON.parse(localStorage.getItem("personalContext") || "{}");
-    const syncedDocs = JSON.parse(localStorage.getItem("syncedDocs") || "[]");
+    const personalContext = JSON.parse(localStorage.getItem("personalContext") || "{}") as PersonalContext;
+    const syncedDocs = JSON.parse(localStorage.getItem("syncedDocs") || "[]") as string[];
     setSteps([
-      { complete: stepsConfig[0].checkComplete(personalContext as PersonalContext) },
+      { complete: stepsConfig[0].checkComplete(personalContext) },
       { complete: stepsConfig[1].checkComplete(syncedDocs) }
     ]);
   }, []);

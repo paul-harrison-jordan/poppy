@@ -2,7 +2,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { collectStream } from "@/lib/collectStream"
 import { FileText, Sparkles, Calendar, Target } from "lucide-react"
-import { useRouter } from 'next/navigation';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -23,6 +22,13 @@ interface TeamTerm {
 }
 
 type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'schedule' | 'strategy';
+
+interface PRDDocument {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+}
 
 export default function ChatInterface() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
