@@ -21,6 +21,18 @@ interface TeamTerm {
   definition: string;
 }
 
+interface MatchedContext {
+  metadata: {
+    NPS_VERBATIM: string;
+    NPS_SCORE_RAW: string;
+    SURVEY_END_DATE: string;
+    RECIPIENT_EMAIL: string;
+    GMV: string;
+    KLAVIYO_ACCOUNT_ID: string;
+    row_number: number;
+  };
+}
+
 type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'schedule' | 'strategy';
 
 interface PRDDocument {
@@ -39,7 +51,7 @@ export default function ChatInterface() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(-1);
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
-  const [matchedContext, setMatchedContext] = useState<any[]>([]);
+  const [matchedContext, setMatchedContext] = useState<MatchedContext[]>([]);
   const [teamTerms, setTeamTerms] = useState<TeamTerm[]>([]);
   const [currentTermIndex, setCurrentTermIndex] = useState<number>(-1);
   const [termDefinitions, setTermDefinitions] = useState<Record<string, string>>({});
