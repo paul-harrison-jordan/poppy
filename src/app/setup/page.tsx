@@ -23,8 +23,6 @@ export default function SetupPage() {
   return (
     <AppShell>
       <Banner 
-        title="Tune Poppy"
-        description="Personalize and configure Poppy so it knows your team's goals, and product strategy, and how you think about your product area."
       />
       <div className="w-full max-w-3xl mx-auto space-y-10">
         <div className="text-center mt-8">

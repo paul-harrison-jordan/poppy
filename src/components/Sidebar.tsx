@@ -11,12 +11,7 @@ import { cn } from "@/lib/utils";
 export default function Sidebar() {
   const pathname = usePathname();
 
-  const navItems = [
-    {
-      href: "/instructions",
-      label: "How to Use It",
-      icon: <GraduationCap className="w-4 h-4" />,
-    },{
+  const navItems = [,{
       href: "/setup",
       label: "Tune Poppy",
       icon: <Settings className="w-4 h-4" />,

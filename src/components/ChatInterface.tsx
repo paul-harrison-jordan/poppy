@@ -41,7 +41,7 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<ChatMode>('chat');
+  const [mode, setMode] = useState<ChatMode>('brainstorm');
   const [draftStep, setDraftStep] = useState<'initial' | 'vocabulary' | 'questions' | 'content'>('initial');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(-1);
@@ -429,7 +429,8 @@ export default function ChatInterface() {
                 title: "Draft PRD",
                 query: input,
                 matchedContext: matchedContext,
-                type: 'prd'
+                type: 'prd',
+                teamTerms: JSON.parse(localStorage.getItem("teamTerms") || "{}")
               }),
             });
             const vocabText = await collectStream(vocabResponse);
@@ -840,20 +841,6 @@ Your Name`;
                   <div className="flex gap-3">
                     <motion.button
                       type="button"
-                      onClick={() => handleModeChange('draft')}
-                      className={`p-2.5 rounded-full transition-all duration-200 ${
-                        mode === 'draft' 
-                          ? 'bg-poppy/20 text-poppy shadow-inner' 
-                          : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
-                      }`}
-                      title="Draft PRD"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <FileText className="w-4 h-4" />
-                    </motion.button>
-                    <motion.button
-                      type="button"
                       onClick={() => handleModeChange('brainstorm')}
                       className={`p-2.5 rounded-full transition-all duration-200 ${
                         mode === 'brainstorm' 
@@ -865,6 +852,20 @@ Your Name`;
                       whileTap={{ scale: 0.98 }}
                     >
                       <Sparkles className="w-4 h-4" />
+                    </motion.button>
+                    <motion.button
+                      type="button"
+                      onClick={() => handleModeChange('draft')}
+                      className={`p-2.5 rounded-full transition-all duration-200 ${
+                        mode === 'draft' 
+                          ? 'bg-poppy/20 text-poppy shadow-inner' 
+                          : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
+                      }`}
+                      title="Draft PRD"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <FileText className="w-4 h-4" />
                     </motion.button>
                     <motion.button
                       type="button"
@@ -895,11 +896,12 @@ Your Name`;
                       <Target className="w-4 h-4" />
                     </motion.button>
                   </div>
-                  {mode === 'brainstorm' && messages.length > 0 && (
+                  <div className="flex-1" />
+                  {mode === 'brainstorm' && messages.filter(msg => msg.role === 'user').length >= 3 && (
                     <motion.button
                       type="button"
                       onClick={handleSummarizeAndSave}
-                      className="p-2.5 rounded-full transition-all duration-200 hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md flex items-center gap-2"
+                      className="p-2.5 rounded-full transition-all duration-200 hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md flex items-center gap-2 mr-2"
                       title="Turn into PRD"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
@@ -937,7 +939,6 @@ Your Name`;
                       </motion.div>
                     </motion.button>
                   )}
-                  <div className="flex-1" />
                   <motion.button
                     type="submit"
                     className={`p-2.5 rounded-full transition-all duration-200 ${
