@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       );
     }
 
+    await index.namespace('ns1').delete1({ filter: { documentId } });
     await index.namespace('ns1').upsert(formattedEmbeddings);
     
     return NextResponse.json({
