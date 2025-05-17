@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { motion } from "framer-motion";
-import { Settings, RefreshCw, BookOpen, LogOut, GraduationCap } from "lucide-react";
+import { Settings, RefreshCw, BookOpen, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Sidebar() {
