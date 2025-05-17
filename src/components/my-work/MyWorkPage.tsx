@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Prd } from '@/types/my-work'
 import PrdCard from './PrdCard'
 import FilterBar, { FilterState } from './FilterBar'
@@ -30,7 +30,7 @@ export default function MyWorkPage() {
       
       // Fetch summary if there are unresolved comments
       let summary = undefined
-      if (data.comments.some((comment: any) => !comment.resolved)) {
+      if (data.comments.some((comment: { resolved: boolean }) => !comment.resolved)) {
         const summaryResponse = await fetch('/api/prd/summarize-comments', {
           method: 'POST',
           headers: {
@@ -59,7 +59,7 @@ export default function MyWorkPage() {
     }
   }
 
-  const loadPrds = async () => {
+  const loadPrds = useCallback(async () => {
     const stored = localStorage.getItem('savedPRD')
     if (stored) {
       try {
@@ -77,6 +77,7 @@ export default function MyWorkPage() {
               last_edited_at: last_modified,
               owner_id: 'user',
               due_date: null,
+              url: prd.url,
               metadata: {
                 comments,
                 edit_history: [],
@@ -98,7 +99,7 @@ export default function MyWorkPage() {
       setFilteredPrds([])
     }
     setLoading(false)
-  }
+  }, [])
 
   const applyFilters = (newFilters: FilterState) => {
     setFilters(newFilters)
@@ -140,7 +141,7 @@ export default function MyWorkPage() {
       window.removeEventListener('storage', handleStorageChange)
       window.removeEventListener('savedPRDUpdated', handleCustomEvent)
     }
-  }, [])
+  }, [loadPrds])
 
   if (loading) {
     return (

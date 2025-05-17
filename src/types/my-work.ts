@@ -7,6 +7,7 @@ export interface Prd {
   created_at: string
   last_edited_at?: string
   metadata?: PrdMetadata
+  url?: string
 }
 
 export interface PrdMetadata {

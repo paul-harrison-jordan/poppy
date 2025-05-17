@@ -74,7 +74,7 @@ export default function DraftForm() {
       setShowPrdsLink(showPrdsLink)
       setPrdLink(prdLink)
     }
-  }, [])
+  }, [query, title])
 
   // Save state to localStorage
   useEffect(() => {

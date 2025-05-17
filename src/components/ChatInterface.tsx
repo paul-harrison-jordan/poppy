@@ -85,6 +85,12 @@ export default function ChatInterface() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]); // Scroll when messages change or loading state changes
 
+  useEffect(() => {
+    if (messages.length > 0) {
+      // ... existing effect code ...
+    }
+  }, [messages.length]);
+
   const handleModeChange = (newMode: ChatMode) => {
     setMode(newMode);
     setDraftStep('initial');
