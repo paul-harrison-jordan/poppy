@@ -35,12 +35,6 @@ interface MatchedContext {
 
 type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'schedule' | 'strategy';
 
-interface PRDDocument {
-  id: string;
-  title: string;
-  content: string;
-  createdAt: string;
-}
 
 export default function ChatInterface() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
