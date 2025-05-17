@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string | React.ReactNode;
+  className?: string;
 }
 
 interface Question {
@@ -127,7 +128,7 @@ export default function ChatInterface() {
       // Show writing message
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: "I'm writing your PRD document now..."
+        content: <span className="animate-pulse">I'm writing your PRD document now...</span>
       }]);
 
       const contentResponse = await fetch("/api/generate-content", {
@@ -161,9 +162,18 @@ export default function ChatInterface() {
         throw new Error("No document URL received");
       }
 
-      // Remove the writing message and add the document link
+      // Remove the writing message
       setMessages(prev => {
-        const withoutWriting = prev.filter(msg => msg.content !== "I'm writing your PRD document now...");
+        const withoutWriting = prev.filter(msg => {
+          if (typeof msg.content === 'string') {
+            return msg.content !== "I'm writing your PRD document now...";
+          }
+          if (React.isValidElement(msg.content)) {
+            const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
+            return element.props.children !== "I'm writing your PRD document now...";
+          }
+          return true;
+        });
         return [...withoutWriting, {
           role: 'assistant',
           content: (
@@ -197,6 +207,12 @@ export default function ChatInterface() {
 
   const generateQuestions = async () => {
     try {
+      // Add thinking message
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: <span className="animate-pulse">Thinking of some questions to help us build a better PRD...</span>
+      }]);
+
       const questionsResponse = await fetch("/api/generate-questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -213,6 +229,19 @@ export default function ChatInterface() {
         throw new Error("No questions generated");
       }
       setQuestions(questionsData.questions);
+      
+      // Remove the thinking message
+      setMessages(prev => prev.filter(msg => {
+        if (typeof msg.content === 'string') {
+          return msg.content !== "Thinking of some questions to help us build a better PRD...";
+        }
+        if (React.isValidElement(msg.content)) {
+          const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
+          return element.props.children !== "Thinking of some questions to help us build a better PRD...";
+        }
+        return true;
+      }));
+      
       // Show the first question immediately
       setCurrentQuestionIndex(0);
       setMessages(prev => [...prev, {
@@ -221,6 +250,17 @@ export default function ChatInterface() {
       }]);
     } catch (error) {
       console.error("Error generating questions:", error);
+      // Remove the thinking message if there's an error
+      setMessages(prev => prev.filter(msg => {
+        if (typeof msg.content === 'string') {
+          return msg.content !== "Thinking of some questions to help us build a better PRD...";
+        }
+        if (React.isValidElement(msg.content)) {
+          const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
+          return element.props.children !== "Thinking of some questions to help us build a better PRD...";
+        }
+        return true;
+      }));
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: "Sorry, I encountered an error while generating questions. Please try again."
@@ -356,7 +396,7 @@ export default function ChatInterface() {
             const matchResponse = await fetch("/api/match-embeds", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(embedding),
+              body: JSON.stringify({ embedding }),
             });
             const { matchedContext } = await matchResponse.json();
             setMatchedContext(matchedContext);
@@ -398,11 +438,13 @@ export default function ChatInterface() {
             const currentTerm = teamTerms[currentTermIndex];
             const newDefinitions = {
               ...termDefinitions,
-              [currentTerm.id]: input
+              [currentTerm.term]: input
             };
             setTermDefinitions(newDefinitions);
-            // Save to localStorage
-            localStorage.setItem("teamTerms", JSON.stringify(newDefinitions));
+            // Merge with existing teamTerms in localStorage
+            const existingTeamTerms = JSON.parse(localStorage.getItem("teamTerms") || "{}") || {};
+            const mergedTeamTerms = { ...existingTeamTerms, ...newDefinitions };
+            localStorage.setItem("teamTerms", JSON.stringify(mergedTeamTerms));
             showNextTerm();
             break;
 
@@ -451,7 +493,7 @@ export default function ChatInterface() {
         const matchRes = await fetch("/api/match-embeds", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({embedding, useCase: 'brainstorm'}),
+          body: JSON.stringify({ embedding }),
         });
 
         if (!matchRes.ok) throw new Error("Failed to match embeddings");
@@ -510,39 +552,42 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 w-full max-w-5xl mx-auto font-sans" style={{ background: 'none' }}>
-      <div className="flex-1 min-h-0 overflow-y-auto px-0 py-2 space-y-2">
-        <div className="text-center sticky top-0 bg-white/80 backdrop-blur-sm py-4 z-10">
-          <h1 className="text-5xl font-semibold text-primary font-sans tracking-tight">Chat with <span className="text-poppy">Poppy</span></h1>
-          <p className="text-lg text-primary/80 font-sans">
-            {mode === 'draft' ? 'Drafting a PRD' : 
-             mode === 'schedule' ? 'Search for feedback and send outreach emails' :
-             mode === 'brainstorm' ? 'Start with an idea or JTBD and let Poppy help you brainstorm' :
-             'Ask me anything about your product, strategy, or ideas.'}
-          </p>
-        </div>
-        <div className="relative z-0 flex flex-col space-y-2">
+    <div className="flex flex-col h-screen w-full max-w-5xl mx-auto font-sans" style={{ background: 'none' }}>
+      {/* Fixed header */}
+      <div className="flex-none text-center bg-neutral/80 backdrop-blur-sm py-8 z-10">
+        <h1 className="text-6xl font-semibold text-primary font-sans tracking-tight mb-3">Chat with <span className="text-poppy">Poppy</span></h1>
+        <p className="text-xl text-primary/80 font-sans max-w-2xl mx-auto">
+          {mode === 'draft' ? 'Drafting a PRD' : 
+           mode === 'schedule' ? 'Search for feedback and send outreach emails' :
+           mode === 'brainstorm' ? 'Start with an idea or JTBD and let Poppy help you brainstorm' :
+           'Ask me anything about your product, strategy, or ideas.'}
+        </p>
+      </div>
+
+      {/* Scrollable message container */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+        <div className="relative z-0 flex flex-col space-y-4">
           {messages
             .filter(msg => !(msg.role === 'assistant' && msg.content === 'Thinking...'))
             .map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} transition-all duration-300 group`}>
+              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-2 transition-all duration-300 group`}>
                 <div className={
                   msg.role === 'user'
-                    ? 'px-5 py-3 rounded-2xl max-w-[70%] text-base bg-poppy/20 text-primary font-sans shadow-md'
-                    : 'px-5 py-3 rounded-2xl max-w-[70%] text-base bg-sprout/20 text-primary font-mono shadow-md whitespace-pre-line relative'
+                    ? 'px-6 py-4 rounded-2xl max-w-[75%] font-semibold text-white bg-poppy shadow-lg hover:shadow-xl transition-shadow duration-200'
+                    : `px-6 py-4 rounded-2xl max-w-[75%] font-sans text-primary bg-white/90 shadow-md hover:shadow-lg transition-shadow duration-200 whitespace-pre-line relative ${msg.className || ''}`
                 }>
                   {msg.content}
                   {msg.role === 'assistant' && mode === 'schedule' && typeof msg.content === 'string' && msg.content.includes('Feedback:') && (
                     <>
                       {msg.content.includes('hasRecentOutreach: true') ? (
-                        <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
+                        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                           ⚠️ Someone has reached out to them in the last 28 days
                         </div>
                       ) : (
                         <button
-                          className={`absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 px-3 py-1.5 rounded-full text-white hover:opacity-90 text-sm font-medium flex items-center gap-2 ${
+                          className={`absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-200 px-4 py-2 rounded-full text-white hover:opacity-90 text-sm font-medium flex items-center gap-2 ${
                             schedulingMessageId === idx ? 'opacity-100' : ''
-                          } bg-poppy`}
+                          } bg-poppy shadow-md hover:shadow-lg`}
                           onClick={async () => {
                             try {
                               setSchedulingMessageId(idx);
@@ -668,113 +713,121 @@ Your Name`;
             ))}
           {loading && (
             <div className="flex justify-start">
-              <div className="px-5 py-3 rounded-2xl bg-neutral text-primary/60 text-base font-sans animate-pulse shadow-md">
+              <div className="px-6 py-4 rounded-2xl bg-white/90 text-primary/60 text-base font-sans animate-pulse shadow-md">
                 {mode === 'schedule' ? 'Searching...' : 'Thinking...'}
               </div>
             </div>
           )}
-          <div ref={messagesEndRef} className="h-4" /> {/* Add some padding at the bottom */}
+          <div ref={messagesEndRef} className="h-4" />
         </div>
       </div>
-      <form onSubmit={sendMessage} className="flex gap-2 items-center px-0 py-6 bg-transparent" style={{ flexShrink: 0 }}>
-        <div className="flex-1 relative">
-          <div className="w-full border border-neutral rounded-xl bg-white/80 overflow-hidden flex flex-col">
-            <textarea
-              className="w-full rounded-t-xl px-5 py-3 focus:ring-2 focus:ring-poppy focus:outline-none text-base bg-neutral/80 placeholder-gray-400 transition-all font-sans resize-none border-0 shadow-none"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              placeholder={
-                mode === 'draft' 
-                  ? draftStep === 'questions' 
-                    ? `Answer question ${currentQuestionIndex + 1} of ${questions.length}...`
-                    : draftStep === 'vocabulary'
-                      ? `Define term ${currentTermIndex + 1} of ${teamTerms.length}...`
-                      : "Share your product idea..."
-                  : mode === 'schedule'
-                    ? "Customers who hate our list import, customers who need more django filters, customers who will help me build a new feature..."
-                    : mode === 'brainstorm'
-                      ? "Like talking to a version of you who remembers everything"
-                      : "Ask me anything..."
-              }
-              disabled={loading}
-              rows={4}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage(e);
-                }
-              }}
-            />
-            <div className="flex gap-3 bg-neutral px-4 py-2 rounded-b-xl">
-              <button
-                type="button"
-                onClick={() => handleModeChange('draft')}
-                className={`p-2 rounded-full transition-colors ${
-                  mode === 'draft' 
-                    ? 'bg-poppy/20 text-poppy' 
-                    : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy'
-                }`}
-                title="Draft PRD"
-              >
-                <FileText className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleModeChange('brainstorm')}
-                className={`p-2 rounded-full transition-colors ${
-                  mode === 'brainstorm' 
-                    ? 'bg-poppy/20 text-poppy' 
-                    : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy'
-                }`}
-                title="Brainstorm"
-              >
-                <Sparkles className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleModeChange('schedule')}
-                className={`p-2 rounded-full transition-colors ${
-                  mode === 'schedule' 
-                    ? 'bg-poppy/20 text-poppy' 
-                    : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy'
-                }`}
-                title="Schedule"
-              >
-                <Calendar className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleModeChange('strategy')}
-                className={`p-2 rounded-full transition-colors ${
-                  mode === 'strategy' 
-                    ? 'bg-poppy/20 text-poppy' 
-                    : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy'
-                }`}
-                title="Strategy"
-              >
-                <Target className="w-4 h-4" />
-              </button>
+
+      {/* Fixed input form */}
+      <div className="flex-none px-4 py-6 bg-transparent">
+        <form onSubmit={sendMessage} className="flex gap-3 items-center">
+          <div className="flex-1 relative">
+            <div className="w-full border border-neutral/40 rounded-xl bg-white/90 overflow-hidden flex flex-col shadow-lg hover:shadow-xl transition-shadow duration-200">
+              <div className="w-full border-2 border-poppy/50 rounded-xl bg-white/90 overflow-hidden flex flex-col">
+                <textarea
+                  className="w-full rounded-t-xl px-6 py-4 focus:ring-2 focus:ring-poppy focus:outline-none text-base bg-neutral/80 placeholder-gray-400 transition-all font-sans resize-none border-0 shadow-none"
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  placeholder={
+                    mode === 'draft' 
+                      ? draftStep === 'questions' 
+                        ? `Answer question ${currentQuestionIndex + 1} of ${questions.length}...`
+                        : draftStep === 'vocabulary'
+                          ? `Define term ${currentTermIndex + 1} of ${teamTerms.length}...`
+                          : "Share your product idea..."
+                      : mode === 'schedule'
+                        ? "Customers who hate our list import, customers who need more django filters, customers who will help me build a new feature..."
+                        : mode === 'brainstorm'
+                          ? "Like talking to a version of you who remembers everything"
+                          : "Ask me anything..."
+                  }
+                  disabled={loading}
+                  rows={4}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage(e);
+                    }
+                  }}
+                />
+                <div className="flex gap-3 p-3 border-t border-neutral/40 bg-neutral/80">
+                  <button
+                    type="button"
+                    onClick={() => handleModeChange('draft')}
+                    className={`p-2.5 rounded-full transition-all duration-200 ${
+                      mode === 'draft' 
+                        ? 'bg-poppy/20 text-poppy shadow-inner' 
+                        : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
+                    }`}
+                    title="Draft PRD"
+                  >
+                    <FileText className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleModeChange('brainstorm')}
+                    className={`p-2.5 rounded-full transition-all duration-200 ${
+                      mode === 'brainstorm' 
+                        ? 'bg-poppy/20 text-poppy shadow-inner' 
+                        : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
+                    }`}
+                    title="Brainstorm"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleModeChange('schedule')}
+                    className={`p-2.5 rounded-full transition-all duration-200 ${
+                      mode === 'schedule' 
+                        ? 'bg-poppy/20 text-poppy shadow-inner' 
+                        : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
+                    }`}
+                    title="Schedule"
+                  >
+                    <Calendar className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleModeChange('strategy')}
+                    className={`p-2.5 rounded-full transition-all duration-200 ${
+                      mode === 'strategy' 
+                        ? 'bg-poppy/20 text-poppy shadow-inner' 
+                        : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
+                    }`}
+                    title="Strategy"
+                  >
+                    <Target className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        <button
-          type="submit"
-          className="w-12 h-12 rounded-full bg-poppy text-white font-medium text-base hover:bg-poppy/90 transition-all duration-150 shadow-md border-0 flex items-center justify-center"
-          disabled={loading}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-        </button>
-        {mode === 'brainstorm' && (
           <button
-            type="button"
-            className="px-5 py-3 rounded-full bg-neutral text-primary font-medium text-base hover:bg-neutral/80 transition-all duration-150 shadow-md border-0 ml-2 font-sans"
-            onClick={handleSummarizeAndSave}
-            disabled={loading || !messages.length}
+            type="submit"
+            className="w-14 h-14 rounded-full bg-poppy text-white font-medium text-base hover:bg-poppy/90 transition-all duration-200 shadow-lg hover:shadow-xl border-0 flex items-center justify-center"
+            disabled={loading}
           >
-            Summarize &amp; Start as PRD
+            <svg className="w-5 h-5 -rotate-45" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+            </svg>
           </button>
-        )}
-      </form>
+          {mode === 'brainstorm' && (
+            <button
+              type="button"
+              className="px-6 py-3 rounded-full bg-neutral text-primary font-medium text-base hover:bg-neutral/80 transition-all duration-200 shadow-md hover:shadow-lg border-0 ml-2 font-sans"
+              onClick={handleSummarizeAndSave}
+              disabled={loading || !messages.length}
+            >
+              Summarize &amp; Start as PRD
+            </button>
+          )}
+        </form>
+      </div>
     </div>
   );
 } 

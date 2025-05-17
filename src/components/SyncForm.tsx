@@ -246,6 +246,15 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
         const results = await Promise.all(syncPromises);
         const successfulSyncs = results.filter((doc): doc is string => doc !== null);
         
+        // If localStorage item 'prds' has at least one item, set the sync docs onboarding as complete
+        const prds = JSON.parse(localStorage.getItem('prds') || '[]');
+        if (Array.isArray(prds) && prds.length > 0) {
+          const prdDocIds = prds.map((doc: { id: string }) => doc.id);
+          const existing = JSON.parse(localStorage.getItem('syncedDocs') || '[]');
+          const merged = Array.from(new Set([...existing, ...prdDocIds]));
+          localStorage.setItem('syncedDocs', JSON.stringify(merged));
+        }
+        
         if (successfulSyncs.length > 0) {
           setToastMessage('Documents synced successfully!');
           setShowToast(true);

@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import ContextForm from '@/components/ContextForm';
 import AppShell from '@/components/AppShell';
+import Banner from '@/components/Banner';
 
 export default function SetupPage() {
   const { data: session, status } = useSession();
@@ -21,6 +22,10 @@ export default function SetupPage() {
 
   return (
     <AppShell>
+      <Banner 
+        title="Tune Poppy"
+        description="Personalize and configure Poppy so it knows your team's goals, and product strategy, and how you think about your product area."
+      />
       <div className="w-full max-w-3xl mx-auto space-y-10">
         <div className="text-center mt-8">
           <h1 className="text-5xl font-semibold text-primary font-sans tracking-tight">Tune <span className="text-poppy">Poppy</span></h1>

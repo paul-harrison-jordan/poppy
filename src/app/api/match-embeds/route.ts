@@ -30,6 +30,10 @@ export async function POST(req: NextRequest) {
    
     const { embedding, useCase } = await req.json();
 
+    if (!embedding || !Array.isArray(embedding)) {
+      return NextResponse.json({ error: 'Invalid embedding format' }, { status: 400 });
+    }
+
     if (isSchedulePage || useCase === 'schedule') {
       const index = pc.index('feedback')
       // For schedule page, use feedback namespace and get up to 4 matches
@@ -38,6 +42,11 @@ export async function POST(req: NextRequest) {
         topK: 10,
         includeMetadata: true
       });
+
+      if (!queryResponse?.matches) {
+        console.error('No matches found in Pinecone response:', queryResponse);
+        return NextResponse.json({ matchedContext: [] });
+      }
 
       const matchedContext = queryResponse.matches.map((match) => ({
         metadata: match.metadata
@@ -52,6 +61,11 @@ export async function POST(req: NextRequest) {
         topK: 10,
         includeMetadata: true
       });
+
+      if (!queryResponse?.matches) {
+        console.error('No matches found in Pinecone response:', queryResponse);
+        return NextResponse.json({ matchedContext: [] });
+      }
 
       const matchedContext = queryResponse.matches.map((match) => (
         match.metadata?.text || 'No text available'

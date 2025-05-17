@@ -1,16 +1,20 @@
+import React from "react";
+import Link from "next/link";
 import AppShell from '@/components/AppShell';
+import Banner from '@/components/Banner';
+import { Home } from 'lucide-react';
 
 export default function InstructionsPage() {
   return (
     <AppShell>
-      <div className="w-full max-w-3xl mx-auto space-y-10">
-        <div className="text-center mt-8">
-          <h1 className="text-4xl font-semibold text-primary font-sans tracking-tight mb-2">How to Use <span className="text-poppy">Poppy</span></h1>
-          <p className="text-base text-primary/80 font-sans mb-6">Get the most out of Poppy: your all-in-one product management workspace for chatting, collaborating, and shipping PRDs with AI.</p>
-        </div>
-        <div className="bg-white/90 rounded-2xl shadow-sm p-8 text-primary font-sans space-y-8">
+      <div className="w-full max-w-3xl mx-auto space-y-10 relative">
+        <Link href="/" className="absolute top-0 right-0 mt-6 mr-8 text-poppy hover:text-poppy/80 transition-colors z-10" aria-label="Back to Chat">
+          <Home className="w-7 h-7" />
+        </Link>
+        <Banner status="instructions" />
+        <div className="bg-white/90 rounded-b-2xl shadow-sm p-8 text-primary font-sans space-y-8">
           <div className="space-y-4">
-            <h2 className="text-2xl font-semibold text-poppy">Draft PRDs Effectively</h2>
+            <h2 className="text-5xl font-semibold text-poppy">Draft PRDs Effectively</h2>
             <p className="text-lg">To get the best results from Poppy&apos;s PRD drafting:</p>
             <ul className="list-disc list-inside space-y-2 text-lg">
               <li>First, <span className="font-semibold">Tune Poppy</span> with your team&apos;s strategy and product thinking</li>

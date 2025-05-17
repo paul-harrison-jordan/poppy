@@ -20,7 +20,7 @@ export default function Onboarding() {
   const [steps, setSteps] = useState<OnboardingStep[]>([
     {
       id: 'tune',
-      title: 'Tune ChatPRD',
+      title: 'Tune Poppy',
       description: 'Set up your context to help ChatPRD understand your product better.',
       icon: <Settings className="w-6 h-6" />,
       isComplete: false,

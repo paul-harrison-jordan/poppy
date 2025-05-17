@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const referer = headersList.get('referer') || '';
     const isSchedulePage = referer.includes('/schedule');
     const isBrainstormPage = referer.includes('/brainstorm');
-    const isChatPage = referer.includes('/chat');
+    const isChatPage = referer.includes('/chat') || referer.endsWith('/');
     const body = await request.json();
     
     if (isSchedulePage) {
