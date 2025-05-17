@@ -15,15 +15,15 @@ interface ChatMessage {
 
 export async function POST(request: Request) {
   try {
-    const { messages } = await request.json();
+    const { messages, storedContext: bodyContext, teamTerms: bodyTeamTerms } = await request.json();
 
     if (!Array.isArray(messages)) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    // Get user's context from localStorage
-    const storedContext = localStorage.getItem("personalContext");
-    const teamTerms = JSON.parse(localStorage.getItem("teamTerms") || "{}");
+    // Use context provided in the request body
+    const storedContext = typeof bodyContext === 'string' ? bodyContext : '';
+    const teamTerms = typeof bodyTeamTerms === 'object' && bodyTeamTerms !== null ? bodyTeamTerms : {};
 
     // Format team terms for the prompt
     const formattedTeamTerms = Object.entries(teamTerms)
