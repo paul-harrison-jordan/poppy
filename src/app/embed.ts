@@ -44,9 +44,8 @@ export async function buildPineconeRecords(
   const vectors  = await embedChunks(enhanced);        // OpenAIEmbedding[]
 
   return enhanced.map((chunk, i) => ({
-    id: nanoid(),
+    id: `${documentId}#${nanoid()}`,
     values: vectors[i].embedding,
-    metadata: { text: chunk },
-    documentId: documentId // fill later if needed
+    metadata: { text: chunk, documentId }
   }));
 }
