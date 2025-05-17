@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { Prd } from '@/types/my-work'
+import { Prd, Task, Reviewer } from '@/types/my-work'
 import DeadlineBadge from './DeadlineBadge'
 import ReviewerAvatars from './ReviewerAvatars'
 import TaskList from './TaskList'
@@ -17,7 +17,13 @@ interface CommentCount {
   count: number
 }
 
-export default function PrdCard({ prd }: { prd: Prd }) {
+interface PrdCardProps {
+  prd: Prd
+  tasks: Task[]
+  reviewers: Reviewer[]
+}
+
+export default function PrdCard({ prd, tasks, reviewers }: PrdCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const getDaysSinceLastEdit = () => {
@@ -124,8 +130,8 @@ export default function PrdCard({ prd }: { prd: Prd }) {
 
             {/* Reviewers and Tasks */}
             <div className="pt-2 border-t border-gray-100">
-              <ReviewerAvatars prdId={prd.id} />
-              <TaskList prdId={prd.id} />
+              <ReviewerAvatars reviewers={reviewers} />
+              <TaskList tasks={tasks} />
             </div>
           </CardContent>
         </Card>
