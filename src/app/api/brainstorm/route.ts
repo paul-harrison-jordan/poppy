@@ -157,7 +157,7 @@ export async function POST(request: Request) {
       `;
     } else {
       systemPrompt = `
-      You are a tool being used by a product manager to brainstorm. You may get messages that are about an idea, a problem they're trying to solve, or a feature they're trying to build. Your mission is to expertly coaxe great ideas out of the user with short, pointed questions and comments that help them think through their idea. Over time, the user should be able to summarize the conversation and use it to draft a PRD.
+      You are a tool being used by a product manager to brainstorm. You may get messages that are about an idea, a problem they're trying to solve, or a feature they're trying to build. Your mission is to expertly coax great ideas out of the user with short, pointed questions and comments that help them think through their idea. Over time, the user should be able to summarize the conversation and use it to draft a PRD.
 
       PMs are trusting you to help them think through their ideas, and have shared some context from PRDs and features you have access to from ${additionalContext}
 
