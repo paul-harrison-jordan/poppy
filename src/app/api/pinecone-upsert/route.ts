@@ -38,6 +38,22 @@ export async function POST(request: Request) {
       );
     }
 
+// <<<<<<< codex/verify-no-vectors-remain-after-deletemany
+//     // Remove any existing vectors associated with this document
+//     await index.namespace('ns1').deleteMany({ prefix: documentId });
+
+//     // Verify deletion succeeded before upserting
+//     const remaining = await index.namespace('ns1').listPaginated({ prefix: documentId });
+
+//     if (remaining.vectors && remaining.vectors.length > 0) {
+//       return NextResponse.json(
+//         { error: 'Failed to delete existing vectors for document' },
+//         { status: 500 }
+//       );
+//     }
+
+//     await index.namespace('ns1').upsert(formattedEmbeddings);
+// =======
     const namespace = index.namespace('ns1');
     const existingVectors = await namespace.listPaginated({ prefix: `${documentId}#` });
     const idsToDelete = existingVectors.vectors?.map(v => v.id) ?? [];
@@ -46,6 +62,7 @@ export async function POST(request: Request) {
     }
 
     await namespace.upsert(formattedEmbeddings);
+// >>>>>>> main
     
     return NextResponse.json({
       message: 'Document synced successfully',
