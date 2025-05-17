@@ -25,6 +25,11 @@ export default function Sidebar() {
       href: "/key-terms",
       label: "Key Terms",
       icon: <BookOpen className="w-4 h-4" />,
+    },
+    {
+      href: "/my-work",
+      label: "My Work",
+      icon: <BookOpen className="w-4 h-4" />,
     }
   ];
 
