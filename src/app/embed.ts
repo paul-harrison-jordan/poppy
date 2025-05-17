@@ -46,7 +46,6 @@ export async function buildPineconeRecords(
   return enhanced.map((chunk, i) => ({
     id: nanoid(),
     values: vectors[i].embedding,
-    metadata: { text: chunk },
-    documentId: documentId // fill later if needed
+    metadata: { text: chunk, documentId },
   }));
 }

@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import SyncForm from '@/components/SyncForm';
 import { useEffect, useState } from 'react';
+import { ProgressNotification, type Document as SyncDocument } from '@/components/progress-notification';
 import AppShell from '@/components/AppShell';
 
 interface PRD {
@@ -18,6 +19,8 @@ export default function SyncPage() {
   const [syncedPrds, setSyncedPrds] = useState<PRD[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [resyncDocuments, setResyncDocuments] = useState<SyncDocument[]>([]);
+  const [isResyncing, setIsResyncing] = useState(false);
 
   const refreshSyncedPrds = () => {
     const stored = localStorage.getItem('prds');
@@ -45,6 +48,38 @@ export default function SyncPage() {
   const endIndex = startIndex + itemsPerPage;
   const currentPrds = syncedPrds.slice(startIndex, endIndex);
 
+  const handleResyncAll = async () => {
+    const storedIds = JSON.parse(localStorage.getItem('syncedDocs') || '[]');
+    if (!Array.isArray(storedIds) || storedIds.length === 0) return;
+
+    const prds = JSON.parse(localStorage.getItem('prds') || '[]');
+    const docs: SyncDocument[] = storedIds.map((id: string) => ({
+      id,
+      name: prds.find((p: { id: string; title: string }) => p.id === id)?.title || 'Document',
+      synced: false,
+    }));
+
+    setResyncDocuments(docs);
+    setIsResyncing(true);
+
+    for (const id of storedIds) {
+      try {
+        const res = await fetch('/api/resync-doc', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documentId: id }),
+        });
+        if (res.ok) {
+          setResyncDocuments(prev => prev.map(d => d.id === id ? { ...d, synced: true } : d));
+        }
+      } catch (err) {
+        console.error('Error resyncing document', err);
+      }
+    }
+
+    setIsResyncing(false);
+  };
+
   if (status === 'loading') {
     return (
       <div className="min-h-screen bg-[#FFFAF3] flex items-center justify-center">
@@ -64,8 +99,15 @@ export default function SyncPage() {
           <h1 className="text-5xl font-semibold text-primary font-sans tracking-tight">Build Context with <span className="text-poppy">Poppy</span></h1>
           <p className="text-base text-primary/80 font-sans mb-6">Add documents to Poppy to help it understand how you think, write, and solve customer problems.</p>
         </div>
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-4">
           <SyncForm />
+          <button
+            onClick={handleResyncAll}
+            disabled={isResyncing}
+            className={`px-4 py-2 rounded-xl bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy ${isResyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {isResyncing ? 'Resyncing...' : 'Resync All Documents'}
+          </button>
         </div>
         <div className="bg-white rounded-xl shadow-lg border border-[#E9DCC6] overflow-x-auto">
           <h2 className="text-2xl font-bold text-[#232426] px-6 pt-6">Documents</h2>
@@ -134,7 +176,16 @@ export default function SyncPage() {
             </div>
           )}
         </div>
+        <ProgressNotification
+          isLoading={isResyncing}
+          documents={resyncDocuments}
+          onComplete={() => {
+            setResyncDocuments([]);
+            setIsResyncing(false);
+          }}
+          position="top-center"
+        />
       </div>
     </AppShell>
   );
-} 
+}
