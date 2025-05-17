@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { Prd, Task } from '@/types/my-work'
+import { Prd } from '@/types/my-work'
 import PrdCard from './PrdCard'
 
 export default function MyWorkPage() {
