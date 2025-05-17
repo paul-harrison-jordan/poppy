@@ -12,6 +12,8 @@ interface BannerContent {
 
 interface BannerProps {
   status?: BannerStatus;
+  title?: string;
+  description?: string;
 }
 
 const content: { [K in BannerStatus]: BannerContent } = {
@@ -29,7 +31,7 @@ const content: { [K in BannerStatus]: BannerContent } = {
   }
 };
 
-export default function Banner({ status = 'chat' }: BannerProps) {
+export default function Banner({ status = 'chat', title, description }: BannerProps) {
   const pathname = usePathname();
   
   // Don't render on setup page
@@ -37,7 +39,7 @@ export default function Banner({ status = 'chat' }: BannerProps) {
     return null;
   }
 
-  const bannerContent = content[status];
+  const bannerContent = title && description ? { title, description } : content[status];
 
   return (
     <div className="text-center bg-neutral/80 backdrop-blur-sm py-6 rounded-t-2xl">
