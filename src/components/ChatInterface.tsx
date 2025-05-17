@@ -84,6 +84,11 @@ export default function ChatInterface() {
         role: 'assistant',
         content: "I'll help you brainstorm ideas. Share your initial thoughts or questions, and I'll help you think through them."
       }]);
+    } else if (newMode === 'strategy') {
+      setMessages([{
+        role: 'assistant',
+        content: "I'll help you create a strategic document. Please share your strategic vision, goals, or the key areas you'd like to focus on."
+      }]);
     }
   };
 
