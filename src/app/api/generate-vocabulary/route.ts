@@ -9,7 +9,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { title, query, matchedContext, type } = await request.json();
+    const { title, query, matchedContext, type, teamTerms } = await request.json();
     const result = await generateVocabulary({ title, query, matchedContext, type });
     return NextResponse.json({ teamTerms: result });
   } catch (error) {
