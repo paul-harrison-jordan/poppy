@@ -1,22 +1,56 @@
-import { Prd } from '@/types/my-work'
+-shouldschedulemeeting
+export interface CalendarEvent {
+  summary: string
+  start: string
+  end: string
+}
 
 /**
- * Decide whether a meeting should be scheduled for a PRD based on
- * unresolved comments, time since last edit and summary text.
+ * Determine whether a meeting should be scheduled based on comment content.
+ * Returns true if any comment contains meeting related keywords unless a
+ * comment explicitly states that no meeting is needed.
  */
-export function shouldScheduleMeeting(prd: Prd): boolean {
-  const unresolvedComments = prd.metadata?.comments?.filter(c => !c.resolved).length ?? 0
-  const daysSinceEdit = prd.last_edited_at
-    ? Math.ceil((Date.now() - new Date(prd.last_edited_at).getTime()) / (1000 * 60 * 60 * 24))
-    : Infinity
+export function shouldScheduleMeeting(comments: string[]): boolean {
+  const denyPhrases = ['no meeting', "don't schedule", 'no need to meet']
+  const meetingKeywords = ['meet', 'meeting', 'call', 'schedule', 'zoom', 'hangout', 'sync']
 
-  const summary = prd.metadata?.open_questions_summary?.toLowerCase() || ''
-  const summaryIndicatesConfusion = ['meeting', 'discuss', 'sync', 'blocked', 'alignment']
-    .some(word => summary.includes(word))
+  let foundKeyword = false
 
-  if (unresolvedComments > 10) return true
-  if (unresolvedComments > 0 && daysSinceEdit > 14) return true
-  if (summaryIndicatesConfusion) return true
+  for (const comment of comments) {
+    const lower = comment.toLowerCase()
+    if (denyPhrases.some(p => lower.includes(p))) {
+      return false
+    }
+    if (meetingKeywords.some(k => lower.includes(k))) {
+      foundKeyword = true
+    }
+  }
 
-  return false
+  return foundKeyword
+}
+
+import { google } from 'googleapis'
+
+/**
+ * Create a calendar event using the Google Calendar API.
+ * Returns true if the event was successfully created, otherwise false.
+ */
+export async function createCalendarEvent(accessToken: string, event: CalendarEvent): Promise<boolean> {
+  const auth = new google.auth.OAuth2()
+  auth.setCredentials({ access_token: accessToken })
+  const calendar = google.calendar({ version: 'v3', auth })
+  try {
+    await calendar.events.insert({
+      calendarId: 'primary',
+      requestBody: {
+        summary: event.summary,
+        start: { dateTime: event.start },
+        end: { dateTime: event.end }
+      }
+    })
+    return true
+  } catch (err) {
+    console.error('Error creating calendar event:', err)
+    return false
+  }
 }
