@@ -89,6 +89,7 @@ export default function MyWorkPage() {
         const prdsWithComments = await Promise.all(
           savedPrds.map(async (prd) => {
             const { comments, last_modified } = await fetchComments(prd.id)
+            const summary = await fetchSummary(prd.id, comments, last_modified)
             return {
               id: prd.id,
               title: prd.title,
@@ -101,7 +102,7 @@ export default function MyWorkPage() {
               metadata: {
                 comments,
                 edit_history: [],
-                open_questions_summary: undefined
+                open_questions_summary: summary
               }
             }
           })
