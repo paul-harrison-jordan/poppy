@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { openai } from '../openai';
 import { terms } from '../constants/terms';
+import type { Question } from '@/types/question';
 
 export { terms };
 
@@ -75,7 +76,6 @@ I've included instructions for how to think and write PRDs like a product manage
   return streamTextResponse(stream);
 }
 
-export interface Question { id?: string; text: string; reasoning: string; }
 export interface QuestionsResponse { questions: Question[]; internalTerms: string[]; }
 export interface GenerateQuestionsRequest {
   title: string;

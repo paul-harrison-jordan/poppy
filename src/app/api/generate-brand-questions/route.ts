@@ -3,16 +3,11 @@ import { getUserIndex } from '@/lib/pinecone';
 import { getAuthServerSession } from '@/lib/auth';
 import { OpenAI } from 'openai';
 import { embedChunks } from '@/app/embed';
+import type { Question } from '@/types/question';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-export interface Question {
-  id?: string;
-  text: string;
-  reasoning: string;
-}
 
 export interface QuestionsResponse {
   questions: Question[];
