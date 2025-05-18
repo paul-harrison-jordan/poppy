@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { collectStream } from "@/lib/collectStream"
+import { generateDocument } from '@/lib/services/documentGenerator'
 import { FileText, Sparkles, Calendar, Target } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -181,15 +182,6 @@ export default function ChatInterface() {
   const generateContent = async () => {
     try {
       setLoading(true);
-      // Format questions and answers for the content generation
-      const questionsWithAnswers = questions.map(q => ({
-        id: q.id,
-        text: q.text,
-        reasoning: q.reasoning,
-        answer: questionAnswers[q.id]
-      }));
-      const storedContext = localStorage.getItem("personalContext");
-      const teamTerms = JSON.parse(localStorage.getItem("teamTerms") || "{}");
 
       // Show writing message
       setMessages(prev => [...prev, {
@@ -197,31 +189,7 @@ export default function ChatInterface() {
         content: <span className="animate-pulse">I&apos;m writing your PRD document now...</span>
       }]);
 
-      const contentResponse = await fetch("/api/generate-content", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "Draft PRD",
-          query: messages[1].content, // The initial product idea
-          matchedContext: matchedContext,
-          type: 'prd',
-          storedContext: storedContext,
-          questions: questionsWithAnswers,
-          teamTerms: teamTerms
-        }),
-      });
-      const contentText = await collectStream(contentResponse);
-
-      // Create Google Doc
-      const docResponse = await fetch("/api/create-google-doc", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "Draft PRD",
-          content: contentText
-        }),
-      });
-      const docData = await docResponse.json();
+      const docData = await generateDocument('prd', 'Draft PRD', messages[1].content, questionAnswers)
       console.log('Doc response:', docData); // Add logging to debug
 
       if (!docData.url) {
