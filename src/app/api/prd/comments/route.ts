@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     const [commentsResponse, fileResponse] = await Promise.all([
       drive.comments.list({
         fileId: documentId,
-        fields: 'comments(id,content,createdTime,author(displayName,emailAddress),resolved)',
+        fields: 'comments(id,content,createdTime,author(displayName,emailAddress,me),resolved)',
         pageSize: 100
       }),
       drive.files.get({
@@ -36,16 +36,28 @@ export async function GET(request: Request) {
       })
     ])
 
+    // Get the current user's email
+    const aboutResponse = await google.oauth2('v2').userinfo.get({
+      auth: oauth2Client
+    })
+    const currentUserEmail = aboutResponse.data.email
+
     // Transform the comments to match our interface
-    const formattedComments = commentsResponse.data.comments?.map(comment => ({
-      id: comment.id!,
-      prd_id: documentId,
-      user_id: comment.author?.emailAddress || 'unknown',
-      user_name: comment.author?.displayName || 'Unknown User',
-      content: comment.content || '',
-      created_at: comment.createdTime || new Date().toISOString(),
-      resolved: comment.resolved || false
-    })) || []
+    const formattedComments = commentsResponse.data.comments?.map(comment => {
+      // If the comment is from the current user, use their email
+      const isCurrentUser = comment.author?.me
+      const email = isCurrentUser ? currentUserEmail : comment.author?.emailAddress
+
+      return {
+        id: comment.id!,
+        prd_id: documentId,
+        user_id: email || 'unknown',
+        user_name: comment.author?.displayName || 'Unknown User',
+        content: comment.content || '',
+        created_at: comment.createdTime || new Date().toISOString(),
+        resolved: comment.resolved || false
+      }
+    }) || []
 
     return NextResponse.json({ 
       comments: formattedComments,

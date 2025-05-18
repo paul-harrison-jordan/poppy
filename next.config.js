@@ -10,6 +10,9 @@ const nextConfig = {
         child_process: false,
         http2: false,
         zlib: false,
+        tls: false,
+        net: false,
+        crypto: false,
       };
     }
     return config;
