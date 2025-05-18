@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import { openai } from '@/lib/openai';
 
 export async function writeSummary(question: string, additionalContext: string, teamStrategy: string, howYouThinkAboutProduct: string, pillarGoalsKeyTermsBackground: string, examplesOfHowYouThink: string, questions: string[]) {
     const terms = {
@@ -102,10 +102,6 @@ export async function writeSummary(question: string, additionalContext: string, 
         "Benchmarks tab in Customer Hub": "Compares a brand's support metrics to industry peers once connected.",
         "Deliverability Health alerts": "Automated warnings that flag rising spam or bounces and recommend fixes"
       }
-        const openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-            organization: 'org-4sVYvNZQTa4dYOT8bAgyz8gu',
-        });
         const completion = await openai.chat.completions.create({
             model: "o3",
             messages: [

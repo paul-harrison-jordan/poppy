@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import { openai } from '@/lib/openai'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
@@ -10,9 +10,6 @@ interface CacheEntry {
 
 const summaryCache = new Map<string, CacheEntry>()
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-})
 
 export async function POST(request: Request) {
   try {

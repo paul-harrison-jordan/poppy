@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getUserIndex } from '@/lib/pinecone';
 import { getAuthServerSession } from '@/lib/auth';
-import { OpenAI } from 'openai';
+import { openai } from '@/lib/openai';
 import { embedChunks } from '@/app/embed';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export interface Question {
   id?: string;

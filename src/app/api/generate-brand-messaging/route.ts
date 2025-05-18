@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getUserIndex } from '@/lib/pinecone';
 import { getAuthServerSession } from '@/lib/auth';
-import { OpenAI } from 'openai';
+import { openai } from '@/lib/openai';
 import { embedChunks } from '@/app/embed';
 import { Question } from '@/types/question';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export async function POST(request: Request) {
   try {
