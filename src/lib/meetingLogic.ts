@@ -1,8 +1,19 @@
--shouldschedulemeeting
+'use server';
+
 export interface CalendarEvent {
   summary: string
   start: string
   end: string
+}
+
+interface Prd {
+  metadata?: {
+    comments?: Array<{
+      content: string
+      user_id: string
+      user_name: string
+    }>
+  }
 }
 
 /**
@@ -10,14 +21,23 @@ export interface CalendarEvent {
  * Returns true if any comment contains meeting related keywords unless a
  * comment explicitly states that no meeting is needed.
  */
-export function shouldScheduleMeeting(comments: string[]): boolean {
+export async function shouldScheduleMeeting(prd: Prd): Promise<boolean> {
+  // Handle invalid input
+  if (!prd?.metadata?.comments || !Array.isArray(prd.metadata.comments)) {
+    return false
+  }
+
   const denyPhrases = ['no meeting', "don't schedule", 'no need to meet']
-  const meetingKeywords = ['meet', 'meeting', 'call', 'schedule', 'zoom', 'hangout', 'sync']
+  const meetingKeywords = ['meet', 'meeting', 'call', 'schedule', 'zoom', 'hangout', 'sync', 'blocked']
 
   let foundKeyword = false
 
-  for (const comment of comments) {
-    const lower = comment.toLowerCase()
+  for (const comment of prd.metadata.comments) {
+    // Skip invalid comments
+    if (typeof comment.content !== 'string') {
+      continue
+    }
+    const lower = comment.content.toLowerCase()
     if (denyPhrases.some(p => lower.includes(p))) {
       return false
     }
