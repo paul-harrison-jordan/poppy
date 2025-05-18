@@ -3,6 +3,13 @@ import OpenAI from 'openai'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
+interface CacheEntry {
+  lastModified: string
+  summary: string
+}
+
+const summaryCache = new Map<string, CacheEntry>()
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
@@ -14,7 +21,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { comments, teamTerms, context } = await request.json()
+    const {
+      prdId,
+      lastModified,
+      comments,
+      teamTerms,
+      context
+    } = (await request.json()) as {
+      prdId?: string
+      lastModified?: string | null
+      comments?: Array<{ resolved: boolean; user_name: string; content: string }>
+      teamTerms?: string
+      context?: string
+    }
+
+    if (!prdId || !lastModified) {
+      return NextResponse.json(
+        { error: 'prdId and lastModified are required' },
+        { status: 400 }
+      )
+    }
+
+    const lastModifiedStr = String(lastModified)
+
+    const cached = summaryCache.get(prdId)
+    if (cached && cached.lastModified === lastModifiedStr) {
+      return NextResponse.json({ summary: cached.summary })
+    }
 
     if (!comments || !Array.isArray(comments)) {
       return NextResponse.json({ error: 'Comments array is required' }, { status: 400 })
@@ -60,6 +93,8 @@ Keep the summary focused and actionable.`
     })
 
     const summary = completion.choices[0].message.content
+
+    summaryCache.set(prdId, { lastModified: lastModifiedStr, summary })
 
     return NextResponse.json({ summary })
   } catch (error) {

@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from 'react'
 import { Prd } from '@/types/my-work'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -9,9 +10,20 @@ interface PrdModalProps {
   prd: Prd
   isOpen: boolean
   onClose: () => void
+  summary?: string
+  loadSummary: () => Promise<string | undefined>
 }
 
-export default function PrdModal({ prd, isOpen, onClose }: PrdModalProps) {
+export default function PrdModal({ prd, isOpen, onClose, summary: initialSummary, loadSummary }: PrdModalProps) {
+  const [summary, setSummary] = useState<string | undefined>(initialSummary)
+
+  useEffect(() => {
+    if (isOpen && !summary) {
+      loadSummary().then(res => {
+        if (res) setSummary(res)
+      })
+    }
+  }, [isOpen])
   const getCommentCounts = () => {
     if (!prd.metadata?.comments) return [];
     
@@ -76,14 +88,14 @@ export default function PrdModal({ prd, isOpen, onClose }: PrdModalProps) {
           </div>
 
           {/* Comments Summary */}
-          {prd.metadata?.open_questions_summary && (
+          {summary && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Lightbulb className="w-5 h-5 text-poppy" />
                 <h3 className="text-lg font-semibold">Open Questions Summary</h3>
               </div>
               <p className="text-gray-600 whitespace-pre-wrap">
-                {prd.metadata.open_questions_summary}
+                {summary}
               </p>
             </div>
           )}
