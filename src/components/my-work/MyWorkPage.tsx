@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 
-import { Prd, Comment } from '@/types/my-work'
+import { Prd, Comment, Task, Reviewer } from '@/types/my-work'
 
 import PrdCard from './PrdCard'
 import FilterBar, { FilterState } from './FilterBar'
@@ -18,6 +18,8 @@ export default function MyWorkPage() {
   const [prds, setPrds] = useState<Prd[]>([])
   const [filteredPrds, setFilteredPrds] = useState<Prd[]>([])
   const [loading, setLoading] = useState(true)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [reviewers, setReviewers] = useState<Reviewer[]>([])
   const [, setFilters] = useState<FilterState>({
     minComments: 0,
     minCommentors: 0,
