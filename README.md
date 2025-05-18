@@ -42,5 +42,6 @@ Local development requires a `.env.local` file containing values for:
 - `GOOGLE_CLIENT_SECRET`
 - `GOOGLE_REDIRECT_URI`
 - `PINECONE_API_KEY`
+- `GOOGLE_CALENDAR_ID` (optional, defaults to the authenticated user's primary calendar)
 
 Ask the maintainer to provide these values.
