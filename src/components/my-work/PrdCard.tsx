@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { shouldScheduleMeeting } from '@/lib/meetingLogic'
 import { Prd } from '@/types/my-work'
 import DeadlineBadge from './DeadlineBadge'
 import ReviewerAvatars from './ReviewerAvatars'
@@ -31,6 +33,30 @@ export default function PrdCard({
   const [summary, setSummary] = useState<string | undefined>(
     prd.metadata?.open_questions_summary
   )
+  const [needsMeeting, setNeedsMeeting] = useState(false)
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!summary) {
+      void ensureSummary()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (summary !== undefined) {
+      const result = shouldScheduleMeeting({
+        ...prd,
+        metadata: {
+          comments: prd.metadata?.comments ?? [],
+          edit_history: prd.metadata?.edit_history ?? [],
+          reviewers: prd.metadata?.reviewers,
+          tasks: prd.metadata?.tasks,
+          open_questions_summary: summary
+        }
+      })
+      setNeedsMeeting(result)
+    }
+  }, [summary, prd])
 
   const ensureSummary = async (): Promise<string | undefined> => {
     if (summary) return summary
@@ -155,6 +181,19 @@ export default function PrdCard({
             <div className="pt-2 border-t border-gray-100">
               <ReviewerAvatars reviewers={prd.metadata?.reviewers || []} />
               <TaskList tasks={prd.metadata?.tasks || []} />
+              {needsMeeting && (
+                <div className="mt-2">
+                  <Button
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      router.push('/schedule')
+                    }}
+                  >
+                    Schedule Meeting
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
