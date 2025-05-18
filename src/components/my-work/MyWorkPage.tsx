@@ -18,8 +18,8 @@ export default function MyWorkPage() {
   const [prds, setPrds] = useState<Prd[]>([])
   const [filteredPrds, setFilteredPrds] = useState<Prd[]>([])
   const [loading, setLoading] = useState(true)
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [reviewers, setReviewers] = useState<Reviewer[]>([])
+  const [, setTasks] = useState<Task[]>([])
+  const [, setReviewers] = useState<Reviewer[]>([])
   const [, setFilters] = useState<FilterState>({
     minComments: 0,
     minCommentors: 0,
