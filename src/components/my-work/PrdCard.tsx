@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { shouldScheduleMeeting } from '@/lib/meetingLogic'
 import { Prd } from '@/types/my-work'
 import DeadlineBadge from './DeadlineBadge'
@@ -37,7 +36,6 @@ export default function PrdCard({
   const [errorMessage, setErrorMessage] = useState<string>('')
   const [availableSlots, setAvailableSlots] = useState<Array<{ start: string; end: string }>>([])
   const [scheduledMeeting, setScheduledMeeting] = useState<{ start: string; end: string } | null>(null)
-  const router = useRouter()
 
   const ensureSummary = useCallback(async (): Promise<string | undefined> => {
     if (summary) return summary
