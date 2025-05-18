@@ -76,12 +76,17 @@ export default function InstructionsPage() {
                   <li>Tracks outreach in the feedback sheet</li>
                 </ul>
               </li>
-            </ul>
-          </div>
+          </ul>
+        </div>
 
-          <div className="mt-8 text-center text-primary/70 text-base">
-            Need help? Ask Poppy in the chat or check the documentation for tips and best practices.
-          </div>
+        <div className="space-y-4">
+          <h2 className="text-2xl font-semibold text-poppy">Meeting Recommendations</h2>
+          <p className="text-lg">When PRDs spark discussion, Poppy looks for action items and suggests times to meet. Connect your Google Calendar so the app can check availability and propose reviews directly in chat.</p>
+        </div>
+
+        <div className="mt-8 text-center text-primary/70 text-base">
+          Need help? Ask Poppy in the chat or check the documentation for tips and best practices.
+        </div>
         </div>
       </div>
     </AppShell>

@@ -45,3 +45,7 @@ Local development requires a `.env.local` file containing values for:
 - `GOOGLE_CALENDAR_ID` (optional, defaults to the authenticated user's primary calendar)
 
 Ask the maintainer to provide these values.
+
+## Google Calendar Integration
+
+Poppy connects to your calendar using these Google credentials. When team members comment on a PRD, Poppy analyzes the discussion and surfaces suggested meeting times. The app checks availability via Google Calendar and recommends sessions like scoping or design reviews directly in the chat.
