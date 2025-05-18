@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect, useState, useCallback } from 'react'
-import { Prd, Task, Reviewer } from '@/types/my-work'
+
+import { Prd, Comment } from '@/types/my-work'
+
 import PrdCard from './PrdCard'
 import FilterBar, { FilterState } from './FilterBar'
 
@@ -29,36 +31,52 @@ export default function MyWorkPage() {
       const response = await fetch(`/api/prd/comments?documentId=${documentId}`)
       if (!response.ok) throw new Error('Failed to fetch comments')
       const data = await response.json()
-      
-      // Fetch summary if there are unresolved comments
-      let summary = undefined
-      if (data.comments.some((comment: { resolved: boolean }) => !comment.resolved)) {
-        const summaryResponse = await fetch('/api/prd/summarize-comments', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ comments: data.comments, teamTerms: localStorage.getItem('teamTerms'), context: localStorage.getItem('personalContext') })
-        })
-        if (summaryResponse.ok) {
-          const summaryData = await summaryResponse.json()
-          summary = summaryData.summary
-        }
-      }
 
       return {
         comments: data.comments,
-        last_modified: data.last_modified,
-        summary
+        last_modified: data.last_modified
       }
     } catch (error) {
       console.error(`Error fetching data for ${documentId}:`, error)
       return {
         comments: [],
-        last_modified: null,
-        summary: undefined
+        last_modified: null
       }
     }
+  }
+
+  const fetchSummary = async (
+    prdId: string,
+    comments: Comment[],
+    lastModified?: string | null
+  ) => {
+    if (!lastModified) return undefined
+    const cacheKey = `summary:${prdId}:${lastModified}`
+    const cached = localStorage.getItem(cacheKey)
+    if (cached) return cached
+
+    try {
+      const response = await fetch('/api/prd/summarize-comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prdId,
+          lastModified,
+          comments,
+          teamTerms: localStorage.getItem('teamTerms'),
+          context: localStorage.getItem('personalContext')
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        localStorage.setItem(cacheKey, data.summary)
+        return data.summary as string
+      }
+    } catch (err) {
+      console.error('Error fetching summary:', err)
+    }
+    return undefined
   }
 
   const loadPrds = useCallback(async () => {
@@ -70,7 +88,7 @@ export default function MyWorkPage() {
         // Fetch comments for each PRD
         const prdsWithComments = await Promise.all(
           savedPrds.map(async (prd) => {
-            const { comments, last_modified, summary } = await fetchComments(prd.id)
+            const { comments, last_modified } = await fetchComments(prd.id)
             return {
               id: prd.id,
               title: prd.title,
@@ -83,7 +101,7 @@ export default function MyWorkPage() {
               metadata: {
                 comments,
                 edit_history: [],
-                open_questions_summary: summary
+                open_questions_summary: undefined
               }
             }
           })
@@ -175,8 +193,11 @@ export default function MyWorkPage() {
           <PrdCard
             key={prd.id}
             prd={prd}
-            tasks={tasks.filter(t => t.prd_id === prd.id)}
-            reviewers={reviewers.filter(r => r.prd_id === prd.id)}
+
+            loadSummary={() =>
+              fetchSummary(prd.id, prd.metadata?.comments || [], prd.last_edited_at)
+            }
+
           />
         ))}
         {filteredPrds.length === 0 && (
