@@ -153,8 +153,8 @@ export default function PrdCard({
 
             {/* Reviewers and Tasks */}
             <div className="pt-2 border-t border-gray-100">
-              <ReviewerAvatars reviewers={reviewers} />
-              <TaskList tasks={tasks} />
+              <ReviewerAvatars reviewers={prd.metadata?.reviewers || []} />
+              <TaskList tasks={prd.metadata?.tasks || []} />
             </div>
           </CardContent>
         </Card>

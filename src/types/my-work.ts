@@ -14,6 +14,8 @@ export interface PrdMetadata {
   comments: Comment[]
   edit_history: Edit[]
   open_questions_summary?: string
+  reviewers?: Reviewer[]
+  tasks?: Task[]
 }
 
 export interface Comment {

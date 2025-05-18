@@ -1,10 +1,10 @@
 import MyWorkPage from '@/components/my-work/MyWorkPage'
-import AppShell from '@/components/AppShell'
+import ClientWrapper from './ClientWrapper'
 
 export default function MyWork() {
   return (
-    <AppShell>
+    <ClientWrapper>
       <MyWorkPage />
-    </AppShell>
+    </ClientWrapper>
   )
 }
