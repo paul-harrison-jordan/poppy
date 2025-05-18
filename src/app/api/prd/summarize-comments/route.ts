@@ -77,7 +77,7 @@ Keep the summary focused and actionable.`
       ]
     })
 
-    const summary = completion.choices[0].message.content
+    const summary = completion.choices[0].message.content || ""
 
     summaryCache.set(prdId, { lastModified: lastModifiedStr, summary })
 
