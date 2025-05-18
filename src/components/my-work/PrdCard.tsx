@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { Prd, Task, Reviewer } from '@/types/my-work'
+import { Prd } from '@/types/my-work'
 import DeadlineBadge from './DeadlineBadge'
 import ReviewerAvatars from './ReviewerAvatars'
 import TaskList from './TaskList'

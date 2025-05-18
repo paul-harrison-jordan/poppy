@@ -19,11 +19,10 @@ export default function PrdModal({ prd, isOpen, onClose, summary: initialSummary
 
   useEffect(() => {
     if (isOpen && !summary) {
-      loadSummary().then(res => {
-        if (res) setSummary(res)
-      })
+      loadSummary()
     }
-  }, [isOpen])
+  }, [isOpen, summary, loadSummary])
+
   const getCommentCounts = () => {
     if (!prd.metadata?.comments) return [];
     

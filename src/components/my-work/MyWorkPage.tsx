@@ -17,8 +17,6 @@ interface SavedPRD {
 export default function MyWorkPage() {
   const [prds, setPrds] = useState<Prd[]>([])
   const [filteredPrds, setFilteredPrds] = useState<Prd[]>([])
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [reviewers, setReviewers] = useState<Reviewer[]>([])
   const [loading, setLoading] = useState(true)
   const [, setFilters] = useState<FilterState>({
     minComments: 0,

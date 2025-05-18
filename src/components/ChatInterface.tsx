@@ -87,9 +87,12 @@ export default function ChatInterface() {
 
   useEffect(() => {
     if (messages.length > 0) {
-      // ... existing effect code ...
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage.role === 'assistant') {
+        setInput('')
+      }
     }
-  }, [messages.length]);
+  }, [messages, messages.length])
 
   const handleModeChange = (newMode: ChatMode) => {
     setMode(newMode);
