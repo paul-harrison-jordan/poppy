@@ -4,7 +4,7 @@ import SignIn from '@/app/auth/signin/page';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import ChatInterface from '@/components/ChatInterface';
-import { Settings } from 'lucide-react';
+import { Settings, PenLine } from 'lucide-react';
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -48,9 +48,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-neutral/80 flex flex-col items-center justify-center relative">
-      <Link href="/instructions" className="absolute top-6 right-8 text-poppy hover:text-poppy/80 transition-colors" aria-label="Tune Poppy settings">
-        <Settings className="w-7 h-7" />
-      </Link>
+      <div className="absolute top-6 right-8 flex flex-col gap-4">
+        <Link href="/my-work" className="text-poppy hover:text-poppy/80 transition-colors" aria-label="View my work">
+          <PenLine className="w-7 h-7" />
+        </Link>
+        <Link href="/instructions" className="text-poppy hover:text-poppy/80 transition-colors" aria-label="Tune Poppy settings">
+          <Settings className="w-7 h-7" />
+        </Link>
+      </div>
       <ChatInterface />
     </div>
   );
