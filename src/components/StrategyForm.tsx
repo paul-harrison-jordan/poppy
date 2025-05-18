@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Target } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import QuestionsForm from "./QuestionsForm"
-import { collectStream } from "@/lib/collectStream"
+import { generateDocument } from "@/lib/services/documentGenerator"
 
 interface Question {
   id: string
@@ -202,58 +202,7 @@ export default function StrategyForm() {
       setIsGenerating(true)
       setIsGeneratingQuestions(false)
 
-      // 1. Get embedding for the query
-      const embedRes = await fetch("/api/embed-request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, query }),
-      })
-      if (!embedRes.ok) throw new Error("Failed to get embedding")
-      const { queryEmbedding } = await embedRes.json()
-      if (!queryEmbedding || !Array.isArray(queryEmbedding)) throw new Error("Invalid embedding response")
-
-      const embedding = queryEmbedding[0].embedding
-
-      // 2. Get matched context from Pinecone
-      const matchRes = await fetch("/api/match-embeds", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(embedding),
-      })
-      if (!matchRes.ok) throw new Error("Failed to match embeddings")
-      const { matchedContext } = await matchRes.json()
-      if (!matchedContext || !Array.isArray(matchedContext)) throw new Error("Invalid matched context response")
-
-      // 3. Generate strategy content
-      const storedContext = localStorage.getItem("personalContext")
-      const teamTerms = JSON.parse(localStorage.getItem("teamTerms") || "{}")
-      const genRes = await fetch("/api/generate-content", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "strategy",
-          title,
-          query,
-          teamTerms,
-          storedContext,
-          additionalContext: matchedContext.join("\n"),
-          questionAnswers,
-        }),
-      })
-
-      const markdown = await collectStream(genRes)
-
-      // 4. Create Google Doc
-      const docRes = await fetch("/api/create-google-doc", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title,
-          content: markdown,
-        }),
-      })
-      if (!docRes.ok) throw new Error("Failed to create Google Doc")
-      const docData = await docRes.json()
+      const docData = await generateDocument('strategy', title, query, questionAnswers)
 
       if (docData && docData.url) {
         setShowDocLink(true)
