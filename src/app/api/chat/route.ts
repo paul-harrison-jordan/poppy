@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
-import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import { openai } from '@/lib/openai';
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 export const dynamic = 'force-dynamic';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 interface ChatMessage {
   role: 'user' | 'assistant';
