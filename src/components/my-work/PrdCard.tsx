@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { Prd } from '@/types/my-work'
+import { Prd, Task, Reviewer } from '@/types/my-work'
 import DeadlineBadge from './DeadlineBadge'
 import ReviewerAvatars from './ReviewerAvatars'
 import TaskList from './TaskList'
@@ -17,6 +17,7 @@ interface CommentCount {
   count: number
 }
 
+
 export default function PrdCard({
   prd,
   loadSummary
@@ -24,6 +25,7 @@ export default function PrdCard({
   prd: Prd
   loadSummary: () => Promise<string | undefined>
 }) {
+
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [summary, setSummary] = useState<string | undefined>(
@@ -151,8 +153,8 @@ export default function PrdCard({
 
             {/* Reviewers and Tasks */}
             <div className="pt-2 border-t border-gray-100">
-              <ReviewerAvatars prdId={prd.id} />
-              <TaskList prdId={prd.id} />
+              <ReviewerAvatars reviewers={reviewers} />
+              <TaskList tasks={tasks} />
             </div>
           </CardContent>
         </Card>

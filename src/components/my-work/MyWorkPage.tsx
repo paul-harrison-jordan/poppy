@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect, useState, useCallback } from 'react'
+
 import { Prd, Comment } from '@/types/my-work'
+
 import PrdCard from './PrdCard'
 import FilterBar, { FilterState } from './FilterBar'
 
@@ -15,6 +17,8 @@ interface SavedPRD {
 export default function MyWorkPage() {
   const [prds, setPrds] = useState<Prd[]>([])
   const [filteredPrds, setFilteredPrds] = useState<Prd[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [reviewers, setReviewers] = useState<Reviewer[]>([])
   const [loading, setLoading] = useState(true)
   const [, setFilters] = useState<FilterState>({
     minComments: 0,
@@ -117,6 +121,19 @@ export default function MyWorkPage() {
     setLoading(false)
   }, [])
 
+  const fetchMyWorkData = useCallback(async () => {
+    try {
+      const res = await fetch('/api/my-work/list')
+      if (res.ok) {
+        const data = await res.json()
+        setTasks(data.prds_tasks || [])
+        setReviewers(data.prds_reviewers || [])
+      }
+    } catch (err) {
+      console.error('Error fetching tasks and reviewers', err)
+    }
+  }, [])
+
   const applyFilters = (newFilters: FilterState) => {
     setFilters(newFilters)
     const filtered = prds.filter(prd => {
@@ -137,6 +154,7 @@ export default function MyWorkPage() {
 
   useEffect(() => {
     loadPrds()
+    fetchMyWorkData()
 
     // Listen for storage changes
     const handleStorageChange = (e: StorageEvent) => {
@@ -157,7 +175,7 @@ export default function MyWorkPage() {
       window.removeEventListener('storage', handleStorageChange)
       window.removeEventListener('savedPRDUpdated', handleCustomEvent)
     }
-  }, [loadPrds])
+  }, [loadPrds, fetchMyWorkData])
 
   if (loading) {
     return (
@@ -175,9 +193,11 @@ export default function MyWorkPage() {
           <PrdCard
             key={prd.id}
             prd={prd}
+
             loadSummary={() =>
               fetchSummary(prd.id, prd.metadata?.comments || [], prd.last_edited_at)
             }
+
           />
         ))}
         {filteredPrds.length === 0 && (
