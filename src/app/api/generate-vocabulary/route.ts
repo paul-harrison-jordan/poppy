@@ -1,13 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getAuthServerSession } from '@/lib/auth';
+import { withAuth } from '@/lib/api';
 import { generateVocabulary } from '@/lib/services/openaiService';
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (session, request: Request) => {
   try {
-    const authSession = await getAuthServerSession();
-    if (!authSession?.user?.name) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const { title, query, matchedContext, type } = await request.json();
     const result = await generateVocabulary({ title, query, matchedContext, type });
@@ -19,4 +15,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

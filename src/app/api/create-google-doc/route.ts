@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getAuthServerSession } from '@/lib/auth';
+import { withAuth } from '@/lib/api';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (session, request: Request) => {
   try {
-    const authSession = await getAuthServerSession();
-    if (!authSession?.accessToken) {
+    if (!session.accessToken) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
@@ -20,7 +19,7 @@ export async function POST(request: Request) {
     });
 
     auth.setCredentials({
-      access_token: authSession.accessToken,
+      access_token: session.accessToken,
     });
 
     // Initialize the Drive API
@@ -49,4 +48,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

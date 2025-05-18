@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAuthServerSession } from '@/lib/auth';
+import { withAuth } from '@/lib/api';
 import { getUserIndex } from '@/lib/pinecone';
 import OpenAI from 'openai';
 import { nanoid } from 'nanoid';
@@ -48,12 +48,8 @@ async function enrichFeedback(feedback: string): Promise<string> {
   return `${feedback}\n\nTopics: ${analysis.topics.join(', ')}\nThemes: ${analysis.themes.join(', ')}\nFeatures: ${analysis.features.join(', ')}\nSentiment: ${analysis.sentiment}`;
 }
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (session, request: Request) => {
   try {
-    const authSession = await getAuthServerSession();
-    if (!authSession?.user?.name) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const index = getUserIndex('feedback');
     const { rows } = await request.json();
@@ -108,4 +104,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}); 

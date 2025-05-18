@@ -1,14 +1,10 @@
 import { NextResponse } from 'next/server';
 import { embedChunks } from '@/app/embed';
-import { getAuthServerSession } from '@/lib/auth';
+import { withAuth } from '@/lib/api';
 import { headers } from 'next/headers';
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (session, request: Request) => {
   try {
-    const authSession = await getAuthServerSession();
-    if (!authSession?.user?.name) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const headersList = await headers();
     const referer = headersList.get('referer') || '';
@@ -47,4 +43,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}); 

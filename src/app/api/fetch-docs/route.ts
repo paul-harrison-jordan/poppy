@@ -1,19 +1,15 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import { getAuthServerSession } from '@/lib/auth';
+import { withAuth } from '@/lib/api';
 
 interface GoogleDoc {
   id: string;
   name: string;
 }
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (session, request: Request) => {
   try {
-    const authSession = await getAuthServerSession();
-    if (!authSession?.user?.name) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const { driveFolderId = '', documentId = '' } = await request.json();
 
@@ -23,10 +19,10 @@ export async function POST(request: Request) {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       redirectUri: process.env.GOOGLE_REDIRECT_URI,
     });
-    if (!authSession.accessToken) {
+    if (!session.accessToken) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
-    auth.setCredentials({ access_token: authSession.accessToken });
+    auth.setCredentials({ access_token: session.accessToken });
 
     const drive = google.drive({ version: 'v3', auth });
 
@@ -71,4 +67,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

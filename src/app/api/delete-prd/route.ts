@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
-import { getAuthServerSession } from '@/lib/auth';
+import { withAuth } from '@/lib/api';
 import { OAuth2Client } from 'google-auth-library';
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (session: Session, request: Request) => {
   interface Session {
     accessToken?: string;
     user?: {
@@ -22,7 +22,6 @@ export async function POST(request: Request) {
     });
 
     // Set the access token from the session
-    const session = await getAuthServerSession() as Session;
     if (!session?.accessToken) {
       return NextResponse.json(
         { error: 'Not authenticated' },
@@ -51,4 +50,4 @@ export async function POST(request: Request) {
     );
   }
   return NextResponse.json({}, { status: 200 });
-} 
+}); 
