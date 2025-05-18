@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { shouldScheduleMeeting } from '@/lib/meetingLogic'
 import { Prd } from '@/types/my-work'
@@ -27,7 +27,6 @@ export default function PrdCard({
   prd: Prd
   loadSummary: () => Promise<string | undefined>
 }) {
-
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [summary, setSummary] = useState<string | undefined>(
@@ -40,11 +39,67 @@ export default function PrdCard({
   const [scheduledMeeting, setScheduledMeeting] = useState<{ start: string; end: string } | null>(null)
   const router = useRouter()
 
+  const ensureSummary = useCallback(async (): Promise<string | undefined> => {
+    if (summary) return summary
+    const s = await loadSummary()
+    if (s) setSummary(s)
+    return s
+  }, [summary, loadSummary])
+
+  const findAvailableTimes = useCallback(async () => {
+    try {
+      setSchedulingStatus('finding-times')
+      setErrorMessage('')
+
+      // Get unique commenter emails
+      const attendeeEmails = [...new Set(prd.metadata?.comments?.map(c => c.user_id) || [])]
+      
+      // Find available meeting times
+      const availabilityResponse = await fetch('/api/google-calendar/find-availability', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          attendees: attendeeEmails,
+          duration: 30, // 30 minute meeting
+          startTime: new Date().toISOString(),
+          endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Next 7 days
+        }),
+      })
+
+      if (!availabilityResponse.ok) {
+        const errorData = await availabilityResponse.json();
+        throw new Error(
+          errorData.errorDetails || 
+          errorData.error || 
+          'Failed to find available meeting times'
+        );
+      }
+
+      const { availableSlots: slots } = await availabilityResponse.json()
+      
+      if (!slots?.length) {
+        setErrorMessage('No available meeting times found in the next 7 days')
+        setSchedulingStatus('error')
+        return
+      }
+
+      // Take at most 3 slots
+      setAvailableSlots(slots.slice(0, 3))
+      setSchedulingStatus('idle')
+    } catch (error) {
+      console.error('Error finding meeting times:', error)
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to find meeting times')
+      setSchedulingStatus('error')
+    }
+  }, [prd.metadata?.comments])
+
   useEffect(() => {
     if (!summary) {
       void ensureSummary()
     }
-  }, [])
+  }, [summary, ensureSummary])
 
   useEffect(() => {
     if (summary !== undefined) {
@@ -57,14 +112,7 @@ export default function PrdCard({
         }
       })()
     }
-  }, [summary, prd])
-
-  const ensureSummary = async (): Promise<string | undefined> => {
-    if (summary) return summary
-    const s = await loadSummary()
-    if (s) setSummary(s)
-    return s
-  }
+  }, [summary, prd, findAvailableTimes])
 
   const getDaysSinceLastEdit = () => {
     if (!prd.last_edited_at) return null;
@@ -131,55 +179,6 @@ export default function PrdCard({
     } catch (error) {
       console.error('Error scheduling meeting:', error)
       setErrorMessage(error instanceof Error ? error.message : 'Failed to schedule meeting')
-      setSchedulingStatus('error')
-    }
-  }
-
-  const findAvailableTimes = async () => {
-    try {
-      setSchedulingStatus('finding-times')
-      setErrorMessage('')
-
-      // Get unique commenter emails
-      const attendeeEmails = [...new Set(prd.metadata?.comments?.map(c => c.user_id) || [])]
-      
-      // Find available meeting times
-      const availabilityResponse = await fetch('/api/google-calendar/find-availability', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          attendees: attendeeEmails,
-          duration: 30, // 30 minute meeting
-          startTime: new Date().toISOString(),
-          endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Next 7 days
-        }),
-      })
-
-      if (!availabilityResponse.ok) {
-        const errorData = await availabilityResponse.json();
-        throw new Error(
-          errorData.errorDetails || 
-          errorData.error || 
-          'Failed to find available meeting times'
-        );
-      }
-
-      const { availableSlots: slots } = await availabilityResponse.json()
-      
-      if (!slots?.length) {
-        setErrorMessage('No available meeting times found in the next 7 days')
-        setSchedulingStatus('error')
-        return
-      }
-
-      // Take at most 3 slots
-      setAvailableSlots(slots.slice(0, 3))
-      setSchedulingStatus('idle')
-    } catch (error) {
-      console.error('Error finding meeting times:', error)
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to find meeting times')
       setSchedulingStatus('error')
     }
   }
@@ -287,7 +286,7 @@ export default function PrdCard({
                   ) : availableSlots.length > 0 ? (
                     <div className="space-y-2">
                       <p className="text-sm text-gray-600">Available times:</p>
-                      {availableSlots.map((slot, index) => (
+                      {availableSlots.map((slot) => (
                         <Button
                           key={slot.start}
                           size="sm"

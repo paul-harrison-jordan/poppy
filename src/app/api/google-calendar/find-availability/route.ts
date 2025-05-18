@@ -97,7 +97,7 @@ export async function POST(request: Request) {
 
       // Check for any errors in the response
       const errors = Object.entries(busySlots)
-        .filter(([_, calendar]) => calendar.errors)
+        .filter(([, calendar]) => calendar.errors)
         .map(([email, calendar]) => ({
           email,
           error: calendar.errors?.[0]?.reason || 'Unknown error'
