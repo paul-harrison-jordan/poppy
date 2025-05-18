@@ -15,7 +15,7 @@ interface PrdModalProps {
 }
 
 export default function PrdModal({ prd, isOpen, onClose, summary: initialSummary, loadSummary }: PrdModalProps) {
-  const [summary, setSummary] = useState<string | undefined>(initialSummary)
+  const [summary, ] = useState<string | undefined>(initialSummary)
 
   useEffect(() => {
     if (isOpen && !summary) {
