@@ -2,33 +2,33 @@ import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api';
 import { Session } from 'next-auth';
 import { Pinecone } from '@pinecone-database/pinecone';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { OpenAI } from 'openai';
 
 const pc = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY!,
 });
 
-// List of available databases to search
-const AVAILABLE_DATABASES = ['feedback', 'product', 'support', 'engineering'];
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
+const DATABASES = ['arjun-madgavkar', 'jeremy-blanchard', 'kevin-twomey'];
+
+export const POST = withAuth<NextResponse, Session, [Request]>(async (session, req) => {
   try {
     if (!session.user) {
       return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
     }
 
-    const { documentBody } = await request.json();
+    const { documentBody } = await req.json();
+
     if (!documentBody) {
       return NextResponse.json({ error: 'Document body is required' }, { status: 400 });
     }
 
-    // Get embedding for the document
+    // Generate embedding for the document
     const embeddingResponse = await openai.embeddings.create({
-      model: "text-embedding-3-small",
+      model: 'text-embedding-3-small',
       input: documentBody,
     });
 
@@ -36,28 +36,33 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
 
     // Search each database for matches
     const searchResults = await Promise.all(
-      AVAILABLE_DATABASES.map(async (dbName) => {
-        try {
-          const index = pc.index(dbName);
-          const queryResponse = await index.namespace('ns1').query({
-            vector: embedding,
-            topK: 3,
-            includeMetadata: true
-          });
+      DATABASES.map(async (database) => {
+        const index = pc.index(database);
+        const queryResponse = await index.namespace('ns1').query({
+          vector: embedding,
+          topK: 5,
+          includeMetadata: true,
+        });
 
+        if (!queryResponse?.matches) {
+          console.error(`No matches found in ${database} database:`, queryResponse);
           return {
-            database: dbName,
-            matches: queryResponse.matches || [],
-            averageScore: queryResponse.matches?.reduce((acc, match) => acc + (match.score || 0), 0) / (queryResponse.matches?.length || 1) || 0
-          };
-        } catch (error) {
-          console.error(`Error searching database ${dbName}:`, error);
-          return {
-            database: dbName,
-            matches: [],
-            averageScore: 0
+            database,
+            averageScore: 0,
+            topMatches: [],
           };
         }
+
+        const averageScore = queryResponse.matches.reduce((acc, match) => acc + match.score, 0) / queryResponse.matches.length;
+
+        return {
+          database,
+          averageScore,
+          topMatches: queryResponse.matches.map(match => ({
+            score: match.score,
+            metadata: match.metadata,
+          })),
+        };
       })
     );
 
@@ -67,41 +72,32 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
       .map(result => result.database);
 
     // Use OpenAI to analyze the matches and provide context
-    const analysisPrompt = `
-      Based on the following document and its matches in these databases: ${relevantDatabases.join(', ')},
-      provide a brief analysis of which databases are most relevant and why.
-      Document: ${documentBody.substring(0, 500)}...
-    `;
+    const analysisPrompt = `Analyze the following document and its matches across different databases. 
+    The document has been matched with the following databases: ${relevantDatabases.join(', ')}.
+    Provide a brief analysis of why these matches are relevant and what insights can be drawn.`;
 
     const analysisResponse = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: 'gpt-4-turbo-preview',
       messages: [
         {
-          role: "system",
-          content: "You are an AI assistant that analyzes document content and determines which databases would be most relevant for storing or searching this content."
+          role: 'system',
+          content: 'You are an AI assistant that analyzes document matches and provides insights.',
         },
         {
-          role: "user",
-          content: analysisPrompt
-        }
+          role: 'user',
+          content: analysisPrompt,
+        },
       ],
-      temperature: 0.7,
-      max_tokens: 200
+      max_tokens: 200,
     });
+
+    const analysis = analysisResponse.choices[0]?.message?.content || 'No analysis available';
 
     return NextResponse.json({
       relevantDatabases,
-      analysis: analysisResponse.choices[0].message.content,
-      searchResults: searchResults.map(result => ({
-        database: result.database,
-        averageScore: result.averageScore,
-        topMatches: result.matches.slice(0, 2).map(match => ({
-          score: match.score,
-          metadata: match.metadata
-        }))
-      }))
+      analysis,
+      searchResults,
     });
-
   } catch (error) {
     console.error('Error analyzing document:', error);
     return NextResponse.json(
