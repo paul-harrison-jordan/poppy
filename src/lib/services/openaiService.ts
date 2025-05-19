@@ -49,9 +49,7 @@ export async function generateContent(opts: GenerateContentRequest) {
 
 I've also included a list of key terms that my team has defined for our product. Use this as background information to help you understand the rest of the prompt. ${Object.keys(teamTerms).join(', ')}
 
-I've included instructions for how to think and write PRDs like a product manager with" ${ctx.examplesOfHowYouThink} "I've also included background on how to think like my product team" ${ctx.pillarGoalsKeyTermsBackground} "I've included an example document to demonstrate my personal philosophy on how we should approach building a product to cross sell to existing users" ${ctx.howYouThinkAboutProduct} "I've included a doc that outlines the strategic goals of the my product team for the rest of the year" ${ctx.teamStrategy}
-
-"I've included example text from work that my team has already done that I want for you to use as additional context for relevant features and terms" ${additionalContext} "I've asked you to write a PRD for the following question" ${query} "I've also included a list of questions and answers about the PRD to provide additional clarity around how we should approach the PRD." ${questions.join('\n')} "When I ask you to write a doc, I want you to evaluate the Job to be Done statement I provide from each perspective (Product Manager, My product team, and Building a product that grows with its users) before beginning to write the PRD. Once done with that step, I want you to write the document with a focus on narrow scope, highly detailed breakdowns of which feature will support which part of the JTBD, and an open questions section that interrogates the JTBD from each of your perspectives (my product team, Product Manager, my philosophy) our edits should be returned in markdown format`,
+I've included instructions for how to think and write PRDs like a product manager with" ${ctx.examplesOfHowYouThink} "I've also included background on how to think like my product team" ${ctx.pillarGoalsKeyTermsBackground} "I've included an example document to demonstrate my personal philosophy on how we should approach building a product to cross sell to existing users" ${ctx.howYouThinkAboutProduct} "I've included a doc that outlines the strategic goals of the my product team for the rest of the year" ${ctx.teamStrategy} I've included example text from work that my team has already done that I want for you to use as additional context for relevant features and terms" ${additionalContext} "I've asked you to write a PRD for the following question" ${query} "I've also included a list of questions and answers about the PRD to provide additional clarity around how we should approach the PRD." ${questions.join('\n')} "When I ask you to write a doc, I want you to evaluate the Job to be Done statement I provide from each perspective (Product Manager, My product team, and Building a product that grows with its users) before beginning to write the PRD. Once done with that step, I want you to write the document with a focus on narrow scope, highly detailed breakdowns of which feature will support which part of the JTBD, and an open questions section that interrogates the JTBD from each of your perspectives (my product team, Product Manager, my philosophy) our edits should be returned in markdown format`,
         },
       ],
     });
@@ -97,38 +95,56 @@ export async function generateQuestions(opts: GenerateQuestionsRequest): Promise
 
 Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of terms over time.
 
-If the title, query, or context have words or terms you aren't 100% certain about, include them in the internalTerms array. You must always return the internalTerms array with string values of internal terms that you are unsure about.
+You must respond with a JSON object containing two arrays:
+1. questions: An array of question objects, each with id, text, and reasoning fields
+2. internalTerms: An array of terms that need clarification
 
-Example JSON object:
+Example JSON response:
 {
   "questions": [
-    {"id": "1","text": "What is the primary problem this feature solves?","reasoning": "Understanding the core problem helps ensure we're building the right solution."},
-    {"id": "2","text": "Who are the primary users of this feature?","reasoning": "Identifying target users helps tailor the solution to their needs."},
-    {"id": "3","text": "What are the key success metrics for this feature?","reasoning": "Defining success metrics helps measure the impact of the feature."}
+    {
+      "id": "1",
+      "text": "What is the primary problem this feature solves?",
+      "reasoning": "Understanding the core problem helps ensure we're building the right solution."
+    },
+    {
+      "id": "2",
+      "text": "Who are the primary users of this feature?",
+      "reasoning": "Identifying target users helps tailor the solution to their needs."
+    }
   ],
-  "internalTerms": ["Profile","Active profile","Suppressed profile","Activity feed"]
+  "internalTerms": ["Profile", "Active profile", "Suppressed profile"]
 }
+
 I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a product manager would ask.
-${Object.keys(terms).join(', ')}
-you must respond with a JSON object containing an array of teamTerms you need definitions of.`
-          : `You are a system that helps a strategic product leader write a Strategic Document. You will be given a title and query for a new strategy, as well as relevant context from previous strategic documents that the user has shared with you.
+${Object.keys(terms).join(', ')}`
+          : `You are a system that helps a strategic leader write a strategy document. You will be given a title and query for a new strategy, as well as relevant context from previous strategies or documents that the user has shared with you.
 
 Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of strategic terms over time.
 
-If the title, query, or context have words or terms you aren't 100% certain about, include them in the internalTerms array. You must always return the internalTerms array with string values of internal terms that you are unsure about.
+You must respond with a JSON object containing two arrays:
+1. questions: An array of question objects, each with id, text, and reasoning fields
+2. internalTerms: An array of terms that need clarification
 
-Example JSON object:
+Example JSON response:
 {
   "questions": [
-    {"id": "1","text": "What is the long-term vision for this strategic initiative?","reasoning": "Understanding the long-term vision helps align all stakeholders and guide decision-making."},
-    {"id": "2","text": "What are the key market opportunities and challenges?","reasoning": "Identifying market dynamics helps shape the strategic approach."},
-    {"id": "3","text": "What are the critical success factors for this strategy?","reasoning": "Defining success factors helps measure the effectiveness of the strategy."}
+    {
+      "id": "1",
+      "text": "What is the long-term vision for this strategic initiative?",
+      "reasoning": "Understanding the long-term vision helps align all stakeholders and guide decision-making."
+    },
+    {
+      "id": "2",
+      "text": "What are the key market opportunities and challenges?",
+      "reasoning": "Identifying market dynamics helps shape the strategic approach."
+    }
   ],
-  "internalTerms": ["Market penetration","Competitive advantage","Strategic initiative","Value proposition"]
+  "internalTerms": ["Market penetration", "Competitive advantage"]
 }
+
 I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a strategic leader would ask.
-${Object.keys(terms).join(', ')}
-you must respond with a JSON object containing an array of teamTerms you need definitions of.`,
+${Object.keys(terms).join(', ')}`,
       },
       {
         role: 'user',
@@ -138,8 +154,35 @@ you must respond with a JSON object containing an array of teamTerms you need de
     model: 'o3',
     response_format: { type: 'json_object' },
   });
-  const response = JSON.parse(completion.choices[0].message.content || '{}');
-  return { questions: response.questions as Question[], internalTerms: response.internalTerms as string[] };
+
+  try {
+    const response = JSON.parse(completion.choices[0].message.content || '{}');
+    
+    // Validate the response structure
+    if (!response.questions || !Array.isArray(response.questions)) {
+      console.error('Invalid questions response format:', response);
+      return { questions: [], internalTerms: [] };
+    }
+
+    // Ensure each question has the required fields
+    const validQuestions = response.questions.filter((q: { id?: string; text?: string; reasoning?: string }) => 
+      q && typeof q === 'object' && 
+      typeof q.id === 'string' && 
+      typeof q.text === 'string' && 
+      typeof q.reasoning === 'string'
+    );
+
+    // Ensure internalTerms is an array
+    const internalTerms = Array.isArray(response.internalTerms) ? response.internalTerms : [];
+
+    return {
+      questions: validQuestions,
+      internalTerms
+    };
+  } catch (error) {
+    console.error('Error parsing questions response:', error);
+    return { questions: [], internalTerms: [] };
+  }
 }
 
 export interface BrainstormMessage { role: 'user' | 'assistant'; content: string; }
@@ -214,6 +257,7 @@ export interface VocabularyRequest {
   query: string;
   matchedContext: string;
   type?: string;
+  teamTerms?: Record<string, string>;
 }
 
 export type TeamTerms = string[];
@@ -229,28 +273,24 @@ export async function generateVocabulary(opts: VocabularyRequest): Promise<TeamT
 
 Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of terms over time.
 
-If the title, query, or context have words or terms you aren't 100% certain about, include them in the internalTerms array. You must always return the internalTerms array with string values of internal terms that you are unsure about.
-
-Example JSON object:
+You must respond with a JSON object containing a terms_to_define array of terms that need definitions. For example:
 {
-  "internalTerms": ["Profile","Active profile","Suppressed profile","Activity feed"]
+  "terms_to_define": ["Service Level Agreement (SLA)", "Round-robin Assignment", "Office Hours"]
 }
+
 I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a product manager would ask.
-${Object.keys(terms).join(', ')}
-you must respond with a JSON object containing an array of teamTerms you need definitions of.`
-          : `You are a system that helps a strategic product leader write a Strategic Document. You will be given a title and query for a new strategy, as well as relevant context from previous strategic documents that the user has shared with you.
+${Object.keys(terms).join(', ')}`
+          : `You are a system that helps a strategic leader write a strategy document. You will be given a title and query for a new strategy, as well as relevant context from previous strategies or documents that the user has shared with you.
 
 Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of strategic terms over time.
 
-If the title, query, or context have words or terms you aren't 100% certain about, include them in the internalTerms array. You must always return the internalTerms array with string values of internal terms that you are unsure about.
-
-Example JSON object:
+You must respond with a JSON object containing a terms_to_define array of terms that need definitions. For example:
 {
-  "internalTerms": ["Market penetration","Competitive advantage","Strategic initiative","Value proposition"]
+  "terms_to_define": ["Market penetration", "Competitive advantage", "Strategic initiative"]
 }
+
 I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a strategic leader would ask.
-${Object.keys(terms).join(', ')}
-you must respond with a JSON object containing an array of teamTerms you need definitions of.`,
+${Object.keys(terms).join(', ')}`,
       },
       {
         role: 'user',
@@ -260,6 +300,30 @@ you must respond with a JSON object containing an array of teamTerms you need de
     model: 'o4-mini',
     response_format: { type: 'json_object' },
   });
-  const response = JSON.parse(completion.choices[0].message.content || '{}');
-  return response.teamTerms as TeamTerms;
+  
+  try {
+    const response = JSON.parse(completion.choices[0].message.content || '[]');
+    // If the response is an array, return it directly
+    if (Array.isArray(response)) {
+      return response;
+    }
+    // If the response is an object with a terms_to_define array, return that
+    if (response.terms_to_define && Array.isArray(response.terms_to_define)) {
+      return response.terms_to_define;
+    }
+    // If the response is an object with a terms array, return that
+    if (response.terms && Array.isArray(response.terms)) {
+      return response.terms;
+    }
+    // If the response is an object with a teamTerms array, return that
+    if (response.teamTerms && Array.isArray(response.teamTerms)) {
+      return response.teamTerms;
+    }
+    // If we can't find an array in the response, return an empty array
+    console.error('Invalid response format from vocabulary generation:', response);
+    return [];
+  } catch (error) {
+    console.error('Error parsing vocabulary response:', error);
+    return [];
+  }
 }

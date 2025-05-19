@@ -51,8 +51,22 @@ export default function ChatInterface() {
   const [teamTerms, setTeamTerms] = useState<TeamTerm[]>([]);
   const [currentTermIndex, setCurrentTermIndex] = useState<number>(-1);
   const [termDefinitions, setTermDefinitions] = useState<Record<string, string>>({});
+  const [internalTerms, setInternalTerms] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [schedulingMessageId, setSchedulingMessageId] = useState<number | null>(null);
+  const [showQuery, setShowQuery] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [pendingSummary, setPendingSummary] = useState<string | null>(null);
+
+  // Check for PRD summary on mount
+  useEffect(() => {
+    const prdSummary = localStorage.getItem('prdSummary');
+    if (prdSummary) {
+      setInput(prdSummary);
+      // Clear the summary after using it
+      localStorage.removeItem('prdSummary');
+    }
+  }, []);
 
   // Add useEffect for initial message
   useEffect(() => {
@@ -94,6 +108,15 @@ export default function ChatInterface() {
       }
     }
   }, [messages, messages.length, setInput])
+
+  // Effect to handle setting input when switching to PRD mode
+  useEffect(() => {
+    if (mode === 'draft' && pendingSummary) {
+      console.log('Setting input from pending summary:', pendingSummary);
+      setInput(pendingSummary);
+      setPendingSummary(null);
+    }
+  }, [mode, pendingSummary]);
 
   const handleModeChange = (newMode: ChatMode) => {
     setMode(newMode);
@@ -152,7 +175,78 @@ export default function ChatInterface() {
       
       // All questions answered, move to content generation
       setDraftStep('content');
-      generateContent();
+      setLoading(true);
+      
+      // Show writing message
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: <span className="animate-pulse">I'm writing your PRD document now...</span>
+      }]);
+
+      try {
+        const docData = await generateDocument(
+          'prd',
+          'Draft PRD',
+          typeof messages[1].content === 'string' ? messages[1].content : String(messages[1].content),
+          questionAnswers
+        );
+
+        if (!docData.url) {
+          throw new Error("No document URL received");
+        }
+
+        // Remove the writing message
+        setMessages(prev => {
+          const withoutWriting = prev.filter(msg => {
+            if (typeof msg.content === 'string') {
+              return msg.content !== "I'm writing your PRD document now...";
+            }
+            if (React.isValidElement(msg.content)) {
+              const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
+              return element.props.children !== "I'm writing your PRD document now...";
+            }
+            return true;
+          });
+          return [...withoutWriting, {
+            role: 'assistant',
+            content: (
+              <div className="flex flex-col items-center gap-4">
+                <p>Your PRD is ready! Click below to view it in Google Docs.</p>
+                <a
+                  href={docData.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
+                >
+                  View PRD in Google Docs
+                </a>
+              </div>
+            )
+          }];
+        });
+
+        // Save the document link
+        const savedDocs = JSON.parse(localStorage.getItem("savedPRD") || "[]");
+        savedDocs.push({
+          url: docData.url,
+          title: docData.title || "Draft PRD",
+          createdAt: new Date().toISOString(),
+          id: docData.docId,
+        });
+        localStorage.setItem("savedPRD", JSON.stringify(savedDocs));
+        window.dispatchEvent(new CustomEvent("prdCountUpdated", { detail: { count: savedDocs.length } }));
+      } catch (error) {
+        console.error("Error generating content:", error);
+        setMessages(prev => {
+          const withoutWriting = prev.filter(msg => msg.content !== "I'm writing your PRD document now...");
+          return [...withoutWriting, {
+            role: 'assistant',
+            content: "Sorry, I encountered an error while generating the content. Please try again."
+          }];
+        });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -259,15 +353,30 @@ export default function ChatInterface() {
           title: "Draft PRD",
           query: messages[1].content,
           matchedContext: matchedContext,
-          type: 'prd'
+          type: 'prd',
+          teamTerms: JSON.parse(localStorage.getItem("teamTerms") || "{}"),
+          storedContext: localStorage.getItem("personalContext")
         }),
       });
+      
+      if (!questionsResponse.ok) {
+        throw new Error("Failed to generate questions");
+      }
+      
       const questionsText = await collectStream(questionsResponse);
       const questionsData = JSON.parse(questionsText);
-      if (!questionsData.questions || questionsData.questions.length === 0) {
+      
+      // Validate the response
+      if (!questionsData.questions || !Array.isArray(questionsData.questions) || questionsData.questions.length === 0) {
+        console.error("Invalid questions response:", questionsData);
         throw new Error("No questions generated");
       }
+
+      // Set the questions and internal terms
       setQuestions(questionsData.questions);
+      if (questionsData.internalTerms) {
+        setInternalTerms(questionsData.internalTerms);
+      }
       
       // Remove the thinking message
       setMessages(prev => prev.filter(msg => {
@@ -332,11 +441,18 @@ export default function ChatInterface() {
           startPrd: true
         }),
       });
+
+      // First get the text response
       const text = await res.text();
+      console.log('Raw response:', text);
+
+      // Parse the JSON
       let prd;
       try {
         prd = JSON.parse(text);
-      } catch {
+        console.log('Parsed PRD:', prd);
+      } catch (e) {
+        console.error('Failed to parse PRD:', e);
         alert('Failed to parse PRD summary. Please try again.');
         return;
       }
@@ -344,7 +460,10 @@ export default function ChatInterface() {
       // Remove the loading message
       setMessages(prev => prev.filter(msg => msg.content !== "I'm summarizing our conversation and preparing to start the PRD..."));
 
-      // Switch to PRD mode
+      // Store the summary before switching modes
+      setPendingSummary(prd.summary);
+
+      // Switch to PRD mode and set up initial state
       setMode('draft');
       setDraftStep('initial');
       
@@ -354,11 +473,6 @@ export default function ChatInterface() {
         content: "I'll help you draft a PRD. Please share your product idea or concept, and I'll guide you through the process."
       }]);
 
-      // Set the input to the PRD summary
-      setInput(prd.summary);
-
-      // Save the PRD data for later use
-      localStorage.setItem('prdDraft', JSON.stringify(prd));
     } catch (error) {
       console.error(error);
       alert('Failed to generate PRD summary.');
@@ -381,45 +495,7 @@ export default function ChatInterface() {
         content: "Thinking..." 
       }]);
 
-      if (mode === 'schedule') {
-        // Get embedding for the query
-        const embedRes = await fetch("/api/embed-request", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: input }),
-        });
-        
-        if (!embedRes.ok) throw new Error("Failed to get embedding");
-        const { queryEmbedding } = await embedRes.json();
-        if (!queryEmbedding || !Array.isArray(queryEmbedding)) throw new Error("Invalid embedding response");
-
-        const embedding = queryEmbedding[0].embedding;
-
-        // Get matched feedback from Pinecone
-        const matchRes = await fetch("/api/match-embeds", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({embedding, useCase: 'schedule'}),
-        });
-
-        if (!matchRes.ok) throw new Error("Failed to match embeddings");
-        const { matchedContext } = await matchRes.json();
-        if (!matchedContext || !Array.isArray(matchedContext)) throw new Error("Invalid matched context response");
-
-        // Remove the thinking message
-        setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
-
-        // Format each match as a text response
-        const responses = matchedContext.map((match) => {
-          const metadata = match.metadata;
-          return `Feedback: ${metadata.NPS_VERBATIM}\nScore: ${metadata.NPS_SCORE_RAW}\nDate: ${metadata.SURVEY_END_DATE}\nEmail: ${metadata.RECIPIENT_EMAIL}\nGMV: ${metadata.GMV}\nKlaviyo Account ID: ${metadata.KLAVIYO_ACCOUNT_ID}\nRow: ${metadata.row_number}`;
-        });
-
-        // Add each response as a separate message
-        for (const response of responses) {
-          setMessages(prev => [...prev, { role: 'assistant', content: response }]);
-        }
-      } else if (mode === 'draft') {
+      if (mode === 'draft') {
         switch (draftStep) {
           case 'initial':
             // First, embed the request
@@ -454,11 +530,11 @@ export default function ChatInterface() {
             });
             const vocabText = await collectStream(vocabResponse);
             const vocabData = JSON.parse(vocabText);
-            if (!vocabData.teamTerms || vocabData.teamTerms.length === 0) {
+            if (!Array.isArray(vocabData) || vocabData.length === 0) {
               throw new Error("No terms generated");
             }
             // Transform the terms into our TeamTerm format
-            const formattedTerms = vocabData.teamTerms.map((term: string, index: number) => ({
+            const formattedTerms = vocabData.map((term: string, index: number) => ({
               id: `term-${index}`,
               term: term,
               definition: ''
@@ -495,29 +571,152 @@ export default function ChatInterface() {
               console.error("No current question found");
               return;
             }
+
+            console.log('Question status:', {
+              currentIndex: currentQuestionIndex,
+              totalQuestions: questions.length,
+              isLastQuestion: currentQuestionIndex === questions.length - 1,
+              answers: questionAnswers
+            });
+
             setQuestionAnswers(prev => ({
               ...prev,
               [currentQuestion.id]: input
             }));
-            showNextQuestion();
+
+            // If this is the last question, we need to handle the transition to content generation
+            if (currentQuestionIndex === questions.length - 1) {
+              console.log('Handling last question, transitioning to content generation');
+              // Remove the thinking message
+              setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
+              
+              // Show writing message
+              setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: <span className="animate-pulse">I'm writing your PRD document now...</span>
+              }]);
+
+              try {
+                const docData = await generateDocument(
+                  'prd',
+                  'Draft PRD',
+                  typeof messages[1].content === 'string' ? messages[1].content : String(messages[1].content),
+                  questionAnswers
+                );
+
+                if (!docData.url) {
+                  throw new Error("No document URL received");
+                }
+
+                // Remove the writing message
+                setMessages(prev => {
+                  const withoutWriting = prev.filter(msg => {
+                    if (typeof msg.content === 'string') {
+                      return msg.content !== "I'm writing your PRD document now...";
+                    }
+                    if (React.isValidElement(msg.content)) {
+                      const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
+                      return element.props.children !== "I'm writing your PRD document now...";
+                    }
+                    return true;
+                  });
+                  return [...withoutWriting, {
+                    role: 'assistant',
+                    content: (
+                      <div className="flex flex-col items-center gap-4">
+                        <p>Your PRD is ready! Click below to view it in Google Docs.</p>
+                        <a
+                          href={docData.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
+                        >
+                          View PRD in Google Docs
+                        </a>
+                      </div>
+                    )
+                  }];
+                });
+
+                // Save the document link
+                const savedDocs = JSON.parse(localStorage.getItem("savedPRD") || "[]");
+                savedDocs.push({
+                  url: docData.url,
+                  title: docData.title || "Draft PRD",
+                  createdAt: new Date().toISOString(),
+                  id: docData.docId,
+                });
+                localStorage.setItem("savedPRD", JSON.stringify(savedDocs));
+                window.dispatchEvent(new CustomEvent("prdCountUpdated", { detail: { count: savedDocs.length } }));
+
+                // Set the draft step to content after successful generation
+                setDraftStep('content');
+                console.log('Successfully transitioned to content step');
+              } catch (error) {
+                console.error("Error generating content:", error);
+                setMessages(prev => {
+                  const withoutWriting = prev.filter(msg => msg.content !== "I'm writing your PRD document now...");
+                  return [...withoutWriting, {
+                    role: 'assistant',
+                    content: "Sorry, I encountered an error while generating the content. Please try again."
+                  }];
+                });
+              }
+            } else {
+              // If not the last question, show the next one
+              console.log('Showing next question');
+              showNextQuestion();
+            }
             break;
 
           case 'content':
-            // Handle follow-up questions or clarifications
-            const response = await fetch("/api/brainstorm", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                messages: [...messages, userMessage],
-                additionalContext: "",
-                teamTerms: JSON.parse(localStorage.getItem("teamTerms") || "{}"),
-                storedContext: localStorage.getItem("personalContext"),
-                startPrd: false
-              }),
-            });
-            const responseText = await collectStream(response);
-            setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
+            // Remove the thinking message
+            setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
+            // In content mode, we don't need to do anything with the user's message
+            // Just acknowledge it and continue
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: "I've noted your feedback. The PRD has been generated and saved to Google Docs."
+            }]);
             break;
+        }
+      } else if (mode === 'schedule') {
+        // Get embedding for the query
+        const embedRes = await fetch("/api/embed-request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: input }),
+        });
+        
+        if (!embedRes.ok) throw new Error("Failed to get embedding");
+        const { queryEmbedding } = await embedRes.json();
+        if (!queryEmbedding || !Array.isArray(queryEmbedding)) throw new Error("Invalid embedding response");
+
+        const embedding = queryEmbedding[0].embedding;
+
+        // Get matched feedback from Pinecone
+        const matchRes = await fetch("/api/match-embeds", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({embedding, useCase: 'schedule'}),
+        });
+
+        if (!matchRes.ok) throw new Error("Failed to match embeddings");
+        const { matchedContext } = await matchRes.json();
+        if (!matchedContext || !Array.isArray(matchedContext)) throw new Error("Invalid matched context response");
+
+        // Remove the thinking message
+        setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
+
+        // Format each match as a text response
+        const responses = matchedContext.map((match) => {
+          const metadata = match.metadata;
+          return `Feedback: ${metadata.NPS_VERBATIM}\nScore: ${metadata.NPS_SCORE_RAW}\nDate: ${metadata.SURVEY_END_DATE}\nEmail: ${metadata.RECIPIENT_EMAIL}\nGMV: ${metadata.GMV}\nKlaviyo Account ID: ${metadata.KLAVIYO_ACCOUNT_ID}\nRow: ${metadata.row_number}`;
+        });
+
+        // Add each response as a separate message
+        for (const response of responses) {
+          setMessages(prev => [...prev, { role: 'assistant', content: response }]);
         }
       } else if (mode === 'brainstorm') {
         // Get embedding for the query

@@ -29,150 +29,123 @@ const queryVariants = {
 
 export default function DraftForm() {
   const pathname = usePathname();
-  const currentPage = pathname === '/strategy' ? 'strategy' : 'prd';
-  const [step, setStep] = useState<"title" | "terms" | "questions" | "generating" | "done">("title")
-  const [title, setTitle] = useState("")
-  const [query, setQuery] = useState("")
-  const [showQuery, setShowQuery] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-  const [showPrdsLink, setShowPrdsLink] = useState(false)
-  const [prdLink, setPrdLink] = useState<string | null>(null)
-  const [showQuestions, setShowQuestions] = useState(false)
-  const [questions, setQuestions] = useState<Question[]>([])
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false)
-  const titleInputRef = useRef<HTMLInputElement>(null)
-  const queryInputRef = useRef<HTMLTextAreaElement>(null)
-  const [internalTerms, setInternalTerms] = useState<string[]>([])
-  const [pendingTerms, setPendingTerms] = useState<string[]>([])
-  const [pendingTermDefs, setPendingTermDefs] = useState<Record<string, string>>({})
-  const [matchedContext, setMatchedContext] = useState<string[]>([])
+  const currentPage = pathname.split('/').pop() || '';
+  const [title, setTitle] = useState('');
+  const [query, setQuery] = useState('');
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [step, setStep] = useState<'initial' | 'vocabulary' | 'questions' | 'content'>('initial');
+  const [error, setError] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createdDoc, setCreatedDoc] = useState<{ docId: string; title: string; url: string } | null>(null);
+  const [loadingState, setLoadingState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+  const [showQuery, setShowQuery] = useState(false);
+  const [showTitle, setShowTitle] = useState(true);
+  const [showPastWork, setShowPastWork] = useState(true);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [matchedContext, setMatchedContext] = useState<string[]>([]);
+  const [internalTerms, setInternalTerms] = useState<string[]>([]);
+  const [showPrdsLink, setShowPrdsLink] = useState(false);
+  const [prdLink, setPrdLink] = useState<string | null>(null);
+  const [showQuestions, setShowQuestions] = useState(false);
+  const [pendingTerms, setPendingTerms] = useState<string[]>([]);
+  const [pendingTermDefs, setPendingTermDefs] = useState<Record<string, string>>({});
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const queryInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load saved state from localStorage
+  // Check for PRD draft data from brainstorm
   useEffect(() => {
-    // Check for prdDraft from brainstorm
-    const prdDraft = localStorage.getItem("prdDraft");
+    const prdDraft = localStorage.getItem('prdDraft');
     if (prdDraft) {
       try {
-        const { title, summary } = JSON.parse(prdDraft);
-        setTitle(title);
-        setQuery(summary);
-      } catch {}
-      localStorage.removeItem("prdDraft");
+        const { title: draftTitle, summary, showQuery: draftShowQuery } = JSON.parse(prdDraft);
+        if (draftTitle && summary) {
+          setTitle(draftTitle);
+          setQuery(summary);
+          setShowQuery(draftShowQuery);
+          // Clear the draft data after using it
+          localStorage.removeItem('prdDraft');
+        }
+      } catch (error) {
+        console.error('Error parsing PRD draft:', error);
+      }
     }
-    // Then check for saved draftFormState
-    const savedState = localStorage.getItem("draftFormState")
-    if (savedState) {
-      const { title: savedTitle, query: savedQuery, showQuery, questions, showQuestions, submitted, showPrdsLink, prdLink } =
-        JSON.parse(savedState)
-      if (!title && savedTitle) setTitle(savedTitle)
-      if (!query && savedQuery) setQuery(savedQuery)
-      setShowQuery(showQuery)
-      setQuestions(questions)
-      setShowQuestions(showQuestions)
-      setSubmitted(submitted)
-      setShowPrdsLink(showPrdsLink)
-      setPrdLink(prdLink)
-    }
-  }, [query, title])
-
-  // Save state to localStorage
-  useEffect(() => {
-    if (title || query || questions.length > 0 || submitted) {
-      localStorage.setItem(
-        "draftFormState",
-        JSON.stringify({
-          title,
-          query,
-          showQuery,
-          questions,
-          showQuestions,
-          submitted,
-          showPrdsLink,
-          prdLink,
-        }),
-      )
-    }
-  }, [title, query, showQuery, questions, showQuestions, submitted, showPrdsLink, prdLink])
-
-  // Focus inputs when state changes
-  useEffect(() => {
-    if (!showQuery && titleInputRef.current) {
-      titleInputRef.current.focus()
-    } else if (showQuery && queryInputRef.current) {
-      queryInputRef.current.focus()
-    }
-  }, [showQuery])
-
-  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && title.trim() !== "") {
-      e.preventDefault()
-      setShowQuery(true)
-    }
-  }
+  }, []);
 
   const handleQuery = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitted(true)
-    setShowPrdsLink(false)
-    setIsGenerating(true)
-    setIsGeneratingQuestions(true)
-    const storedContext = localStorage.getItem("personalContext")
-    try {
-      console.log("Starting question generation...")
-      // First, get questions from OpenAI
+    e.preventDefault();
+    setLoadingState({
+      isOpen: true,
+      title: 'Generating Questions',
+      message: 'We\'re analyzing your context to create relevant questions...',
+    });
+    setIsGenerating(true);
+    setIsGeneratingQuestions(true);
 
+    try {
       // 1. Get embedding for the query
       const embedRes = await fetch("/api/embed-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, query }),
-      })
-      if (!embedRes.ok) throw new Error("Failed to get embedding")
-      const { queryEmbedding } = await embedRes.json()
-      if (!queryEmbedding || !Array.isArray(queryEmbedding)) throw new Error("Invalid embedding response")
+      });
+      if (!embedRes.ok) throw new Error("Failed to get embedding");
+      const { queryEmbedding } = await embedRes.json();
+      if (!queryEmbedding || !Array.isArray(queryEmbedding)) throw new Error("Invalid embedding response");
 
-      const embedding = queryEmbedding[0].embedding
+      const embedding = queryEmbedding[0].embedding;
 
       // 2. Get matched context from Pinecone
       const matchRes = await fetch("/api/match-embeds", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(embedding),
-      })
-      if (!matchRes.ok) throw new Error("Failed to match embeddings")
-      const { matchedContext } = await matchRes.json()
-      if (!matchedContext || !Array.isArray(matchedContext)) throw new Error("Invalid matched context response")
+      });
+      if (!matchRes.ok) throw new Error("Failed to match embeddings");
+      const { matchedContext } = await matchRes.json();
+      if (!matchedContext || !Array.isArray(matchedContext)) throw new Error("Invalid matched context response");
 
-      setMatchedContext(matchedContext)
+      setMatchedContext(matchedContext);
 
       // 3. Get vocabulary/terms
       const vocabRes = await fetch("/api/generate-vocabulary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, query, matchedContext, type: currentPage }),
-      })
-      if (!vocabRes.ok) throw new Error("Failed to generate vocabulary")
-      const vocabData = await vocabRes.json()
+      });
+      if (!vocabRes.ok) throw new Error("Failed to generate vocabulary");
+      const vocabData = await vocabRes.json();
       if (vocabData.teamTerms && vocabData.teamTerms.length > 0) {
-        setPendingTerms(vocabData.teamTerms)
-        // setShowTermDefs(true)
-        setIsGenerating(false)
-        setIsGeneratingQuestions(false)
-        setStep("terms")
-        return
+        setPendingTerms(vocabData.teamTerms);
+        setLoadingState({ isOpen: false, title: '', message: '' });
+        setIsGenerating(false);
+        setIsGeneratingQuestions(false);
+        setStep("vocabulary");
+        return;
       }
-      const teamTerms = JSON.parse(localStorage.getItem("teamTerms") || "{}")
-      // If no terms, continue to generate questions as before
-      await fetchQuestions(teamTerms, matchedContext, storedContext )
+
+      const teamTerms = JSON.parse(localStorage.getItem("teamTerms") || "{}");
+      const storedContext = localStorage.getItem("personalContext");
+      await fetchQuestions(teamTerms, matchedContext, storedContext);
     } catch (error) {
-      console.error("Error generating questions:", error)
-      setIsGenerating(false)
-      setIsGeneratingQuestions(false)
-      // Fallback to direct PRD generation if question generation fails
-      await generatePRD()
+      console.error("Error generating questions:", error);
+      setError("Failed to generate questions. Please try again.");
+      setLoadingState({ isOpen: false, title: '', message: '' });
+      setIsGenerating(false);
+      setIsGeneratingQuestions(false);
     }
-  }
+  };
+
   // Helper to fetch questions
   type FetchQuestions = (
     teamTerms: Record<string, string>,
@@ -220,7 +193,7 @@ export default function DraftForm() {
       setIsGenerating(true);
       setIsGeneratingQuestions(false);
 
-      const docData = await generateDocument(currentPage, title, query, questionAnswers)
+      const docData = await generateDocument(currentPage, title, query, questionAnswers, matchedContext)
 
       if (docData && docData.url) {
         setShowPrdsLink(true);

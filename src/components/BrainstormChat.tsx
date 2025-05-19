@@ -84,6 +84,12 @@ export default function BrainstormChat() {
   const handleSummarizeAndSave = async () => {
     if (!messages.length) return;
     try {
+      setLoading(true);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: "I'm summarizing our conversation and preparing to start the PRD..." 
+      }]);
+
       const storedContext = localStorage.getItem("personalContext");
       const teamTerms = JSON.parse(localStorage.getItem("teamTerms") || "{}");
       const chatMessages = [
@@ -100,21 +106,23 @@ export default function BrainstormChat() {
           startPrd: true
         }),
       });
-   const text = await res.text();
-   let prd;
-   try {
-     prd = JSON.parse(text);
-   } catch {
-     alert('Failed to parse PRD summary. Please try again.');
-     return;
-   }
-   localStorage.setItem('prdDraft', JSON.stringify(prd));
-   router.push(`/draft-prd`);
-  } catch (error) {
-    console.error(error);
-    alert('Failed to generate PRD summary.');
-  }
-};
+      const prd = await res.json();
+
+      // Remove the loading message
+      setMessages(prev => prev.filter(msg => msg.content !== "I'm summarizing our conversation and preparing to start the PRD..."));
+
+      // Store just the summary for the PRD input
+      localStorage.setItem('prdSummary', prd.summary);
+
+      // Navigate to the PRD page
+      router.push('/prd');
+    } catch (error) {
+      console.error(error);
+      alert('Failed to generate PRD summary.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0 w-full max-w-5xl mx-auto font-sans" style={{ background: 'none' }}>
