@@ -93,7 +93,7 @@ export default function ChatInterface() {
         setInput('')
       }
     }
-  }, [messages, messages.length])
+  }, [messages, messages.length, setInput])
 
   const handleModeChange = (newMode: ChatMode) => {
     setMode(newMode);

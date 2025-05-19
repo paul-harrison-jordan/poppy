@@ -25,7 +25,10 @@ export default function PrdModal({ prd, isOpen, onClose, summary: initialSummary
       averageScore: number;
       topMatches: Array<{
         score: number;
-        metadata: any;
+        metadata: {
+          text?: string;
+          [key: string]: unknown;
+        };
       }>;
     }>;
   } | null>(null)

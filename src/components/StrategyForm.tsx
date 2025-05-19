@@ -93,7 +93,7 @@ export default function StrategyForm() {
     if (query && title) {
       setShowQuestions(true)
     }
-  }, [query, title])
+  }, [query, title, setShowQuestions])
 
   const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && title.trim() !== "") {
