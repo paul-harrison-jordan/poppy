@@ -2,15 +2,15 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { withAuth } from '@/lib/api';
+import { Session } from 'next-auth';
 
 interface GoogleDoc {
   id: string;
   name: string;
 }
 
-export const POST = withAuth(async (session, request: Request) => {
+export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
   try {
-
     const { driveFolderId = '', documentId = '' } = await request.json();
 
     // Initialize OAuth2 client with current user's access token

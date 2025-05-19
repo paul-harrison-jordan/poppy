@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api';
 import { buildPineconeRecords } from '@/app/embed';
 import { headers } from 'next/headers';
+import { Session } from 'next-auth';
 
-export const POST = withAuth(async (session, request: Request) => {
+export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request: Request) => {
   try {
     
     const body = await request.json();

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { withAuth } from '@/lib/api';
+import { Session } from 'next-auth';
 
 interface SheetData {
   id: string;
@@ -12,9 +13,8 @@ interface SheetData {
   }>;
 }
 
-export const POST = withAuth(async (session, request: Request) => {
+export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
   try {
-
     const { documentId } = await request.json();
     if (!documentId) {
       return NextResponse.json({ error: 'Document ID is required' }, { status: 400 });
@@ -73,9 +73,9 @@ export const POST = withAuth(async (session, request: Request) => {
 
     return NextResponse.json({ sheet: sheetData });
   } catch (error) {
-    console.error('Error fetching sheet:', error);
+    console.error('Error fetching sheets:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: error instanceof Error ? error.message : 'Failed to fetch sheets' },
       { status: 500 }
     );
   }

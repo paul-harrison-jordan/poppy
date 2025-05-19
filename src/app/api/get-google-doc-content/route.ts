@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { withAuth } from '@/lib/api';
+import { Session } from 'next-auth';
 
-export const POST = withAuth(async (session, request: Request) => {
+export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
   try {
     if (!session.accessToken) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });

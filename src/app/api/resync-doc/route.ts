@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api';
 import { getUserIndex } from '@/lib/pinecone';
+import { Session } from 'next-auth';
 
-export const POST = withAuth(async (session, request: Request) => {
+export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
   try {
-
     const formattedUsername = session.user.name
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, '-')
@@ -47,7 +47,7 @@ export const POST = withAuth(async (session, request: Request) => {
   } catch (error) {
     console.error('Error resyncing document:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: error instanceof Error ? error.message : 'Failed to resync document' },
       { status: 500 }
     );
   }

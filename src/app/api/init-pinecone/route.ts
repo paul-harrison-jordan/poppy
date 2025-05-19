@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { withAuth } from '@/lib/api';
+import { Session } from 'next-auth';
 
-export const POST = withAuth(async (session) => {
+export const POST = withAuth<NextResponse, Session, []>(async (session) => {
   try {
-
     if (!session?.user?.name) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

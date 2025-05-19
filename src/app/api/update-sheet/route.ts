@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { withAuth } from '@/lib/api';
+import { Session } from 'next-auth';
 
-export const POST = withAuth(async (session, request: Request) => {
+export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
   try {
-
     const { documentId, klaviyoAccountId, feedbackData, email } = await request.json();
     
     if (!documentId || !klaviyoAccountId || !feedbackData) {
@@ -68,7 +68,7 @@ export const POST = withAuth(async (session, request: Request) => {
   } catch (error) {
     console.error('Error updating sheet:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: error instanceof Error ? error.message : 'Failed to update sheet' },
       { status: 500 }
     );
   }

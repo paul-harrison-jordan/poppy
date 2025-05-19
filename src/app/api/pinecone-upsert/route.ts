@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api';
 import { getUserIndex } from '@/lib/pinecone';
+import { Session } from 'next-auth';
 
-export const POST = withAuth(async (session, request: Request) => {
+export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
   try {
+    const { vectors } = await request.json();
+    if (!vectors || !Array.isArray(vectors)) {
+      return NextResponse.json(
+        { error: 'Vectors array is required' },
+        { status: 400 }
+      );
+    }
 
     // Format username to comply with Pinecone naming requirements
     const formattedUsername = session.user.name
@@ -34,22 +42,6 @@ export const POST = withAuth(async (session, request: Request) => {
       );
     }
 
-// <<<<<<< codex/verify-no-vectors-remain-after-deletemany
-//     // Remove any existing vectors associated with this document
-//     await index.namespace('ns1').deleteMany({ prefix: documentId });
-
-//     // Verify deletion succeeded before upserting
-//     const remaining = await index.namespace('ns1').listPaginated({ prefix: documentId });
-
-//     if (remaining.vectors && remaining.vectors.length > 0) {
-//       return NextResponse.json(
-//         { error: 'Failed to delete existing vectors for document' },
-//         { status: 500 }
-//       );
-//     }
-
-//     await index.namespace('ns1').upsert(formattedEmbeddings);
-// =======
     const namespace = index.namespace('ns1');
     const existingVectors = await namespace.listPaginated({ prefix: `${documentId}#` });
     const idsToDelete = existingVectors.vectors?.map(v => v.id) ?? [];
@@ -58,7 +50,6 @@ export const POST = withAuth(async (session, request: Request) => {
     }
 
     await namespace.upsert(formattedEmbeddings);
-// >>>>>>> main
     
     return NextResponse.json({
       message: 'Document synced successfully',

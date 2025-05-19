@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { withAuth } from '@/lib/api';
+import { Session } from 'next-auth';
 
-export const POST = withAuth(async (session, request: Request) => {
+export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
   try {
-
     const { documentId, rowNumber, columnIndex } = await request.json();
     
     if (!documentId || !rowNumber || columnIndex === undefined) {
@@ -91,7 +91,7 @@ export const POST = withAuth(async (session, request: Request) => {
   } catch (error) {
     console.error('Error fetching email:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: error instanceof Error ? error.message : 'Failed to fetch email' },
       { status: 500 }
     );
   }

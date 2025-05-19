@@ -3,15 +3,15 @@ import { getUserIndex } from '@/lib/pinecone';
 import { withAuth } from '@/lib/api';
 import { headers } from 'next/headers';
 import { Pinecone } from '@pinecone-database/pinecone';
+import { Session } from 'next-auth';
 
 const pc = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY!,
 });
 
 
-export const POST = withAuth(async (session, req: NextRequest) => {
+export const POST = withAuth<NextResponse, Session, [NextRequest]>(async (session, req: NextRequest) => {
   try {
-
     const headersList = await headers();
     const referer = headersList.get('referer') || '';
     const isSchedulePage = referer.includes('/schedule');
@@ -23,7 +23,6 @@ export const POST = withAuth(async (session, req: NextRequest) => {
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
 
-   
     const { embedding, useCase } = await req.json();
 
     if (!embedding || !Array.isArray(embedding)) {
@@ -70,6 +69,10 @@ export const POST = withAuth(async (session, req: NextRequest) => {
       return NextResponse.json({ matchedContext });
     }
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+    console.error('Error matching embeddings:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to match embeddings' },
+      { status: 500 }
+    );
   }
 }); 

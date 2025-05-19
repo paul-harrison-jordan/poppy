@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api';
 import { getCalendarClient } from '@/lib/calendar';
+import { Session } from 'next-auth';
 
 interface FindAvailabilityRequest {
   attendees: string[];
@@ -46,7 +47,93 @@ function getNextWorkingHourStart(date: Date): Date {
   return next;
 }
 
-export const POST = withAuth(async (session, request: Request) => {
+// Helper function to find common free slots between busy periods
+function findCommonFreeSlots(
+  busyPeriods: Array<Array<{ start?: string | null; end?: string | null }>>,
+  startTime: Date,
+  endTime: Date,
+  duration: number
+): Array<{ start: string; end: string }> {
+  // Filter out any busy periods with null/undefined start/end times
+  const validBusyPeriods = busyPeriods.map(periods => 
+    periods.filter(period => period.start && period.end)
+  );
+
+  // If no busy periods, return the entire time range
+  if (validBusyPeriods.every(periods => periods.length === 0)) {
+    return [{
+      start: startTime.toISOString(),
+      end: endTime.toISOString()
+    }];
+  }
+
+  // Merge all busy periods into a single timeline
+  const allBusyPeriods = validBusyPeriods.flat().sort((a, b) => 
+    new Date(a.start!).getTime() - new Date(b.start!).getTime()
+  );
+
+  // Find free slots
+  const freeSlots: Array<{ start: string; end: string }> = [];
+  let currentTime = new Date(startTime);
+
+  for (const busy of allBusyPeriods) {
+    const busyStart = new Date(busy.start!);
+    const busyEnd = new Date(busy.end!);
+
+    // If there's a gap between current time and busy start
+    if (currentTime < busyStart) {
+      const slotEnd = new Date(Math.min(busyStart.getTime(), endTime.getTime()));
+      const slotDuration = (slotEnd.getTime() - currentTime.getTime()) / (1000 * 60); // in minutes
+
+      // Only add slot if it's long enough and during working hours
+      if (slotDuration >= duration && isWorkingHours(currentTime)) {
+        freeSlots.push({
+          start: currentTime.toISOString(),
+          end: slotEnd.toISOString()
+        });
+      }
+    }
+
+    // Move current time to the end of this busy period
+    currentTime = new Date(Math.max(currentTime.getTime(), busyEnd.getTime()));
+  }
+
+  // Check for remaining time after last busy period
+  if (currentTime < endTime) {
+    const slotDuration = (endTime.getTime() - currentTime.getTime()) / (1000 * 60); // in minutes
+    if (slotDuration >= duration && isWorkingHours(currentTime)) {
+      freeSlots.push({
+        start: currentTime.toISOString(),
+        end: endTime.toISOString()
+      });
+    }
+  }
+
+  // Split slots into chunks of the requested duration
+  const durationMs = duration * 60 * 1000;
+  const finalSlots: Array<{ start: string; end: string }> = [];
+
+  for (const slot of freeSlots) {
+    const slotStart = new Date(slot.start);
+    const slotEnd = new Date(slot.end);
+    let currentSlotStart = slotStart;
+
+    while (currentSlotStart.getTime() + durationMs <= slotEnd.getTime()) {
+      const currentSlotEnd = new Date(currentSlotStart.getTime() + durationMs);
+      if (isWorkingHours(currentSlotStart)) {
+        finalSlots.push({
+          start: currentSlotStart.toISOString(),
+          end: currentSlotEnd.toISOString()
+        });
+      }
+      currentSlotStart = new Date(currentSlotStart.getTime() + 30 * 60 * 1000); // Move forward by 30 minutes
+    }
+  }
+
+  return finalSlots;
+}
+
+export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
   try {
     if (!session.accessToken) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -79,122 +166,35 @@ export const POST = withAuth(async (session, request: Request) => {
 
     // Adjust start time to next working hour if needed
     const adjustedStart = getNextWorkingHourStart(start);
+    const adjustedEnd = end;
 
-    try {
-      // Get free/busy information for all attendees
-      const freeBusyResponse = await calendar.freebusy.query({
-        requestBody: {
-          timeMin: adjustedStart.toISOString(),
-          timeMax: end.toISOString(),
-          items: validAttendees.map(email => ({ id: email })),
-        },
-      });
+    // Get busy periods for all attendees
+    const busyPeriods = await Promise.all(
+      validAttendees.map(async (email) => {
+        const response = await calendar.freebusy.query({
+          requestBody: {
+            timeMin: adjustedStart.toISOString(),
+            timeMax: adjustedEnd.toISOString(),
+            items: [{ id: email }],
+          },
+        });
+        return response.data.calendars?.[email]?.busy || [];
+      })
+    );
 
-      // Find available time slots
-      const busySlots = freeBusyResponse.data.calendars || {};
-      const availableSlots: { start: string; end: string }[] = [];
+    // Find common free slots
+    const availableSlots = findCommonFreeSlots(
+      busyPeriods,
+      adjustedStart,
+      adjustedEnd,
+      duration
+    );
 
-      // Check for any errors in the response
-      const errors = Object.entries(busySlots)
-        .filter(([, calendar]) => calendar.errors)
-        .map(([email, calendar]) => ({
-          email,
-          error: calendar.errors?.[0]?.reason || 'Unknown error'
-        }));
-
-      if (errors.length > 0) {
-        const errorMessages = errors.map(e => 
-          `${e.email}: ${e.error === 'notFound' ? 'Calendar not found' : 
-            e.error === 'forbidden' ? 'No access to calendar' : 
-            e.error}`
-        ).join(', ');
-
-        return NextResponse.json({
-          error: 'Some attendees\' calendars could not be accessed',
-          availableSlots: [],
-          calendarErrors: errors,
-          errorDetails: errorMessages,
-          invalidAttendees: attendees.filter(email => !validAttendees.includes(email))
-        }, { status: 400 });
-      }
-
-      // Convert busy slots to a more manageable format
-      const allBusySlots = Object.values(busySlots).flatMap(calendar => 
-        (calendar.busy || []).map(slot => ({
-          start: new Date(slot.start || ''),
-          end: new Date(slot.end || '')
-        }))
-      );
-
-      // Sort busy slots by start time
-      allBusySlots.sort((a, b) => a.start.getTime() - b.start.getTime());
-
-      // Find gaps between busy slots
-      let currentTime = adjustedStart;
-      for (const busySlot of allBusySlots) {
-        // Skip if we're not in working hours
-        if (!isWorkingHours(currentTime)) {
-          currentTime = getNextWorkingHourStart(currentTime);
-          continue;
-        }
-
-        if (currentTime < busySlot.start) {
-          const gapDuration = (busySlot.start.getTime() - currentTime.getTime()) / (60 * 1000);
-          if (gapDuration >= duration) {
-            // Check if the meeting would end after working hours
-            const meetingEnd = new Date(currentTime.getTime() + duration * 60 * 1000);
-            if (isWorkingHours(meetingEnd)) {
-              availableSlots.push({
-                start: currentTime.toISOString(),
-                end: meetingEnd.toISOString()
-              });
-            }
-          }
-        }
-        currentTime = new Date(Math.max(currentTime.getTime(), busySlot.end.getTime()));
-      }
-
-      // Check if there's time available after the last busy slot
-      if (currentTime < end) {
-        // Skip if we're not in working hours
-        if (!isWorkingHours(currentTime)) {
-          currentTime = getNextWorkingHourStart(currentTime);
-        }
-
-        if (currentTime < end) {
-          const remainingDuration = (end.getTime() - currentTime.getTime()) / (60 * 1000);
-          if (remainingDuration >= duration) {
-            // Check if the meeting would end after working hours
-            const meetingEnd = new Date(currentTime.getTime() + duration * 60 * 1000);
-            if (isWorkingHours(meetingEnd)) {
-              availableSlots.push({
-                start: currentTime.toISOString(),
-                end: meetingEnd.toISOString()
-              });
-            }
-          }
-        }
-      }
-
-      return NextResponse.json({ 
-        availableSlots,
-        invalidAttendees: attendees.filter(email => !validAttendees.includes(email))
-      });
-    } catch (calendarError) {
-      console.error('Calendar API error:', calendarError);
-      return NextResponse.json({ 
-        error: 'Failed to access calendar information',
-        availableSlots: [],
-        invalidAttendees: attendees.filter(email => !validAttendees.includes(email))
-      }, { status: 500 });
-    }
+    return NextResponse.json({ availableSlots });
   } catch (error) {
     console.error('Error finding availability:', error);
     return NextResponse.json(
-      { 
-        error: 'Failed to find availability',
-        availableSlots: []
-      },
+      { error: error instanceof Error ? error.message : 'Failed to find availability' },
       { status: 500 }
     );
   }

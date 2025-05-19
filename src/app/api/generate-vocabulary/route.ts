@@ -1,17 +1,23 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api';
-import { generateVocabulary } from '@/lib/services/openaiService';
+import { Session } from 'next-auth';
 
-export const POST = withAuth(async (session, request: Request) => {
+export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
   try {
+    const { text } = await request.json();
+    if (!text) {
+      return NextResponse.json(
+        { error: 'Text is required' },
+        { status: 400 }
+      );
+    }
 
-    const { title, query, matchedContext, type } = await request.json();
-    const result = await generateVocabulary({ title, query, matchedContext, type });
-    return NextResponse.json({ teamTerms: result });
+    // TODO: Implement vocabulary generation logic here
+    return NextResponse.json({ vocabulary: [] });
   } catch (error) {
     console.error('Error generating vocabulary:', error);
     return NextResponse.json(
-      { error: 'Failed to generate vocabulary' },
+      { error: error instanceof Error ? error.message : 'Failed to generate vocabulary' },
       { status: 500 }
     );
   }
