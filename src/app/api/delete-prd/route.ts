@@ -2,10 +2,22 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { withAuth } from '@/lib/api';
 import { OAuth2Client } from 'google-auth-library';
+import { Session } from 'next-auth';
 
-export const POST = withAuth(async (session: Session, request: Request) => {
-  // Blank body for now
-  try{ 
+export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
+  try {
+    if (!session.accessToken) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const { documentId } = await request.json();
+
+    if (!documentId) {
+      return NextResponse.json(
+        { error: 'Document ID is required' },
+        { status: 400 }
+      );
+    }
 
     // Initialize the OAuth2 client
     const auth = new OAuth2Client({
@@ -14,14 +26,6 @@ export const POST = withAuth(async (session: Session, request: Request) => {
       redirectUri: process.env.GOOGLE_REDIRECT_URI,
     });
 
-    // Set the access token from the session
-    if (!session?.accessToken) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
-
     auth.setCredentials({
       access_token: session.accessToken,
     });
@@ -29,18 +33,17 @@ export const POST = withAuth(async (session: Session, request: Request) => {
     // Initialize the Drive API
     const drive = google.drive({ version: 'v3', auth });
 
-    const body = await request.json();
-    const docId = body.id;
+    // Delete the document
+    await drive.files.delete({
+      fileId: documentId,
+    });
 
-    await drive.files.delete( {fileId: docId} );
-    return NextResponse.json(`${docId} deleted` );
-  } 
-  catch (error) {
-    console.error('Error processing query:', error);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting document:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: error instanceof Error ? error.message : 'Failed to delete document' },
       { status: 500 }
     );
   }
-  return NextResponse.json({}, { status: 200 });
 }); 
