@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Input } from "@/components/ui/input"
 import QuestionsForm from "./QuestionsForm"
@@ -67,7 +67,7 @@ export default function DraftForm() {
     const prdDraft = localStorage.getItem('prdDraft');
     if (prdDraft) {
       try {
-        const { title: draftTitle, summary, showQuery: draftShowQuery } = JSON.parse(prdDraft);
+        const { title: draftTitle, summary } = JSON.parse(prdDraft);
         if (draftTitle && summary) {
           setTitle(draftTitle);
           setQuery(summary);
