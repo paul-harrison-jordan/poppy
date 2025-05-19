@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import { openai } from '@/lib/openai';
 
 /**
  * Splits a given text into chunks of 1 to many paragraphs.
@@ -54,10 +54,6 @@ export function chunkTextByMultiParagraphs(
     export async function enhanceChunks(chunks: string[]) {
         const enhancedChunks: string[] = [];
         for (const chunk of chunks) {
-            const openai = new OpenAI({
-                apiKey: process.env.OPENAI_API_KEY,
-                organization: process.env.OPENAI_ORGANIZATION,
-            });
             const completion = await openai.chat.completions.create({
                 model: "gpt-4o-mini",
                 messages: [

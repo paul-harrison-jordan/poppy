@@ -1,13 +1,9 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api';
 import { getUserIndex } from '@/lib/pinecone';
-import OpenAI from 'openai';
+import { openai } from '@/lib/openai';
 import { nanoid } from 'nanoid';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  organization: process.env.OPENAI_ORGANIZATION,
-});
 
 interface FeedbackRow {
   RECIPIENT_EMAIL: string;

@@ -1,4 +1,5 @@
-import OpenAI from "openai";
+import type OpenAI from "openai";
+import { openai } from "@/lib/openai";
 import { enhanceChunks } from "./chunk";
 import { nanoid } from "nanoid"; 
 
@@ -12,10 +13,6 @@ export const maxDuration = 60;
 export async function embedChunks(
   chunks: string[]
 ): Promise<OpenAIEmbedding[]> {
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    organization: "org-4sVYvNZQTa4dYOT8bAgyz8gu",
-  });
 
   try {
     const res = await openai.embeddings.create({
