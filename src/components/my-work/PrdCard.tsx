@@ -142,7 +142,6 @@ export default function PrdCard({
   };
 
   const daysSinceEdit = getDaysSinceLastEdit();
-  const commentCounts = getCommentCounts();
 
   const handleScheduleMeeting = async (slot: { start: string; end: string }) => {
     try {
