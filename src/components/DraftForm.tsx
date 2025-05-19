@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import {  FilePlus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import QuestionsForm from "./QuestionsForm"
 import { generateDocument } from "@/lib/services/documentGenerator"
@@ -40,12 +39,6 @@ const formVariants = {
   exit: { opacity: 0, y: -30, transition: { duration: 0.2 } },
 };
 
-const queryVariants = {
-  initial: { opacity: 0, y: 20, height: 0 },
-  animate: { opacity: 1, y: 0, height: "auto", transition: { type: "spring", stiffness: 400, damping: 30 } },
-  exit: { opacity: 0, y: -20, height: 0, transition: { duration: 0.2 } },
-};
-
 export default function DraftForm() {
   const pathname = usePathname();
   const currentPage = pathname.split('/').pop() || '';
@@ -53,22 +46,21 @@ export default function DraftForm() {
   const [query, setQuery] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [step, setStep] = useState<'initial' | 'vocabulary' | 'questions' | 'content'>('initial');
-  const [loadingState, setLoadingState] = useState<LoadingState>({
+  const [, setLoadingState] = useState<LoadingState>({
     isOpen: false,
     title: '',
     message: ''
   });
-  const [showTitle, setShowTitle] = useState(false);
-  const [showPastWork, setShowPastWork] = useState(false);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(-1);
+  const [, setShowTitle] = useState(false);
+  const [, setShowPastWork] = useState(false);
+  const [, setCurrentQuestionIndex] = useState<number>(-1);
   const [matchedContext, setMatchedContext] = useState<MatchedContext[]>([]);
   const [internalTerms, setInternalTerms] = useState<string[]>([]);
   const [pendingTerms, setPendingTerms] = useState<string[]>([]);
   const [pendingTermDefs, setPendingTermDefs] = useState<Record<string, string>>({});
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
-  const titleInputRef = useRef<HTMLInputElement>(null);
-  const queryInputRef = useRef<HTMLTextAreaElement>(null);
+  const [, setIsGeneratingQuestions] = useState(false);
+
 
   // Check for PRD draft data from brainstorm
   useEffect(() => {

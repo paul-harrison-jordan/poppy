@@ -51,11 +51,9 @@ export default function ChatInterface() {
   const [teamTerms, setTeamTerms] = useState<TeamTerm[]>([]);
   const [currentTermIndex, setCurrentTermIndex] = useState<number>(-1);
   const [termDefinitions, setTermDefinitions] = useState<Record<string, string>>({});
-  const [internalTerms, setInternalTerms] = useState<string[]>([]);
+  const [, setInternalTerms] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [schedulingMessageId, setSchedulingMessageId] = useState<number | null>(null);
-  const [showQuery, setShowQuery] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [pendingSummary, setPendingSummary] = useState<string | null>(null);
 
   // Check for PRD summary on mount
@@ -273,70 +271,70 @@ export default function ChatInterface() {
     }
   };
 
-  const generateContent = async () => {
-    try {
-      setLoading(true);
+  // const generateContent = async () => {
+  //   try {
+  //     setLoading(true);
 
-      // Show writing message
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: <span className="animate-pulse">I&apos;m writing your PRD document now...</span>
-      }]);
+  //     // Show writing message
+  //     setMessages(prev => [...prev, {
+  //       role: 'assistant',
+  //       content: <span className="animate-pulse">I&apos;m writing your PRD document now...</span>
+  //     }]);
 
-      const docData = await generateDocument(
-        'prd',
-        'Draft PRD',
-        typeof messages[1].content === 'string' ? messages[1].content : String(messages[1].content),
-        questionAnswers
-      )
-      console.log('Doc response:', docData); // Add logging to debug
+  //     const docData = await generateDocument(
+  //       'prd',
+  //       'Draft PRD',
+  //       typeof messages[1].content === 'string' ? messages[1].content : String(messages[1].content),
+  //       questionAnswers
+  //     )
+  //     console.log('Doc response:', docData); // Add logging to debug
 
-      if (!docData.url) {
-        throw new Error("No document URL received");
-      }
+  //     if (!docData.url) {
+  //       throw new Error("No document URL received");
+  //     }
 
-      // Remove the writing message
-      setMessages(prev => {
-        const withoutWriting = prev.filter(msg => {
-          if (typeof msg.content === 'string') {
-            return msg.content !== "I&apos;m writing your PRD document now...";
-          }
-          if (React.isValidElement(msg.content)) {
-            const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
-            return element.props.children !== "I&apos;m writing your PRD document now...";
-          }
-          return true;
-        });
-        return [...withoutWriting, {
-          role: 'assistant',
-          content: (
-            <div className="flex flex-col items-center gap-4">
-              <p>Your PRD is ready! Click below to view it in Google Docs.</p>
-              <a
-                href={docData.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
-              >
-                View PRD in Google Docs
-              </a>
-            </div>
-          )
-        }];
-      });
-    } catch (error) {
-      console.error("Error generating content:", error);
-      setMessages(prev => {
-        const withoutWriting = prev.filter(msg => msg.content !== "I&apos;m writing your PRD document now...");
-        return [...withoutWriting, {
-          role: 'assistant',
-          content: "Sorry, I encountered an error while generating the content. Please try again."
-        }];
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     // Remove the writing message
+  //     setMessages(prev => {
+  //       const withoutWriting = prev.filter(msg => {
+  //         if (typeof msg.content === 'string') {
+  //           return msg.content !== "I&apos;m writing your PRD document now...";
+  //         }
+  //         if (React.isValidElement(msg.content)) {
+  //           const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
+  //           return element.props.children !== "I&apos;m writing your PRD document now...";
+  //         }
+  //         return true;
+  //       });
+  //       return [...withoutWriting, {
+  //         role: 'assistant',
+  //         content: (
+  //           <div className="flex flex-col items-center gap-4">
+  //             <p>Your PRD is ready! Click below to view it in Google Docs.</p>
+  //             <a
+  //               href={docData.url}
+  //               target="_blank"
+  //               rel="noopener noreferrer"
+  //               className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
+  //             >
+  //               View PRD in Google Docs
+  //             </a>
+  //           </div>
+  //         )
+  //       }];
+  //     });
+  //   } catch (error) {
+  //     console.error("Error generating content:", error);
+  //     setMessages(prev => {
+  //       const withoutWriting = prev.filter(msg => msg.content !== "I&apos;m writing your PRD document now...");
+  //       return [...withoutWriting, {
+  //         role: 'assistant',
+  //         content: "Sorry, I encountered an error while generating the content. Please try again."
+  //       }];
+  //     });
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const generateQuestions = async () => {
     try {
