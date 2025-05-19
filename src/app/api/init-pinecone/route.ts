@@ -5,8 +5,12 @@ import { Session } from 'next-auth';
 
 export const POST = withAuth<NextResponse, Session, []>(async (session) => {
   try {
-    if (!session?.user?.name) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session.user) {
+      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
+    }
+
+    if (!session.user.name) {
+      return NextResponse.json({ error: 'User name not found' }, { status: 401 });
     }
 
     const pinecone = new Pinecone({

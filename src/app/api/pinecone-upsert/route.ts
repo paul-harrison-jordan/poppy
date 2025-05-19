@@ -13,6 +13,14 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
       );
     }
 
+    if (!session.user) {
+      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
+    }
+
+    if (!session.user.name) {
+      return NextResponse.json({ error: 'User name not found' }, { status: 401 });
+    }
+
     // Format username to comply with Pinecone naming requirements
     const formattedUsername = session.user.name
       .toLowerCase()
