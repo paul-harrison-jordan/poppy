@@ -9,10 +9,29 @@ import { Input } from "@/components/ui/input"
 import QuestionsForm from "./QuestionsForm"
 import { generateDocument } from "@/lib/services/documentGenerator"
 import { usePathname } from 'next/navigation'
+import { collectStream } from "@/lib/collectStream"
 
 interface Question {
   id: string
   text: string
+}
+
+interface MatchedContext {
+  metadata: {
+    NPS_VERBATIM: string;
+    NPS_SCORE_RAW: string;
+    SURVEY_END_DATE: string;
+    RECIPIENT_EMAIL: string;
+    GMV: string;
+    KLAVIYO_ACCOUNT_ID: string;
+    row_number: number;
+  };
+}
+
+interface LoadingState {
+  isOpen: boolean;
+  title: string;
+  message: string;
 }
 
 const formVariants = {
@@ -33,29 +52,17 @@ export default function DraftForm() {
   const [title, setTitle] = useState('');
   const [query, setQuery] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [step, setStep] = useState<'initial' | 'vocabulary' | 'questions' | 'content'>('initial');
-  const [error, setError] = useState('');
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [createdDoc, setCreatedDoc] = useState<{ docId: string; title: string; url: string } | null>(null);
-  const [loadingState, setLoadingState] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-  }>({
+  const [loadingState, setLoadingState] = useState<LoadingState>({
     isOpen: false,
     title: '',
-    message: '',
+    message: ''
   });
-  const [showQuery, setShowQuery] = useState(false);
-  const [showTitle, setShowTitle] = useState(true);
-  const [showPastWork, setShowPastWork] = useState(true);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [matchedContext, setMatchedContext] = useState<string[]>([]);
+  const [showTitle, setShowTitle] = useState(false);
+  const [showPastWork, setShowPastWork] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(-1);
+  const [matchedContext, setMatchedContext] = useState<MatchedContext[]>([]);
   const [internalTerms, setInternalTerms] = useState<string[]>([]);
-  const [showPrdsLink, setShowPrdsLink] = useState(false);
-  const [prdLink, setPrdLink] = useState<string | null>(null);
-  const [showQuestions, setShowQuestions] = useState(false);
   const [pendingTerms, setPendingTerms] = useState<string[]>([]);
   const [pendingTermDefs, setPendingTermDefs] = useState<Record<string, string>>({});
   const [isGenerating, setIsGenerating] = useState(false);
@@ -72,7 +79,6 @@ export default function DraftForm() {
         if (draftTitle && summary) {
           setTitle(draftTitle);
           setQuery(summary);
-          setShowQuery(draftShowQuery);
           // Clear the draft data after using it
           localStorage.removeItem('prdDraft');
         }
@@ -82,74 +88,79 @@ export default function DraftForm() {
     }
   }, []);
 
-  const handleQuery = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoadingState({
-      isOpen: true,
-      title: 'Generating Questions',
-      message: 'We\'re analyzing your context to create relevant questions...',
-    });
-    setIsGenerating(true);
-    setIsGeneratingQuestions(true);
-
+  const handleQuery = async () => {
+    if (!query.trim()) return;
+    
     try {
-      // 1. Get embedding for the query
-      const embedRes = await fetch("/api/embed-request", {
+      setIsGenerating(true);
+      setLoadingState({
+        isOpen: true,
+        title: 'Generating',
+        message: 'Generating questions...'
+      });
+
+      // First, embed the request
+      const embedResponse = await fetch("/api/embed-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, query }),
+        body: JSON.stringify({ text: query }),
       });
-      if (!embedRes.ok) throw new Error("Failed to get embedding");
-      const { queryEmbedding } = await embedRes.json();
-      if (!queryEmbedding || !Array.isArray(queryEmbedding)) throw new Error("Invalid embedding response");
+      const embedResponseJson = await embedResponse.json();
+      const embedding = embedResponseJson.queryEmbedding[0].embedding;
 
-      const embedding = queryEmbedding[0].embedding;
-
-      // 2. Get matched context from Pinecone
-      const matchRes = await fetch("/api/match-embeds", {
+      // Then match context
+      const matchResponse = await fetch("/api/match-embeds", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(embedding),
+        body: JSON.stringify({ embedding }),
       });
-      if (!matchRes.ok) throw new Error("Failed to match embeddings");
-      const { matchedContext } = await matchRes.json();
-      if (!matchedContext || !Array.isArray(matchedContext)) throw new Error("Invalid matched context response");
-
+      const { matchedContext } = await matchResponse.json();
       setMatchedContext(matchedContext);
 
-      // 3. Get vocabulary/terms
-      const vocabRes = await fetch("/api/generate-vocabulary", {
+      // Generate vocabulary
+      const vocabResponse = await fetch("/api/generate-vocabulary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, query, matchedContext, type: currentPage }),
+        body: JSON.stringify({
+          title: "Draft PRD",
+          query: query,
+          matchedContext: matchedContext,
+          type: 'prd',
+          teamTerms: JSON.parse(localStorage.getItem("teamTerms") || "{}")
+        }),
       });
-      if (!vocabRes.ok) throw new Error("Failed to generate vocabulary");
-      const vocabData = await vocabRes.json();
-      if (vocabData.teamTerms && vocabData.teamTerms.length > 0) {
-        setPendingTerms(vocabData.teamTerms);
-        setLoadingState({ isOpen: false, title: '', message: '' });
-        setIsGenerating(false);
-        setIsGeneratingQuestions(false);
-        setStep("vocabulary");
-        return;
+      const vocabText = await collectStream(vocabResponse);
+      const vocabData = JSON.parse(vocabText);
+      if (!Array.isArray(vocabData) || vocabData.length === 0) {
+        throw new Error("No terms generated");
       }
 
-      const teamTerms = JSON.parse(localStorage.getItem("teamTerms") || "{}");
-      const storedContext = localStorage.getItem("personalContext");
-      await fetchQuestions(teamTerms, matchedContext, storedContext);
+      // Transform the terms into our TeamTerm format
+      const formattedTerms = vocabData.map((term: string, index: number) => ({
+        id: `term-${index}`,
+        term: term,
+        definition: ''
+      }));
+
+      setPendingTerms(formattedTerms.map(t => t.term));
+      setStep('vocabulary');
+      setCurrentQuestionIndex(0);
     } catch (error) {
       console.error("Error generating questions:", error);
-      setError("Failed to generate questions. Please try again.");
-      setLoadingState({ isOpen: false, title: '', message: '' });
+      setLoadingState({
+        isOpen: false,
+        title: '',
+        message: ''
+      });
+    } finally {
       setIsGenerating(false);
-      setIsGeneratingQuestions(false);
     }
   };
 
   // Helper to fetch questions
   type FetchQuestions = (
     teamTerms: Record<string, string>,
-    matchedContext: string[],
+    matchedContext: MatchedContext[],
     storedContext: string | null
   ) => Promise<void>;
 
@@ -175,57 +186,40 @@ export default function DraftForm() {
     }
     setQuestions(questionsData.questions)
     setInternalTerms(questionsData.internalTerms || [])
-    setShowQuestions(true)
     setIsGenerating(false)
     setIsGeneratingQuestions(false)
   }
 
   const handleQuestionsSubmit = async (answers: Record<string, string>) => {
-    setShowQuestions(false);
     setIsGenerating(true);
     setIsGeneratingQuestions(false);
-    setStep('generating'); // Show loading modal
     await generatePRD(answers);
-  }
+  };
 
   const generatePRD = async (questionAnswers?: Record<string, string>) => {
     try {
       setIsGenerating(true);
       setIsGeneratingQuestions(false);
-
-      const docData = await generateDocument(currentPage, title, query, questionAnswers, matchedContext)
-
+      // Map matchedContext to string[] if needed
+      const contextStrings = matchedContext.map(ctx => ctx.metadata?.NPS_VERBATIM || '').filter(Boolean);
+      const docData = await generateDocument(currentPage, title, query, questionAnswers, contextStrings);
       if (docData && docData.url) {
-        setShowPrdsLink(true);
-        setPrdLink(docData.url);
-        const savedDocs = JSON.parse(localStorage.getItem(currentPage === 'strategy' ? "savedStrategy" : "savedPRD") || "[]");
-        savedDocs.push({
-          url: docData.url,
-          title: docData.title || title,
-          createdAt: new Date().toISOString(),
-          id: docData.docId,
-        });
-        localStorage.setItem(currentPage === 'strategy' ? "savedStrategy" : "savedPRD", JSON.stringify(savedDocs));
-        window.dispatchEvent(new CustomEvent("prdCountUpdated", { detail: { count: savedDocs.length } }));
+        localStorage.removeItem("draftFormState");
+        setIsGenerating(false);
+        setStep('content'); // Show content step
       }
-      localStorage.removeItem("draftFormState");
-      setIsGenerating(false);
-      setStep('done'); // Show success modal
     } catch (error) {
       console.error("Error processing query:", error);
       setIsGenerating(false);
-      setStep('done'); // Show error state
+      // Optionally show an error message or fallback UI
     }
-  }
+  };
 
   const handleDraftAnother = () => {
     setTitle("");
     setQuery("");
-    setShowQuery(false);
-    setSubmitted(false);
-    setShowPrdsLink(false);
-    setPrdLink(null);
-    setShowQuestions(false);
+    setShowTitle(false);
+    setShowPastWork(false);
     setQuestions([]);
     setIsGenerating(false);
     setIsGeneratingQuestions(false);
@@ -233,9 +227,9 @@ export default function DraftForm() {
     setPendingTermDefs({});
     setMatchedContext([]);
     setInternalTerms([]);
-    setStep('title'); // Show the title/query form
+    setStep('initial');
     localStorage.removeItem("draftFormState");
-  }
+  };
 
   // Prefill from localStorage if available
   useEffect(() => {
@@ -246,198 +240,58 @@ export default function DraftForm() {
     }
   }, [pendingTerms.length]);
 
-  if (step === "title") {
+  if (step === "initial") {
     // Render title/query form
     return (
       <div className="flex items-center justify-center">
         <AnimatePresence mode="wait">
-          {!submitted ? (
-            <motion.form
-              key="draft-form"
-              onSubmit={handleQuery}
-              variants={formVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className="space-y-4 w-full max-w-xl"
-            >
-              <AnimatePresence mode="wait">
-                {!showQuery ? (
-                  <motion.div
-                    key="title-input"
-                    variants={formVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    className="flex items-center gap-2"
-                  >
-                    <Input
-                      ref={titleInputRef}
-                      id="title"
-                      type="text"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      onKeyDown={handleTitleKeyDown}
-                      className="flex-1 h-12 text-base rounded-full border-neutral bg-white/90 backdrop-blur-sm shadow-sm focus-visible:ring-poppy"
-                      placeholder={`Give your ${currentPage === 'strategy' ? 'Strategy' : 'PRD'} a title...`}
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => title.trim() && setShowQuery(true)}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors
-                        ${title.trim() ? 'bg-poppy text-white hover:bg-poppy/90 cursor-pointer focus:ring-poppy' : 'bg-neutral text-white cursor-not-allowed'}
-                      `}
-                      tabIndex={-1}
-                      disabled={!title.trim()}
-                    >
-                      <svg
-                        className="w-5 h-5 transition-transform duration-300"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="query-input"
-                    variants={queryVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    className="space-y-4"
-                  >
-                    <div className="relative">
-                      <div>
-                        {showQuery && (
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2 mb-1">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setShowQuery(false);
-                                }}
-                                className="text-2xl font-bold text-poppy bg-poppy/10 hover:bg-poppy/20 transition px-3 py-2 flex items-center rounded-full"
-                                aria-label={`Edit ${currentPage === 'strategy' ? 'Strategy' : 'PRD'} title`}
-                              >
-                                <motion.div
-                                  initial={{ opacity: 0, x: -10 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  transition={{ delay: 0.1, type: "spring", stiffness: 400, damping: 30 }}
-                                  className="flex items-center gap-2 mb-2"
-                                >
-                                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-poppy/10 text-poppy">
-                                    <FilePlus className="h-3 w-3" />
-                                  </div>
-                                </motion.div>
-                                {title || `Untitled ${currentPage === 'strategy' ? 'Strategy' : 'PRD'}`}
-                              </button>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <textarea
-                                id="query"
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                rows={4}
-                                className="flex-1 rounded-xl border border-neutral px-3 py-2 text-gray-800 shadow-sm focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy/20"
-                                placeholder={`Ask Poppy to help draft your ${currentPage === 'strategy' ? 'Strategy' : 'PRD'}...`}
-                                required
-                                autoFocus
-                              />
-                              <button
-                                type="submit"
-                                className="w-10 h-10 rounded-full bg-poppy text-white flex items-center justify-center shadow-md hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy focus:ring-offset-2 transition-colors"
-                              >
-                                <svg className="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                                </svg>
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.form>
-          ) : (
-            <motion.div
-              key="results"
-              variants={formVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className="text-center flex flex-col items-center gap-4 bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm p-8 max-w-xl mx-auto mt-8 border border-rose-100/30"
-            >
-              <div className="text-lg font-semibold text-gray-800">
-                {isGenerating ? (
-                  <div className="flex flex-col items-center justify-center gap-3" aria-live="polite">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 2, ease: "linear", repeat: Number.POSITIVE_INFINITY }}
-                      className="w-10 h-10 rounded-full border-2 border-rose-100 border-t-rose-500"
-                    />
-                    <span>
-                      {isGeneratingQuestions ? (
-                        "We're preparing a few clarifying questions to help us create the best possible PRD for you..."
-                      ) : (
-                        <>
-                          Working on your PRD <span className="inline-block animate-pulse">...</span>
-                        </>
-                      )}
-                    </span>
-                  </div>
-                ) : prdLink ? (
-                  "First draft complete!"
-                ) : (
-                  "Something went wrong"
-                )}
-              </div>
-              <div className="text-base text-gray-700">
-                <span className="font-bold">Title:</span> {title}
-              </div>
-              <div className="text-base text-gray-700">
-                <span className="font-bold">Prompt:</span> {query}
-              </div>
-              {showPrdsLink && prdLink && (
-                <div className="flex flex-col gap-4">
-                  <a
-                    href={prdLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block rounded-full bg-gradient-to-r from-rose-400 to-pink-400 hover:from-rose-500 hover:to-pink-500 px-6 py-2 text-white font-medium shadow-sm transition-colors"
-                  >
-                    View PRD in Google Drive
-                  </a>
-                  <button
-                    onClick={handleDraftAnother}
-                    className="inline-block rounded-full bg-poppy text-white px-6 py-2 font-medium shadow-sm hover:bg-poppy/90 transition-colors"
-                  >
-                    Draft Another
-                  </button>
-                </div>
-              )}
-              {!isGenerating && !prdLink && (
-                <button
-                  onClick={handleDraftAnother}
-                  className="inline-block rounded-full bg-poppy text-white px-6 py-2 font-medium shadow-sm hover:bg-poppy/90 transition-colors"
-                >
-                  Try Again
-                </button>
-              )}
-            </motion.div>
-          )}
+          <motion.form
+            key="draft-form"
+            onSubmit={e => { e.preventDefault(); handleQuery(); }}
+            variants={formVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="space-y-4 w-full max-w-xl"
+          >
+            <div className="flex items-center gap-2">
+              <Input
+                id="title"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="flex-1 h-12 text-base rounded-full border-neutral bg-white/90 backdrop-blur-sm shadow-sm focus-visible:ring-poppy"
+                placeholder={`Give your ${currentPage === 'strategy' ? 'Strategy' : 'PRD'} a title...`}
+                required
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <textarea
+                id="query"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                rows={4}
+                className="flex-1 rounded-xl border border-neutral px-3 py-2 text-gray-800 shadow-sm focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy/20"
+                placeholder={`Ask Poppy to help draft your ${currentPage === 'strategy' ? 'Strategy' : 'PRD'}...`}
+                required
+                autoFocus
+              />
+              <button
+                type="submit"
+                className="w-10 h-10 rounded-full bg-poppy text-white flex items-center justify-center shadow-md hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy focus:ring-offset-2 transition-colors"
+              >
+                <svg className="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </motion.form>
         </AnimatePresence>
       </div>
     )
   }
 
-  if (step === "terms") {
+  if (step === "vocabulary") {
     return (
       <form
         onSubmit={async (e) => {
@@ -445,7 +299,6 @@ export default function DraftForm() {
           localStorage.setItem('teamTerms', JSON.stringify(pendingTermDefs));
           setIsGenerating(true);
           setIsGeneratingQuestions(true);
-          setStep('generating'); // Show loading modal
           await fetchQuestions(pendingTermDefs, matchedContext, localStorage.getItem("personalContext"));
           setStep('questions');
         }}
@@ -489,34 +342,8 @@ export default function DraftForm() {
     )
   }
 
-  if (step === "generating") {
-    // Show loading spinner
-    return (
-      <div className="text-center flex flex-col items-center gap-4 backdrop-blur-sm rounded-2xl shadow-sm p-8 max-w-xl mx-auto mt-8 border border-neutral">
-        <div className="text-lg font-semibold text-gray-800">
-          <div className="flex flex-col items-center justify-center gap-3" aria-live="polite">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, ease: "linear", repeat: Number.POSITIVE_INFINITY }}
-              className="w-10 h-10 rounded-full border-2 border-neutral border-t-poppy"
-            />
-            <span>
-              {isGeneratingQuestions ? (
-                "We're preparing a few clarifying questions to help us create the best possible PRD for you..."
-              ) : (
-                <>
-                  Working on your PRD <span className="inline-block animate-pulse">...</span>
-                </>
-              )}
-            </span>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (step === "done") {
-    // Show result
+  if (step === "content") {
+    // Show result (PRD link, etc.)
     return (
       <div className="text-center flex flex-col items-center gap-4 bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm p-8 max-w-xl mx-auto mt-8 border border-rose-100/30">
         <div className="text-lg font-semibold text-gray-800">
@@ -528,19 +355,11 @@ export default function DraftForm() {
                 className="w-10 h-10 rounded-full border-2 border-rose-100 border-t-rose-500"
               />
               <span>
-                {isGeneratingQuestions ? (
-                  "We're preparing a few clarifying questions to help us create the best possible PRD for you..."
-                ) : (
-                  <>
-                    Working on your PRD <span className="inline-block animate-pulse">...</span>
-                  </>
-                )}
+                Working on your PRD <span className="inline-block animate-pulse">...</span>
               </span>
             </div>
-          ) : prdLink ? (
-            "First draft complete!"
           ) : (
-            "Something went wrong"
+            "First draft complete!"
           )}
         </div>
         <div className="text-base text-gray-700">
@@ -549,35 +368,16 @@ export default function DraftForm() {
         <div className="text-base text-gray-700">
           <span className="font-bold">Prompt:</span> {query}
         </div>
-        {showPrdsLink && prdLink && (
-          <div className="flex flex-col gap-4">
-            <a
-              href={prdLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block rounded-full bg-gradient-to-r from-rose-400 to-pink-400 hover:from-rose-500 hover:to-pink-500 px-6 py-2 text-white font-medium shadow-sm transition-colors"
-            >
-              View PRD in Google Drive
-            </a>
-            <button
-              onClick={handleDraftAnother}
-              className="inline-block rounded-full bg-poppy text-white px-6 py-2 font-medium shadow-sm hover:bg-poppy/90 transition-colors"
-              type="button"
-            >
-              Draft Another
-            </button>
-          </div>
-        )}
-        {!isGenerating && !prdLink && (
-          <button
-            onClick={handleDraftAnother}
-            className="inline-block rounded-full bg-poppy text-white px-6 py-2 font-medium shadow-sm hover:bg-poppy/90 transition-colors"
-          >
-            Try Again
-          </button>
-        )}
+        {/* Add PRD link or other result UI here */}
+        <button
+          onClick={handleDraftAnother}
+          className="inline-block rounded-full bg-poppy text-white px-6 py-2 font-medium shadow-sm hover:bg-poppy/90 transition-colors"
+          type="button"
+        >
+          Draft Another
+        </button>
       </div>
-    )
+    );
   }
 
   return (

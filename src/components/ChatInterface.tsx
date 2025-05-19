@@ -74,31 +74,31 @@ export default function ChatInterface() {
       if (mode === 'draft') {
         setMessages([{
           role: 'assistant',
-          content: "I'll help you draft a PRD. Please share your product idea or concept, a JTDB, and any extra context you have that you want me to know"
+          content: "I&apos;ll help you draft a PRD. Please share your product idea or concept, a JTDB, and any extra context you have that you want me to know"
         }]);
       } else if (mode === 'schedule') {
         setMessages([{
           role: 'assistant',
-          content: "I'll help you find and schedule customer feedback. What kind of customers are you looking for? For example: 'customers who hate our list import', 'customers who need more django filters', or 'customers who will help me build a new feature'"
+          content: "I&apos;ll help you find and schedule customer feedback. What kind of customers are you looking for? For example: &apos;customers who hate our list import&apos;, &apos;customers who need more django filters&apos;, or &apos;customers who will help me build a new feature&apos;"
         }]);
       } else if (mode === 'brainstorm') {
         setMessages([{
           role: 'assistant',
-          content: "I'll help you brainstorm ideas. Share your initial thoughts or questions, and I'll help you think through them."
+          content: "I&apos;ll help you brainstorm ideas. Share your initial thoughts or questions, and I&apos;ll help you think through them."
         }]);
       } else if (mode === 'strategy') {
         setMessages([{
           role: 'assistant',
-          content: "I'll help you create a strategic document. Please share your strategic vision, goals, or the key areas you'd like to focus on."
+          content: "I&apos;ll help you create a strategic document. Please share your strategic vision, goals, or the key areas you&apos;d like to focus on."
         }]);
       }
     }
-  }, [mode]);
+  }, [mode, messages.length]);
 
   // Add useEffect for auto-scrolling
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]); // Scroll when messages change or loading state changes
+  }, [messages, loading]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -107,7 +107,7 @@ export default function ChatInterface() {
         setInput('')
       }
     }
-  }, [messages, messages.length, setInput])
+  }, [messages, messages.length]);
 
   // Effect to handle setting input when switching to PRD mode
   useEffect(() => {
@@ -132,22 +132,22 @@ export default function ChatInterface() {
     if (newMode === 'draft') {
       setMessages([{
         role: 'assistant',
-        content: "I'll help you draft a PRD. Please share your product idea or concept, a JTDB, and any extra context you have that you want me to know"
+        content: "I&apos;ll help you draft a PRD. Please share your product idea or concept, a JTDB, and any extra context you have that you want me to know"
       }]);
     } else if (newMode === 'schedule') {
       setMessages([{
         role: 'assistant',
-        content: "I'll help you find and schedule customer feedback. What kind of customers are you looking for? For example: 'customers who hate our list import', 'customers who need more django filters', or 'customers who will help me build a new feature'"
+        content: "I&apos;ll help you find and schedule customer feedback. What kind of customers are you looking for? For example: &apos;customers who hate our list import&apos;, &apos;customers who need more django filters&apos;, or &apos;customers who will help me build a new feature&apos;"
       }]);
     } else if (newMode === 'brainstorm') {
       setMessages([{
         role: 'assistant',
-        content: "I'll help you brainstorm ideas. Share your initial thoughts or questions, and I'll help you think through them."
+        content: "I&apos;ll help you brainstorm ideas. Share your initial thoughts or questions, and I&apos;ll help you think through them."
       }]);
     } else if (newMode === 'strategy') {
       setMessages([{
         role: 'assistant',
-        content: "I'll help you create a strategic document. Please share your strategic vision, goals, or the key areas you'd like to focus on."
+        content: "I&apos;ll help you create a strategic document. Please share your strategic vision, goals, or the key areas you&apos;d like to focus on."
       }]);
     }
   };
@@ -180,7 +180,7 @@ export default function ChatInterface() {
       // Show writing message
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: <span className="animate-pulse">I'm writing your PRD document now...</span>
+        content: <span className="animate-pulse">I&apos;m writing your PRD document now...</span>
       }]);
 
       try {
@@ -199,11 +199,11 @@ export default function ChatInterface() {
         setMessages(prev => {
           const withoutWriting = prev.filter(msg => {
             if (typeof msg.content === 'string') {
-              return msg.content !== "I'm writing your PRD document now...";
+              return msg.content !== "I&apos;m writing your PRD document now...";
             }
             if (React.isValidElement(msg.content)) {
               const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
-              return element.props.children !== "I'm writing your PRD document now...";
+              return element.props.children !== "I&apos;m writing your PRD document now...";
             }
             return true;
           });
@@ -238,7 +238,7 @@ export default function ChatInterface() {
       } catch (error) {
         console.error("Error generating content:", error);
         setMessages(prev => {
-          const withoutWriting = prev.filter(msg => msg.content !== "I'm writing your PRD document now...");
+          const withoutWriting = prev.filter(msg => msg.content !== "I&apos;m writing your PRD document now...");
           return [...withoutWriting, {
             role: 'assistant',
             content: "Sorry, I encountered an error while generating the content. Please try again."
@@ -299,11 +299,11 @@ export default function ChatInterface() {
       setMessages(prev => {
         const withoutWriting = prev.filter(msg => {
           if (typeof msg.content === 'string') {
-            return msg.content !== "I'm writing your PRD document now...";
+            return msg.content !== "I&apos;m writing your PRD document now...";
           }
           if (React.isValidElement(msg.content)) {
             const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
-            return element.props.children !== "I'm writing your PRD document now...";
+            return element.props.children !== "I&apos;m writing your PRD document now...";
           }
           return true;
         });
@@ -327,7 +327,7 @@ export default function ChatInterface() {
     } catch (error) {
       console.error("Error generating content:", error);
       setMessages(prev => {
-        const withoutWriting = prev.filter(msg => msg.content !== "I'm writing your PRD document now...");
+        const withoutWriting = prev.filter(msg => msg.content !== "I&apos;m writing your PRD document now...");
         return [...withoutWriting, {
           role: 'assistant',
           content: "Sorry, I encountered an error while generating the content. Please try again."
@@ -422,7 +422,7 @@ export default function ChatInterface() {
       setLoading(true);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: "I'm summarizing our conversation and preparing to start the PRD..." 
+        content: "I&apos;m summarizing our conversation and preparing to start the PRD..." 
       }]);
 
       const storedContext = localStorage.getItem("personalContext");
@@ -458,7 +458,7 @@ export default function ChatInterface() {
       }
 
       // Remove the loading message
-      setMessages(prev => prev.filter(msg => msg.content !== "I'm summarizing our conversation and preparing to start the PRD..."));
+      setMessages(prev => prev.filter(msg => msg.content !== "I&apos;m summarizing our conversation and preparing to start the PRD..."));
 
       // Store the summary before switching modes
       setPendingSummary(prd.summary);
@@ -470,7 +470,7 @@ export default function ChatInterface() {
       // Clear existing messages and add the summary
       setMessages([{
         role: 'assistant',
-        content: "I'll help you draft a PRD. Please share your product idea or concept, and I'll guide you through the process."
+        content: "I&apos;ll help you draft a PRD. Please share your product idea or concept, and I&apos;ll guide you through the process."
       }]);
 
     } catch (error) {
@@ -593,7 +593,7 @@ export default function ChatInterface() {
               // Show writing message
               setMessages(prev => [...prev, {
                 role: 'assistant',
-                content: <span className="animate-pulse">I'm writing your PRD document now...</span>
+                content: <span className="animate-pulse">I&apos;m writing your PRD document now...</span>
               }]);
 
               try {
@@ -612,11 +612,11 @@ export default function ChatInterface() {
                 setMessages(prev => {
                   const withoutWriting = prev.filter(msg => {
                     if (typeof msg.content === 'string') {
-                      return msg.content !== "I'm writing your PRD document now...";
+                      return msg.content !== "I&apos;m writing your PRD document now...";
                     }
                     if (React.isValidElement(msg.content)) {
                       const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
-                      return element.props.children !== "I'm writing your PRD document now...";
+                      return element.props.children !== "I&apos;m writing your PRD document now...";
                     }
                     return true;
                   });
@@ -655,7 +655,7 @@ export default function ChatInterface() {
               } catch (error) {
                 console.error("Error generating content:", error);
                 setMessages(prev => {
-                  const withoutWriting = prev.filter(msg => msg.content !== "I'm writing your PRD document now...");
+                  const withoutWriting = prev.filter(msg => msg.content !== "I&apos;m writing your PRD document now...");
                   return [...withoutWriting, {
                     role: 'assistant',
                     content: "Sorry, I encountered an error while generating the content. Please try again."
@@ -676,7 +676,7 @@ export default function ChatInterface() {
             // Just acknowledge it and continue
             setMessages(prev => [...prev, {
               role: 'assistant',
-              content: "I've noted your feedback. The PRD has been generated and saved to Google Docs."
+              content: "I&apos;ve noted your feedback. The PRD has been generated and saved to Google Docs."
             }]);
             break;
         }
@@ -970,7 +970,7 @@ Here are the details from your feedback:
 - Date: ${content.match(/Date: ([^\n]+)/)?.[1] || ''}
 - GMV: ${content.match(/GMV: ([^\n]+)/)?.[1] || ''}
 
-I'd love to schedule some time to discuss this further. Would you be available for a quick call?
+I&apos;d love to schedule some time to discuss this further. Would you be available for a quick call?
 
 Best regards,
 Your Name`;
