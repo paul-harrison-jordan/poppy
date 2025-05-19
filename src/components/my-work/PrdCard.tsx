@@ -11,12 +11,6 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import PrdModal from './PrdModal'
 
-interface CommentCount {
-  user_id: string
-  user_name: string
-  count: number
-}
-
 
 export default function PrdCard({
   prd,
@@ -117,28 +111,6 @@ export default function PrdCard({
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - lastEdit.getTime());
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  const getCommentCounts = (): CommentCount[] => {
-    if (!prd.metadata?.comments) return [];
-    
-    const counts = prd.metadata.comments
-      .filter(comment => !comment.resolved)
-      .reduce((acc, comment) => {
-        const existing = acc.find(c => c.user_id === comment.user_id);
-        if (existing) {
-          existing.count++;
-        } else {
-          acc.push({
-            user_id: comment.user_id,
-            user_name: comment.user_name,
-            count: 1
-          });
-        }
-        return acc;
-      }, [] as CommentCount[]);
-
-    return counts.sort((a, b) => b.count - a.count);
   };
 
   const daysSinceEdit = getDaysSinceLastEdit();
