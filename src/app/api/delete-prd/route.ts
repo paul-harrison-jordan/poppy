@@ -4,13 +4,6 @@ import { withAuth } from '@/lib/api';
 import { OAuth2Client } from 'google-auth-library';
 
 export const POST = withAuth(async (session: Session, request: Request) => {
-  interface Session {
-    accessToken?: string;
-    user?: {
-      name?: string;
-      email?: string;
-    };
-  }
   // Blank body for now
   try{ 
 
