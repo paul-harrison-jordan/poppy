@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     const [commentsResponse, fileResponse] = await Promise.all([
       drive.comments.list({
         fileId: documentId,
-        fields: 'comments(id,content,createdTime,author(displayName,emailAddress,me),resolved)',
+        fields: 'comments(id,content,createdTime,author(displayName,emailAddress,me),resolved,replies(id,content,createdTime,author(displayName,emailAddress,me)))',
         pageSize: 100
       }),
       drive.files.get({
@@ -43,20 +43,41 @@ export async function GET(request: Request) {
     const currentUserEmail = aboutResponse.data.email
 
     // Transform the comments to match our interface
-    const formattedComments = commentsResponse.data.comments?.map(comment => {
+    const formattedComments = commentsResponse.data.comments?.flatMap(comment => {
       // If the comment is from the current user, use their email
       const isCurrentUser = comment.author?.me
       const email = isCurrentUser ? currentUserEmail : comment.author?.emailAddress
 
-      return {
+      // Format the main comment
+      const mainComment = {
         id: comment.id!,
         prd_id: documentId,
         user_id: email || 'unknown',
         user_name: comment.author?.displayName || 'Unknown User',
         content: comment.content || '',
         created_at: comment.createdTime || new Date().toISOString(),
-        resolved: comment.resolved || false
+        resolved: comment.resolved || false,
+        is_reply: false
       }
+
+      // Format the replies
+      const replies = (comment.replies || []).map(reply => {
+        const isReplyFromCurrentUser = reply.author?.me
+        const replyEmail = isReplyFromCurrentUser ? currentUserEmail : reply.author?.emailAddress
+
+        return {
+          id: reply.id!,
+          prd_id: documentId,
+          user_id: replyEmail || 'unknown',
+          user_name: reply.author?.displayName || 'Unknown User',
+          content: reply.content || '',
+          created_at: reply.createdTime || new Date().toISOString(),
+          is_reply: true,
+          parent_id: comment.id
+        }
+      })
+
+      return [mainComment, ...replies]
     }) || []
 
     return NextResponse.json({ 

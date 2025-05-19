@@ -5,9 +5,8 @@ import { shouldScheduleMeeting } from '@/lib/meetingLogic'
 import { Prd } from '@/types/my-work'
 import DeadlineBadge from './DeadlineBadge'
 import ReviewerAvatars from './ReviewerAvatars'
-import TaskList from './TaskList'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { MessageSquare, Clock, Lightbulb, Expand } from 'lucide-react'
+import { MessageSquare, Lightbulb, Expand, ExternalLink, Users } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import PrdModal from './PrdModal'
@@ -181,6 +180,78 @@ export default function PrdCard({
     }
   }
 
+  const getCommentStats = () => {
+    if (!prd.metadata?.comments) return { total: 0, unresolved: 0, uniqueCommenters: 0, threads: 0, openThreads: 0 }
+    
+    const comments = prd.metadata.comments
+    const mainComments = comments.filter(c => !c.is_reply)
+    const replies = comments.filter(c => c.is_reply)
+    
+    // Count unique commenters
+    const uniqueCommenters = new Set(comments.map(c => c.user_id)).size
+    
+    // Count open threads (a thread is open if either the main comment or any of its replies are unresolved)
+    const openThreads = mainComments.filter(mainComment => {
+      const threadReplies = replies.filter(reply => reply.parent_id === mainComment.id)
+      return !mainComment.resolved || threadReplies.some(reply => !reply.resolved)
+    }).length
+    
+    // Count total unresolved comments
+    const unresolved = comments.filter(c => !c.resolved).length
+    
+    return {
+      total: comments.length,
+      unresolved,
+      uniqueCommenters,
+      threads: mainComments.length,
+      openThreads
+    }
+  }
+
+  const getSpiciestThread = () => {
+    if (!prd.metadata?.comments) {
+      console.log('No comments found in metadata')
+      return null
+    }
+    
+    const comments = prd.metadata.comments
+    console.log('Total comments:', comments.length)
+    
+    const mainComments = comments.filter(c => !c.is_reply)
+    const replies = comments.filter(c => c.is_reply)
+    console.log('Main comments:', mainComments.length)
+    console.log('Replies:', replies.length)
+    
+    // Find the thread with the most comments
+    const threadStats = mainComments.map(mainComment => {
+      const threadReplies = replies.filter(reply => reply.parent_id === mainComment.id)
+      const allThreadComments = [mainComment, ...threadReplies]
+      const contributors = new Set(allThreadComments.map(c => c.user_id))
+      
+      return {
+        mainComment,
+        replyCount: threadReplies.length,
+        totalComments: allThreadComments.length,
+        contributors: contributors.size,
+        lastComment: allThreadComments.reduce((latest, current) => 
+          new Date(current.created_at) > new Date(latest.created_at) ? current : latest
+        )
+      }
+    })
+    
+    // Sort by total comments and get the thread with the most comments
+    const spiciestThread = threadStats
+      .sort((a, b) => b.totalComments - a.totalComments)[0]
+    
+    console.log('Thread stats:', threadStats)
+    console.log('Spiciest thread:', spiciestThread)
+    
+    return spiciestThread
+  }
+
+  const commentStats = getCommentStats()
+  const spiciestThread = getSpiciestThread()
+
   return (
     <>
       <motion.div
@@ -196,76 +267,101 @@ export default function PrdCard({
             if (next) ensureSummary()
           }}
         >
-          <CardHeader>
-            <CardTitle className="flex justify-between items-center">
-              <span className="text-lg font-semibold text-gray-900">{prd.title}</span>
-              <div className="flex items-center gap-2">
-                <DeadlineBadge dueDate={prd.due_date} />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={async () => {
-                    await ensureSummary()
-                    setIsModalOpen(true)
-                  }}
-                  className="h-8 w-8"
-                >
-                  <Expand className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Comments Section */}
-            {commentCounts.length > 0 && (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <MessageSquare className="w-4 h-4 text-poppy" />
-                <div className="flex items-center gap-1">
-                  {commentCounts.map((count, index) => (
-                    <span key={count.user_id} className="flex items-center">
-                      {index > 0 && <span className="mx-1">•</span>}
-                      <span className="font-medium">{count.user_name}</span>
-                      <span className="ml-1 text-poppy">({count.count})</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Last Edit Section */}
-            {daysSinceEdit !== null && (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Clock className="w-4 h-4 text-poppy" />
-                <div className="flex items-center gap-1">
-                  <span className="font-medium">
+          <CardHeader className="pb-2">
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-lg font-semibold text-gray-900 truncate">
+                  {prd.title}
+                </CardTitle>
+                <div className="flex items-center gap-2 mt-1">
+                  <DeadlineBadge dueDate={prd.due_date} />
+                  <span className="text-sm text-gray-500">
                     {daysSinceEdit === 0 
                       ? "Edited today" 
                       : daysSinceEdit === 1 
                         ? "Edited yesterday" 
                         : `Edited ${daysSinceEdit} days ago`}
                   </span>
-                  <span className="text-poppy">({daysSinceEdit})</span>
                 </div>
               </div>
-            )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  await ensureSummary()
+                  setIsModalOpen(true)
+                }}
+                className="h-8 w-8"
+              >
+                <Expand className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
 
-            {/* Open Questions Summary */}
-            {isExpanded && summary && (
-              <div className="flex items-start gap-2 text-sm text-gray-600">
-                <Lightbulb className="w-4 h-4 text-poppy mt-0.5 flex-shrink-0" />
-                <div className="space-y-1">
-                  <p className="font-medium text-gray-900">Open Questions</p>
-                  <p className="line-clamp-3">{summary}</p>
+          <CardContent className="space-y-4">
+            {/* Status Bar */}
+            <div className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-poppy" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">
+                      {commentStats.openThreads} open threads
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {commentStats.unresolved} unresolved comments
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-poppy" />
+                  <span className="text-sm font-medium">
+                    {commentStats.uniqueCommenters} commenters
+                  </span>
                 </div>
               </div>
-            )}
-
-            {/* Reviewers and Tasks */}
-            <div className="pt-2 border-t border-gray-100">
               <ReviewerAvatars reviewers={prd.metadata?.reviewers || []} />
-              <TaskList tasks={prd.metadata?.tasks || []} />
+            </div>
+
+            {/* Spiciest Thread Preview */}
+            {spiciestThread && (
+              <div className="p-2 bg-gray-50 rounded-md border border-gray-100">
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">
+                        Most active thread
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {spiciestThread.totalComments} comments • {spiciestThread.contributors} contributors
+                      </span>
+                    </div>
+                    <div className="mt-1 space-y-1">
+                      <p className="text-sm text-gray-600 line-clamp-2">
+                        {spiciestThread.mainComment.content}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span>{spiciestThread.mainComment.user_name}</span>
+                        <span>•</span>
+                        <span>{new Date(spiciestThread.mainComment.created_at).toLocaleDateString()}</span>
+                        {!spiciestThread.mainComment.resolved && (
+                          <>
+                            <span>•</span>
+                            <span className="text-poppy">Unresolved</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Action Section */}
+            <div className="space-y-2">
               {needsMeeting && (
-                <div className="mt-2 space-y-2">
+                <div className="space-y-2">
                   {scheduledMeeting ? (
                     <div className="flex items-center gap-2 p-2 bg-green-50 rounded-md border border-green-200">
                       <svg className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
@@ -283,7 +379,7 @@ export default function PrdCard({
                     </div>
                   ) : availableSlots.length > 0 ? (
                     <div className="space-y-2">
-                      <p className="text-sm text-gray-600">Available times:</p>
+                      <p className="text-sm font-medium text-gray-700">Schedule a meeting:</p>
                       {availableSlots.map((slot) => (
                         <Button
                           key={slot.start}
@@ -347,7 +443,48 @@ export default function PrdCard({
                   )}
                 </div>
               )}
+
+              {/* Quick Actions */}
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    window.open(prd.url, '_blank')
+                  }}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Open in Drive
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setIsModalOpen(true)
+                  }}
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  View Comments
+                </Button>
+              </div>
             </div>
+
+            {/* Expanded Content */}
+            {isExpanded && summary && (
+              <div className="pt-2 border-t border-gray-100">
+                <div className="flex items-start gap-2 text-sm text-gray-600">
+                  <Lightbulb className="w-4 h-4 text-poppy mt-0.5 flex-shrink-0" />
+                  <div className="space-y-1">
+                    <p className="font-medium text-gray-900">Open Questions</p>
+                    <p className="line-clamp-3">{summary}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -362,3 +499,4 @@ export default function PrdCard({
     </>
   )
 }
+

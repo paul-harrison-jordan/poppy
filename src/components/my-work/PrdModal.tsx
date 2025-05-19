@@ -23,29 +23,37 @@ export default function PrdModal({ prd, isOpen, onClose, summary: initialSummary
     }
   }, [isOpen, summary, loadSummary])
 
-  const getCommentCounts = () => {
-    if (!prd.metadata?.comments) return [];
+  const getCommentUrl = (commentId: string) => {
+    if (!prd.url) return ''
     
-    const counts = prd.metadata.comments
-      .filter(comment => !comment.resolved)
-      .reduce((acc, comment) => {
-        const existing = acc.find(c => c.user_id === comment.user_id);
-        if (existing) {
-          existing.count++;
-        } else {
-          acc.push({
-            user_id: comment.user_id,
-            user_name: comment.user_name,
-            count: 1
-          });
-        }
-        return acc;
-      }, [] as Array<{ user_id: string; user_name: string; count: number }>);
+    // Extract the document ID from the URL
+    const docId = prd.url.split('/d/')[1]?.split('/')[0]
+    if (!docId) return prd.url
 
-    return counts.sort((a, b) => b.count - a.count);
-  };
+    // Construct the URL with the correct format for comment linking
+    return `https://docs.google.com/document/d/${docId}/edit?disco=${commentId}`
+  }
 
-  const commentCounts = getCommentCounts();
+  const getCommentThreads = () => {
+    if (!prd.metadata?.comments) return []
+    
+    const comments = prd.metadata.comments
+    const mainComments = comments.filter(c => !c.is_reply)
+    const replies = comments.filter(c => c.is_reply)
+    
+    return mainComments.map(mainComment => {
+      const threadReplies = replies
+        .filter(reply => reply.parent_id === mainComment.id)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      
+      return {
+        mainComment,
+        replies: threadReplies
+      }
+    }).sort((a, b) => new Date(b.mainComment.created_at).getTime() - new Date(a.mainComment.created_at).getTime())
+  }
+
+  const commentThreads = getCommentThreads()
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -106,24 +114,72 @@ export default function PrdModal({ prd, isOpen, onClose, summary: initialSummary
               <h3 className="text-lg font-semibold">Comments</h3>
             </div>
             
-            {commentCounts.length > 0 ? (
-              <div className="space-y-4">
-                {prd.metadata?.comments
-                  ?.filter(comment => !comment.resolved)
-                  .map(comment => (
-                    <div key={comment.id} className="p-4 bg-white border rounded-lg">
+            {commentThreads.length > 0 ? (
+              <div className="space-y-6">
+                {commentThreads.map(thread => (
+                  <div key={thread.mainComment.id} className="space-y-2">
+                    {/* Main Comment */}
+                    <div className="p-4 bg-white border rounded-lg">
                       <div className="flex justify-between items-start mb-2">
-                        <p className="font-medium">{comment.user_name}</p>
-                        <p className="text-sm text-gray-500">
-                          {new Date(comment.created_at).toLocaleDateString()}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{thread.mainComment.user_name}</p>
+                          {!thread.mainComment.resolved && (
+                            <span className="px-2 py-0.5 text-xs font-medium text-poppy bg-poppy/10 rounded-full">
+                              Unresolved
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-gray-500">
+                            {new Date(thread.mainComment.created_at).toLocaleDateString()}
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2"
+                            onClick={() => window.open(getCommentUrl(thread.mainComment.id), '_blank')}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
-                      <p className="text-gray-600 whitespace-pre-wrap">{comment.content}</p>
+                      <p className="text-gray-600 whitespace-pre-wrap">{thread.mainComment.content}</p>
                     </div>
-                  ))}
+
+                    {/* Replies */}
+                    {thread.replies.length > 0 && (
+                      <div className="ml-8 space-y-2">
+                        {thread.replies.map(reply => (
+                          <div key={reply.id} className="p-3 bg-gray-50 border rounded-lg">
+                            <div className="flex justify-between items-start mb-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-sm">{reply.user_name}</p>
+                                <span className="text-xs text-gray-500">(reply)</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <p className="text-xs text-gray-500">
+                                  {new Date(reply.created_at).toLocaleDateString()}
+                                </p>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-5 px-2"
+                                  onClick={() => window.open(getCommentUrl(reply.id), '_blank')}
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            <p className="text-sm text-gray-600 whitespace-pre-wrap">{reply.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             ) : (
-              <p className="text-gray-500">No unresolved comments</p>
+              <p className="text-gray-500">No comments</p>
             )}
           </div>
         </div>
