@@ -77,7 +77,6 @@ export default function Scheduler() {
       if (!documentId) {
         throw new Error("Invalid document ID");
       }
-      console.log('Schedule form submitted with:', documentId);
       const sheetResponse = await fetch('/api/fetch-sheets', {
         method: 'POST',
         headers: {
@@ -86,7 +85,6 @@ export default function Scheduler() {
         body: JSON.stringify({  documentId: documentId }),
       });
       const sheetData = await sheetResponse.json();
-      console.log('Sheet response:', sheetData);
       
       // Store the sheet ID for later use
       localStorage.setItem('currentSheetId', documentId);
@@ -172,7 +170,6 @@ export default function Scheduler() {
                               return;
                             }
                             const { email, hasRecentOutreach } = await response.json();
-                            console.log('Got email:', email, 'Has recent outreach:', hasRecentOutreach);
 
                             if (hasRecentOutreach) {
                               // Update the message content to include the outreach status
@@ -217,9 +214,7 @@ I'd love to schedule some time to discuss this further. Would you be available f
 Best regards,
 Your Name`;
 
-                            console.log('Email content:', emailContent);
                             const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&body=${encodeURIComponent(emailContent)}`;
-                            console.log('Opening Gmail URL:', gmailUrl);
                             
                             // Try to open the window
                             window.open(gmailUrl, '_blank', 'noopener,noreferrer');

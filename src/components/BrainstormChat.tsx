@@ -65,7 +65,6 @@ export default function BrainstormChat() {
           })
     
           const response = await collectStream(genRes)
-          console.log("PRD generation response:", response)
           
           // Add assistant's response to chat
           setMessages(prev => [...prev, { role: 'assistant', content: response }]);

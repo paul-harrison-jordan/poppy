@@ -15,7 +15,6 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
    
 
     if (isSchedulePage) {
-      console.log('Called from schedule page');
       return NextResponse.json({
         message: 'Schedule page request received',
         formattedEmbeddings: [],

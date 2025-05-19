@@ -119,7 +119,6 @@ export default function DraftForm() {
     setIsGeneratingQuestions(true)
     const storedContext = localStorage.getItem("personalContext")
     try {
-      console.log("Starting question generation...")
       // First, get questions from OpenAI
 
       // 1. Get embedding for the query
