@@ -182,18 +182,17 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
 
             const chunksResponse = await response.json();
             const chunks = chunksResponse.chunks;
-            const documentId = chunksResponse.id;
 
             // Process chunks individually to avoid timeouts
             const embeddedChunksPromises = chunks.map(async (chunk: string) => {
               const embeddedChunk = await fetch('/api/embed-chunks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chunks: [chunk], documentId }),
+                body: JSON.stringify({ chunks: [chunk], documentId: doc.id }),
               });
 
               if (!embeddedChunk.ok) {
-                console.error(`Failed to embed chunk for document: ${documentId}`);
+                console.error(`Failed to embed chunk for document: ${doc.id}`);
                 return null;
               }
 
@@ -212,11 +211,14 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
             const pineconeUpsert = await fetch('/api/pinecone-upsert', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ formattedEmbeddings: sanitizedEmbeddings, documentId }),
+              body: JSON.stringify({ 
+                vectors: sanitizedEmbeddings,
+                documentId: doc.id 
+              }),
             });
 
             if (!pineconeUpsert.ok) {
-              console.error(`Failed to upsert to Pinecone: ${documentId}`);
+              console.error(`Failed to upsert to Pinecone: ${doc.id}`);
               return null;
             }
 

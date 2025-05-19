@@ -5,7 +5,7 @@ import { Session } from 'next-auth';
 
 export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
   try {
-    const { vectors } = await request.json();
+    const { vectors, documentId } = await request.json();
     if (!vectors || !Array.isArray(vectors)) {
       return NextResponse.json(
         { error: 'Vectors array is required' },
@@ -32,9 +32,6 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
     
     const index = getUserIndex(indexName);
     
-    const body = await request.json();
-    const documentId = body.documentId;
-    const formattedEmbeddings = body.formattedEmbeddings;
     if (!documentId) {
       return NextResponse.json(
         { error: 'Document ID is required' },
@@ -57,7 +54,7 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
       await namespace.deleteMany(idsToDelete);
     }
 
-    await namespace.upsert(formattedEmbeddings);
+    await namespace.upsert(vectors);
     
     return NextResponse.json({
       message: 'Document synced successfully',

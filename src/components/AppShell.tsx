@@ -110,7 +110,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     <div className="font-semibold text-poppy">Add your personal context</div>
                     <div className="text-xs text-gray-500">Help Poppy understand your product and team.</div>
                   </div>
-                  <Link href="/tune-poppy" className="px-4 py-2 rounded-full bg-poppy text-white font-semibold hover:bg-poppy/90 transition-colors text-sm shadow">
+                  <Link href="/setup" className="px-4 py-2 rounded-full bg-poppy text-white font-semibold hover:bg-poppy/90 transition-colors text-sm shadow">
                     Get Started
                   </Link>
                 </div>
@@ -122,7 +122,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     <div className="font-semibold text-poppy">Sync your first document</div>
                     <div className="text-xs text-gray-500">Give Poppy access to your docs for better results.</div>
                   </div>
-                  <Link href="/sync-docs" className="px-4 py-2 rounded-full bg-poppy text-white font-semibold hover:bg-poppy/90 transition-colors text-sm shadow">
+                  <Link href="/sync" className="px-4 py-2 rounded-full bg-poppy text-white font-semibold hover:bg-poppy/90 transition-colors text-sm shadow">
                     Sync Now
                   </Link>
                 </div>
