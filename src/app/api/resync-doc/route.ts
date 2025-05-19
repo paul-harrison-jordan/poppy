@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getAuthServerSession } from '@/lib/auth';
+import { withAuth } from '@/lib/api';
 import { getUserIndex } from '@/lib/pinecone';
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (session, request: Request) => {
   try {
-    const authSession = await getAuthServerSession();
-    if (!authSession?.user?.name) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
-    const formattedUsername = authSession.user.name
+    const formattedUsername = session.user.name
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, '-')
       .replace(/-+/g, '-')
@@ -28,7 +24,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!authSession.accessToken) {
+    if (!session.accessToken) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
@@ -55,4 +51,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

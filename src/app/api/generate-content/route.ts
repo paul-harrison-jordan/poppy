@@ -1,16 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getAuthServerSession } from '@/lib/auth';
+import { withAuth } from '@/lib/api';
 import { generateContent, type GenerateContentRequest } from '@/lib/services/openaiService';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (session, request: Request) => {
   try {
-    const session = await getAuthServerSession();
-    if (!session?.user?.name) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = (await request.json()) as GenerateContentRequest;
     return await generateContent(body);
   } catch (err) {
@@ -20,4 +15,4 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-}
+});

@@ -74,10 +74,13 @@ export function handleAPIError(error: unknown) {
 }
 
 export async function withErrorHandling<T>(
-  handler: () => Promise<T>
+  handler: () => Promise<T | NextResponse>
 ): Promise<NextResponse> {
   try {
     const result = await handler();
+    if (result instanceof NextResponse) {
+      return result;
+    }
     return apiJsonResponse(createAPIResponse(result));
   } catch (error) {
     return handleAPIError(error);

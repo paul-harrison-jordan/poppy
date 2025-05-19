@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAuthServerSession } from '@/lib/auth';
+import { withAuth } from '@/lib/api';
 import { getCalendarClient } from '@/lib/calendar';
 
 interface CreateEventRequest {
@@ -9,10 +9,9 @@ interface CreateEventRequest {
   end: string;   // ISO date string
 }
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (session, request: Request) => {
   try {
-    const session = await getAuthServerSession();
-    if (!session?.accessToken) {
+    if (!session.accessToken) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
@@ -43,5 +42,5 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});
 

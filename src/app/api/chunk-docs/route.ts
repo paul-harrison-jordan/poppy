@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import { getAuthServerSession } from '@/lib/auth';
+import { withAuth } from '@/lib/api';
 import { chunkTextByMultiParagraphs } from '@/app/chunk';
 
 
@@ -11,12 +11,8 @@ interface DocumentContent {
   content: string;
 }
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (session, request: Request) => {
   try {
-    const authSession = await getAuthServerSession();
-    if (!authSession?.user?.name) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
     
     const body = await request.json();
     const documentId = body.documentId;
@@ -36,7 +32,7 @@ export async function POST(request: Request) {
     });
 
     // Set the access token from the session
-    if (!authSession.accessToken) {
+    if (!session.accessToken) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
@@ -44,7 +40,7 @@ export async function POST(request: Request) {
     }
 
     auth.setCredentials({
-      access_token: authSession.accessToken,
+      access_token: session.accessToken,
     });
 
     // Initialize the Drive API
@@ -92,4 +88,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}); 

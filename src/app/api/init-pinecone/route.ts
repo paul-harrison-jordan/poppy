@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { Pinecone } from '@pinecone-database/pinecone';
-import { getAuthServerSession } from '@/lib/auth';
+import { withAuth } from '@/lib/api';
 
-export async function POST() {
+export const POST = withAuth(async (session) => {
   try {
-    const authSession = await getAuthServerSession();
 
-    if (!authSession?.user?.name) {
+    if (!session?.user?.name) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -15,7 +14,7 @@ export async function POST() {
     });
 
     // Format username to comply with Pinecone naming requirements
-    const formattedUsername = authSession.user.name
+    const formattedUsername = session.user.name
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, '-')
       .replace(/-+/g, '-') // Replace multiple consecutive hyphens with a single one
@@ -43,13 +42,13 @@ export async function POST() {
 
       return NextResponse.json({
         message: 'Pinecone index created successfully',
-        username: authSession.user.name,
+        username: session.user.name,
         indexName,
       });
     } else {
       return NextResponse.json({
         message: 'Pinecone index already exists',
-        username: authSession.user.name,
+        username: session.user.name,
         indexName,
       });
     }
@@ -60,4 +59,4 @@ export async function POST() {
       { status: 500 }
     );
   }
-}
+});
