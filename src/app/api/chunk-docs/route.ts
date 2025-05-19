@@ -3,17 +3,15 @@ import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { withAuth } from '@/lib/api';
 import { chunkTextByMultiParagraphs } from '@/app/chunk';
-
-
+import { Session } from 'next-auth';
 
 interface DocumentContent {
   name: string;
   content: string;
 }
 
-export const POST = withAuth(async (session, request: Request) => {
+export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
   try {
-    
     const body = await request.json();
     const documentId = body.documentId;
 
@@ -30,61 +28,36 @@ export const POST = withAuth(async (session, request: Request) => {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       redirectUri: process.env.GOOGLE_REDIRECT_URI,
     });
-
-    // Set the access token from the session
-    if (!session.accessToken) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
-
-    auth.setCredentials({
-      access_token: session.accessToken,
-    });
+    auth.setCredentials({ access_token: session.accessToken });
 
     // Initialize the Drive API
     const drive = google.drive({ version: 'v3', auth });
 
-    // Get document details
-    const docResponse = await drive.files.get({
-      fileId: documentId,
-      fields: 'id, name',
-      supportsAllDrives: true
-    });
-
-    const doc = docResponse.data;
-    if (!doc.name) {
-      return NextResponse.json(
-        { error: 'Document not found' },
-        { status: 404 }
-      );
-    }
-
-    // Fetch document content
+    // Fetch document content as HTML
     const contentResponse = await drive.files.export({
       fileId: documentId,
-      mimeType: 'text/plain',
+      mimeType: 'text/html',
+    });
+
+    // Get document name
+    const fileResponse = await drive.files.get({
+      fileId: documentId,
+      fields: 'name',
     });
 
     const documentContent: DocumentContent = {
-      name: doc.name,
+      name: fileResponse.data.name || 'Untitled Document',
       content: contentResponse.data as string,
     };
 
-    // Process and store the document
+    // Chunk the content
     const chunks = chunkTextByMultiParagraphs(documentContent.content);
 
-    
-    return NextResponse.json({
-      message: `${documentContent.name} chunked successfully`,
-      chunks: chunks,
-      id: documentId,
-    });
+    return NextResponse.json({ chunks });
   } catch (error) {
-    console.error('Error syncing document:', error);
+    console.error('Error chunking document:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: 'Failed to chunk document' },
       { status: 500 }
     );
   }
