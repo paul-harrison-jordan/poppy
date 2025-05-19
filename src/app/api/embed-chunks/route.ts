@@ -18,7 +18,6 @@ export async function POST(request: Request) {
    
 
     if (isSchedulePage) {
-      console.log('Called from schedule page');
       return NextResponse.json({
         message: 'Schedule page request received',
         formattedEmbeddings: [],

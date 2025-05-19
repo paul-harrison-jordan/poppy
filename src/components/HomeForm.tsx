@@ -33,7 +33,6 @@ export default function HomeForm() {
 
   const handleInitialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted, setting loading state...');
     setLoadingState({
       isOpen: true,
       title: 'Generating Questions',
@@ -41,7 +40,6 @@ export default function HomeForm() {
     });
 
     try {
-      console.log('Making API request...');
       const response = await fetch('/api/generate-questions', {
         method: 'POST',
         headers: {
@@ -59,7 +57,6 @@ export default function HomeForm() {
       }
 
       const data = await response.json();
-      console.log('Received questions:', data.questions);
       
       // Update all states in sequence
       setQuestions(data.questions);

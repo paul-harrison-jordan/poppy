@@ -36,7 +36,6 @@ export function PrdSearch() {
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // Handle new PRD creation
-    console.log("Creating new PRD:", prdTitle)
     setPrdTitle("")
   }
 

@@ -195,7 +195,6 @@ export default function ChatInterface() {
         typeof messages[1].content === 'string' ? messages[1].content : String(messages[1].content),
         questionAnswers
       )
-      console.log('Doc response:', docData); // Add logging to debug
 
       if (!docData.url) {
         throw new Error("No document URL received");
@@ -731,7 +730,6 @@ export default function ChatInterface() {
                                 return;
                               }
                               const { email, hasRecentOutreach } = await response.json();
-                              console.log('Got email:', email, 'Has recent outreach:', hasRecentOutreach);
 
                               if (hasRecentOutreach) {
                                 // Update the message content to include the outreach status
@@ -776,9 +774,7 @@ I'd love to schedule some time to discuss this further. Would you be available f
 Best regards,
 Your Name`;
 
-                              console.log('Email content:', emailContent);
                               const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&body=${encodeURIComponent(emailContent)}`;
-                              console.log('Opening Gmail URL:', gmailUrl);
                               
                               // Try to open the window
                               window.open(gmailUrl, '_blank', 'noopener,noreferrer');
