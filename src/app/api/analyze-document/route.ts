@@ -53,7 +53,7 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
           };
         }
 
-        const averageScore = queryResponse.matches.reduce((acc, match) => acc + match.score, 0) / queryResponse.matches.length;
+        const averageScore = queryResponse.matches.reduce((acc, match) => acc + (match.score ?? 0), 0) / queryResponse.matches.length;
 
         return {
           database,
