@@ -16,8 +16,12 @@ export const POST = withAuth<NextResponse, Session, [NextRequest]>(async (sessio
     const referer = headersList.get('referer') || '';
     const isSchedulePage = referer.includes('/schedule');
 
+    if (!session.user) {
+      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
+    }
+
     // Format username to comply with Pinecone naming requirements
-    const formattedUsername = session.user.name
+    const formattedUsername = session.user.name || ''
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, '-')
       .replace(/-+/g, '-')
