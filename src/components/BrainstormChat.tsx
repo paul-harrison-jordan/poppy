@@ -116,13 +116,13 @@ export default function BrainstormChat() {
 
       // Navigate to the PRD page
       router.push('/prd');
-    } catch (error) {
-      console.error(error);
-      alert('Failed to generate PRD summary.');
+  } catch (error) {
+    console.error(error);
+    alert('Failed to generate PRD summary.');
     } finally {
       setLoading(false);
-    }
-  };
+  }
+};
 
   return (
     <div className="flex flex-col flex-1 min-h-0 w-full max-w-5xl mx-auto font-sans" style={{ background: 'none' }}>

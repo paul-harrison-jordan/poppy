@@ -72,22 +72,22 @@ export default function ChatInterface() {
       if (mode === 'draft') {
         setMessages([{
           role: 'assistant',
-          content: "I&apos;ll help you draft a PRD. Please share your product idea or concept, a JTDB, and any extra context you have that you want me to know"
+          content: "Share your product idea or concept, a JTDB, and any extra context you have that you want me to know"
         }]);
       } else if (mode === 'schedule') {
         setMessages([{
           role: 'assistant',
-          content: "I&apos;ll help you find and schedule customer feedback. What kind of customers are you looking for? For example: &apos;customers who hate our list import&apos;, &apos;customers who need more django filters&apos;, or &apos;customers who will help me build a new feature&apos;"
+          content: "Find and schedule customer feedback. What kind of customers are you looking for? For example: customers who hate our list import, customers who need more django filters, or customers who will help me build a new feature"
         }]);
       } else if (mode === 'brainstorm') {
         setMessages([{
           role: 'assistant',
-          content: "I&apos;ll help you brainstorm ideas. Share your initial thoughts or questions, and I&apos;ll help you think through them."
+          content: "Develop an idea into a feature our customers will love. Share your initial thoughts or questions, and I can help you think through them."
         }]);
       } else if (mode === 'strategy') {
         setMessages([{
           role: 'assistant',
-          content: "I&apos;ll help you create a strategic document. Please share your strategic vision, goals, or the key areas you&apos;d like to focus on."
+          content: "Share your strategic vision, goals, or the key areas you want to focus on."
         }]);
       }
     }
