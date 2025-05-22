@@ -942,17 +942,17 @@ export default function ChatInterface() {
     }
   };
 
-  const isStrategyMode = (mode: ChatMode): mode is 'brand-messaging' => {
-    return mode === 'brand-messaging';
-  };
+  // const isStrategyMode = (mode: ChatMode): mode is 'brand-messaging' => {
+  //   return mode === 'brand-messaging';
+  // };
 
-  const getDocumentTypeText = (mode: ChatMode): string => {
-    return isStrategyMode(mode) ? 'brand messaging' : 'PRD';
-  };
+  // const getDocumentTypeText = (mode: ChatMode): string => {
+  //   return isStrategyMode(mode) ? 'brand messaging' : 'PRD';
+  // };
 
-  const getDocumentTitle = (mode: ChatMode): string => {
-    return isStrategyMode(mode) ? 'Brand Messaging' : 'PRD';
-  };
+  // const getDocumentTitle = (mode: ChatMode): string => {
+  //   return isStrategyMode(mode) ? 'Brand Messaging' : 'PRD';
+  // };
 
   return (
     <div className="flex flex-col h-screen w-full max-w-5xl mx-auto font-sans" style={{ background: 'none' }}>
