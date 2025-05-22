@@ -25,7 +25,7 @@ export function streamTextResponse(iterable: AsyncIterable<OpenAI.ChatCompletion
 }
 
 export interface GenerateContentRequest {
-  type: 'prd' | 'brand';
+  type: 'prd' | 'brand-messaging';
   title: string;
   query: string;
   questions: string[];
@@ -56,17 +56,40 @@ I've included instructions for how to think and write PRDs like a product manage
     return streamTextResponse(stream);
   }
 
+  // Brand messaging document generation
   const stream = await openai.chat.completions.create({
     model: 'o3',
     stream: true,
     messages: [
       {
         role: 'system',
-        content: `You are a brand-messaging expert …`,
+        content: `You are a brand messaging expert who helps create comprehensive brand messaging documents. Your role is to analyze the provided information and create a well-structured messaging document that aligns with the organization's goals and vision.
+
+You have access to the following context:
+- Team terms and definitions: ${Object.keys(teamTerms).join(', ')}
+- Additional context from previous work: ${additionalContext}
+
+Your task is to create a comprehensive brand messaging document that includes:
+1. Executive Summary
+2. Brand Vision and Mission
+3. Target Audience Analysis
+4. Brand Positioning
+5. Brand Values and Personality
+6. Key Messaging Pillars
+7. Implementation Strategy
+8. Success Metrics
+
+The document should be written in markdown format and should be clear, actionable, and aligned with the organization's goals.`,
       },
       {
         role: 'user',
-        content: `Create a comprehensive brand-messaging doc in markdown.\n\nTitle: ${title}\nBackground query: ${query}\nQ&A: ${questions.join('\n')}`,
+        content: `Create a comprehensive brand messaging document in markdown.
+
+Title: ${title}
+Background query: ${query}
+Q&A: ${questions.join('\n')}
+
+Please ensure the document is well-structured, actionable, and includes all necessary sections for a complete brand messaging strategy.`,
       },
     ],
   });
@@ -81,7 +104,7 @@ export interface GenerateQuestionsRequest {
   matchedContext: string;
   storedContext: string;
   teamTerms: string;
-  type?: string;
+  type?: 'prd' | 'brand-messaging';
 }
 
 export async function generateQuestions(opts: GenerateQuestionsRequest): Promise<QuestionsResponse> {
@@ -118,9 +141,9 @@ Example JSON response:
 
 I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a product manager would ask.
 ${Object.keys(terms).join(', ')}`
-          : `You are a system that helps a strategic leader write a strategy document. You will be given a title and query for a new strategy, as well as relevant context from previous strategies or documents that the user has shared with you.
+          : `You are a system that helps a brand messaging expert write a brand messaging document. You will be given a title and query for a new brand messaging document, as well as relevant context from previous documents that the user has shared with you.
 
-Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of strategic terms over time.
+Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of brand messaging terms over time.
 
 You must respond with a JSON object containing two arrays:
 1. questions: An array of question objects, each with id, text, and reasoning fields
@@ -131,19 +154,34 @@ Example JSON response:
   "questions": [
     {
       "id": "1",
-      "text": "What is the long-term vision for this strategic initiative?",
-      "reasoning": "Understanding the long-term vision helps align all stakeholders and guide decision-making."
+      "text": "What is your brand's core purpose and mission?",
+      "reasoning": "Understanding the fundamental purpose helps align all messaging decisions."
     },
     {
       "id": "2",
-      "text": "What are the key market opportunities and challenges?",
-      "reasoning": "Identifying market dynamics helps shape the strategic approach."
+      "text": "Who is your target audience and what are their key needs?",
+      "reasoning": "Identifying target audience and their needs helps shape brand messaging."
+    },
+    {
+      "id": "3",
+      "text": "What are your brand's core values and personality traits?",
+      "reasoning": "Defining brand values and personality helps create consistent messaging."
+    },
+    {
+      "id": "4",
+      "text": "What is your unique value proposition in the market?",
+      "reasoning": "Understanding your competitive advantage helps differentiate your brand messaging."
+    },
+    {
+      "id": "5",
+      "text": "What are your key brand messaging pillars?",
+      "reasoning": "Identifying key messages helps create consistent communication."
     }
   ],
-  "internalTerms": ["Market penetration", "Competitive advantage"]
+  "internalTerms": ["Brand positioning", "Value proposition", "Brand voice"]
 }
 
-I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a strategic leader would ask.
+I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a brand messaging expert would ask.
 ${Object.keys(terms).join(', ')}`,
       },
       {
@@ -256,7 +294,7 @@ export interface VocabularyRequest {
   title: string;
   query: string;
   matchedContext: string;
-  type?: string;
+  type?: 'prd' | 'brand-messaging';
   teamTerms?: Record<string, string>;
 }
 
@@ -280,16 +318,16 @@ You must respond with a JSON object containing a terms_to_define array of terms 
 
 I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a product manager would ask.
 ${Object.keys(terms).join(', ')}`
-          : `You are a system that helps a strategic leader write a strategy document. You will be given a title and query for a new strategy, as well as relevant context from previous strategies or documents that the user has shared with you.
+          : `You are a system that helps a brand messaging expert write a brand messaging document. You will be given a title and query for a new brand messaging document, as well as relevant context from previous documents that the user has shared with you.
 
-Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of strategic terms over time.
+Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of brand messaging terms over time.
 
 You must respond with a JSON object containing a terms_to_define array of terms that need definitions. For example:
 {
-  "terms_to_define": ["Market penetration", "Competitive advantage", "Strategic initiative"]
+  "terms_to_define": ["Brand positioning", "Value proposition", "Brand voice", "Messaging pillars", "Brand personality"]
 }
 
-I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a strategic leader would ask.
+I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a brand messaging expert would ask.
 ${Object.keys(terms).join(', ')}`,
       },
       {

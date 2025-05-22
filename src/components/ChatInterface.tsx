@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { collectStream } from "@/lib/collectStream"
 import { generateDocument } from '@/lib/services/documentGenerator'
-import { FileText, Sparkles, Calendar, Target } from "lucide-react"
+import { FileText, Sparkles, Calendar, Megaphone } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion";
 
 export interface ChatMessage {
@@ -35,7 +35,7 @@ interface MatchedContext {
   };
 }
 
-type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'schedule' | 'strategy';
+type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'schedule' | 'brand-messaging';
 
 
 export default function ChatInterface() {
@@ -55,6 +55,23 @@ export default function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [schedulingMessageId, setSchedulingMessageId] = useState<number | null>(null);
   const [pendingSummary, setPendingSummary] = useState<string | null>(null);
+
+  const DOCUMENT_TYPES = {
+    'brand-messaging': {
+      type: 'brand-messaging',
+      title: 'Brand Messaging',
+      text: 'brand messaging'
+    },
+    'draft': {
+      type: 'prd',
+      title: 'Draft PRD',
+      text: 'PRD'
+    }
+  } as const;
+
+  const getDocumentType = (mode: ChatMode) => {
+    return mode === 'brand-messaging' ? DOCUMENT_TYPES['brand-messaging'] : DOCUMENT_TYPES['draft'];
+  };
 
   // Check for PRD summary on mount
   useEffect(() => {
@@ -84,10 +101,10 @@ export default function ChatInterface() {
           role: 'assistant',
           content: "Develop an idea into a feature our customers will love. Share your initial thoughts or questions, and I can help you think through them."
         }]);
-      } else if (mode === 'strategy') {
+      } else if (mode === 'brand-messaging') {
         setMessages([{
           role: 'assistant',
-          content: "Share your strategic vision, goals, or the key areas you want to focus on."
+          content: "Share your brand messaging document. Please share your brand messaging strategy, goals, or the key areas you'd like to focus on."
         }]);
       }
     }
@@ -142,10 +159,10 @@ export default function ChatInterface() {
         role: 'assistant',
         content: "I&apos;ll help you brainstorm ideas. Share your initial thoughts or questions, and I&apos;ll help you think through them."
       }]);
-    } else if (newMode === 'strategy') {
+    } else if (newMode === 'brand-messaging') {
       setMessages([{
         role: 'assistant',
-        content: "I&apos;ll help you create a strategic document. Please share your strategic vision, goals, or the key areas you&apos;d like to focus on."
+        content: "I&apos;ll help you create a brand messaging document. Please share your brand messaging strategy, goals, or the key areas you&apos;d like to focus on."
       }]);
     }
   };
@@ -176,9 +193,10 @@ export default function ChatInterface() {
       setLoading(true);
       
       // Show writing message
+      const docType = getDocumentType(mode);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: <span className="animate-pulse">I&apos;m writing your PRD document now...</span>
+        content: <span className="animate-pulse">I&apos;m writing your {docType.text} document now...</span>
       }]);
 
       try {
@@ -193,15 +211,33 @@ export default function ChatInterface() {
           throw new Error("No document URL received");
         }
 
+        // Remove the thinking message
+        setMessages(prev => prev.filter(msg => {
+          if (typeof msg.content === 'string') {
+            return msg.content !== "Thinking...";
+          }
+          if (React.isValidElement(msg.content)) {
+            const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
+            return element.props.children !== "Thinking...";
+          }
+          return true;
+        }));
+
+        // Show writing message
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: <span className="animate-pulse">I&apos;m writing your {docType.text} document now...</span>
+        }]);
+
         // Remove the writing message
         setMessages(prev => {
           const withoutWriting = prev.filter(msg => {
             if (typeof msg.content === 'string') {
-              return msg.content !== "I&apos;m writing your PRD document now...";
+              return msg.content !== `I&apos;m writing your ${docType.text} document now...`;
             }
             if (React.isValidElement(msg.content)) {
               const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
-              return element.props.children !== "I&apos;m writing your PRD document now...";
+              return element.props.children !== `I&apos;m writing your ${docType.text} document now...`;
             }
             return true;
           });
@@ -209,14 +245,14 @@ export default function ChatInterface() {
             role: 'assistant',
             content: (
               <div className="flex flex-col items-center gap-4">
-                <p>Your PRD is ready! Click below to view it in Google Docs.</p>
+                <p>Your {docType.text} is ready! Click below to view it in Google Docs.</p>
                 <a
                   href={docData.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
                 >
-                  View PRD in Google Docs
+                  View {docType.title} in Google Docs
                 </a>
               </div>
             )
@@ -271,71 +307,6 @@ export default function ChatInterface() {
     }
   };
 
-  // const generateContent = async () => {
-  //   try {
-  //     setLoading(true);
-
-  //     // Show writing message
-  //     setMessages(prev => [...prev, {
-  //       role: 'assistant',
-  //       content: <span className="animate-pulse">I&apos;m writing your PRD document now...</span>
-  //     }]);
-
-  //     const docData = await generateDocument(
-  //       'prd',
-  //       'Draft PRD',
-  //       typeof messages[1].content === 'string' ? messages[1].content : String(messages[1].content),
-  //       questionAnswers
-  //     )
-  //     console.log('Doc response:', docData); // Add logging to debug
-
-  //     if (!docData.url) {
-  //       throw new Error("No document URL received");
-  //     }
-
-  //     // Remove the writing message
-  //     setMessages(prev => {
-  //       const withoutWriting = prev.filter(msg => {
-  //         if (typeof msg.content === 'string') {
-  //           return msg.content !== "I&apos;m writing your PRD document now...";
-  //         }
-  //         if (React.isValidElement(msg.content)) {
-  //           const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
-  //           return element.props.children !== "I&apos;m writing your PRD document now...";
-  //         }
-  //         return true;
-  //       });
-  //       return [...withoutWriting, {
-  //         role: 'assistant',
-  //         content: (
-  //           <div className="flex flex-col items-center gap-4">
-  //             <p>Your PRD is ready! Click below to view it in Google Docs.</p>
-  //             <a
-  //               href={docData.url}
-  //               target="_blank"
-  //               rel="noopener noreferrer"
-  //               className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
-  //             >
-  //               View PRD in Google Docs
-  //             </a>
-  //           </div>
-  //         )
-  //       }];
-  //     });
-  //   } catch (error) {
-  //     console.error("Error generating content:", error);
-  //     setMessages(prev => {
-  //       const withoutWriting = prev.filter(msg => msg.content !== "I&apos;m writing your PRD document now...");
-  //       return [...withoutWriting, {
-  //         role: 'assistant',
-  //         content: "Sorry, I encountered an error while generating the content. Please try again."
-  //       }];
-  //     });
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const generateQuestions = async () => {
     try {
       // Add thinking message
@@ -348,10 +319,10 @@ export default function ChatInterface() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: "Draft PRD",
+          title: mode === 'brand-messaging' ? "Brand Messaging" : "Draft PRD",
           query: messages[1].content,
           matchedContext: matchedContext,
-          type: 'prd',
+          type: mode === 'brand-messaging' ? 'brand-messaging' : 'prd',
           teamTerms: JSON.parse(localStorage.getItem("teamTerms") || "{}"),
           storedContext: localStorage.getItem("personalContext")
         }),
@@ -589,9 +560,10 @@ export default function ChatInterface() {
               setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
               
               // Show writing message
+              const docType = getDocumentType(mode);
               setMessages(prev => [...prev, {
                 role: 'assistant',
-                content: <span className="animate-pulse">I&apos;m writing your PRD document now...</span>
+                content: <span className="animate-pulse">I&apos;m writing your {docType.text} document now...</span>
               }]);
 
               try {
@@ -610,11 +582,11 @@ export default function ChatInterface() {
                 setMessages(prev => {
                   const withoutWriting = prev.filter(msg => {
                     if (typeof msg.content === 'string') {
-                      return msg.content !== "I&apos;m writing your PRD document now...";
+                      return msg.content !== `I&apos;m writing your ${docType.text} document now...`;
                     }
                     if (React.isValidElement(msg.content)) {
                       const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
-                      return element.props.children !== "I&apos;m writing your PRD document now...";
+                      return element.props.children !== `I&apos;m writing your ${docType.text} document now...`;
                     }
                     return true;
                   });
@@ -622,14 +594,14 @@ export default function ChatInterface() {
                     role: 'assistant',
                     content: (
                       <div className="flex flex-col items-center gap-4">
-                        <p>Your PRD is ready! Click below to view it in Google Docs.</p>
+                        <p>Your {docType.text} is ready! Click below to view it in Google Docs.</p>
                         <a
                           href={docData.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
                         >
-                          View PRD in Google Docs
+                          View {docType.title} in Google Docs
                         </a>
                       </div>
                     )
@@ -672,9 +644,10 @@ export default function ChatInterface() {
             setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
             // In content mode, we don't need to do anything with the user's message
             // Just acknowledge it and continue
+            const docType = getDocumentType(mode);
             setMessages(prev => [...prev, {
               role: 'assistant',
-              content: "I&apos;ve noted your feedback. The PRD has been generated and saved to Google Docs."
+              content: `I&apos;ve noted your feedback. The ${docType.text} has been generated and saved to Google Docs.`
             }]);
             break;
         }
@@ -761,6 +734,183 @@ export default function ChatInterface() {
         setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
 
         setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
+      } else if (mode === 'brand-messaging') {
+        switch (draftStep) {
+          case 'initial':
+            // First, embed the request
+            const embedResponse = await fetch("/api/embed-request", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ text: input }),
+            });
+            const embedResponseJson = await embedResponse.json();
+            const embedding = embedResponseJson.queryEmbedding[0].embedding;
+
+            // Then match context
+            const matchResponse = await fetch("/api/match-embeds", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ embedding }),
+            });
+            const { matchedContext } = await matchResponse.json();
+            setMatchedContext(matchedContext);
+
+            // Generate vocabulary
+            const vocabResponse = await fetch("/api/generate-vocabulary", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title: "Brand Messaging",
+                query: input,
+                matchedContext: matchedContext,
+                type: 'brand-messaging',
+                teamTerms: JSON.parse(localStorage.getItem("teamTerms") || "{}")
+              }),
+            });
+            const vocabText = await collectStream(vocabResponse);
+            const vocabData = JSON.parse(vocabText);
+            if (!Array.isArray(vocabData) || vocabData.length === 0) {
+              throw new Error("No terms generated");
+            }
+            // Transform the terms into our TeamTerm format
+            const formattedTerms = vocabData.map((term: string, index: number) => ({
+              id: `term-${index}`,
+              term: term,
+              definition: ''
+            }));
+            setTeamTerms(formattedTerms);
+            setDraftStep('vocabulary');
+            // Show the first term immediately
+            setCurrentTermIndex(0);
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `Can you please define "${formattedTerms[0].term}"?`
+            }]);
+            break;
+
+          case 'vocabulary':
+            // Save the definition for the current term
+            const currentTerm = teamTerms[currentTermIndex];
+            const newDefinitions = {
+              ...termDefinitions,
+              [currentTerm.term]: input
+            };
+            setTermDefinitions(newDefinitions);
+            // Merge with existing teamTerms in localStorage
+            const existingTeamTerms = JSON.parse(localStorage.getItem("teamTerms") || "{}") || {};
+            const mergedTeamTerms = { ...existingTeamTerms, ...newDefinitions };
+            localStorage.setItem("teamTerms", JSON.stringify(mergedTeamTerms));
+            showNextTerm();
+            break;
+
+          case 'questions':
+            // Save the answer for the current question
+            const currentQuestion = questions[currentQuestionIndex];
+            if (!currentQuestion) {
+              console.error("No current question found");
+              return;
+            }
+
+            setQuestionAnswers(prev => ({
+              ...prev,
+              [currentQuestion.id]: input
+            }));
+
+            // If this is the last question, we need to handle the transition to content generation
+            if (currentQuestionIndex === questions.length - 1) {
+              // Remove the thinking message
+              setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
+              
+              // Show writing message
+              const docType = getDocumentType(mode);
+              setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: <span className="animate-pulse">I&apos;m writing your {docType.text} document now...</span>
+              }]);
+
+              try {
+                const docData = await generateDocument(
+                  'brand-messaging',
+                  'Brand Messaging',
+                  typeof messages[1].content === 'string' ? messages[1].content : String(messages[1].content),
+                  questionAnswers
+                );
+
+                if (!docData.url) {
+                  throw new Error("No document URL received");
+                }
+
+                // Remove the writing message
+                setMessages(prev => {
+                  const withoutWriting = prev.filter(msg => {
+                    if (typeof msg.content === 'string') {
+                      return msg.content !== "I&apos;m writing your brand messaging document now...";
+                    }
+                    if (React.isValidElement(msg.content)) {
+                      const element = msg.content as React.ReactElement<{ children: React.ReactNode }>;
+                      return element.props.children !== "I&apos;m writing your brand messaging document now...";
+                    }
+                    return true;
+                  });
+                  return [...withoutWriting, {
+                    role: 'assistant',
+                    content: (
+                      <div className="flex flex-col items-center gap-4">
+                        <p>Your {docType.text} is ready! Click below to view it in Google Docs.</p>
+                        <a
+                          href={docData.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
+                        >
+                          View {docType.title} in Google Docs
+                        </a>
+                      </div>
+                    )
+                  }];
+                });
+
+                // Save the document link
+                const savedDocs = JSON.parse(localStorage.getItem("savedBrandMessaging") || "[]");
+                savedDocs.push({
+                  url: docData.url,
+                  title: docData.title || "Brand Messaging",
+                  createdAt: new Date().toISOString(),
+                  id: docData.docId,
+                });
+                localStorage.setItem("savedBrandMessaging", JSON.stringify(savedDocs));
+                window.dispatchEvent(new CustomEvent("brandMessagingCountUpdated", { detail: { count: savedDocs.length } }));
+
+                // Set the draft step to content after successful generation
+                setDraftStep('content');
+              } catch (error) {
+                console.error("Error generating content:", error);
+                setMessages(prev => {
+                  const withoutWriting = prev.filter(msg => msg.content !== "I&apos;m writing your brand messaging document now...");
+                  return [...withoutWriting, {
+                    role: 'assistant',
+                    content: "Sorry, I encountered an error while generating the content. Please try again."
+                  }];
+                });
+              }
+            } else {
+              // If not the last question, show the next one
+              showNextQuestion();
+            }
+            break;
+
+          case 'content':
+            // Remove the thinking message
+            setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
+            // In content mode, we don't need to do anything with the user's message
+            // Just acknowledge it and continue
+            const docType = getDocumentType(mode);
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `I&apos;ve noted your feedback. The ${docType.text} has been generated and saved to Google Docs.`
+            }]);
+            break;
+        }
       } else {
         // Regular chat mode
         const response = await fetch("/api/brainstorm", {
@@ -792,6 +942,18 @@ export default function ChatInterface() {
     }
   };
 
+  const isStrategyMode = (mode: ChatMode): mode is 'brand-messaging' => {
+    return mode === 'brand-messaging';
+  };
+
+  const getDocumentTypeText = (mode: ChatMode): string => {
+    return isStrategyMode(mode) ? 'brand messaging' : 'PRD';
+  };
+
+  const getDocumentTitle = (mode: ChatMode): string => {
+    return isStrategyMode(mode) ? 'Brand Messaging' : 'PRD';
+  };
+
   return (
     <div className="flex flex-col h-screen w-full max-w-5xl mx-auto font-sans" style={{ background: 'none' }}>
       {/* Fixed header */}
@@ -818,6 +980,7 @@ export default function ChatInterface() {
             {mode === 'draft' ? 'Drafting a PRD' : 
              mode === 'schedule' ? 'Search for feedback and send outreach emails' :
              mode === 'brainstorm' ? 'Start with an idea or JTBD and let Poppy help you brainstorm' :
+             mode === 'brand-messaging' ? 'Create a comprehensive brand messaging document' :
              'Ask me anything about your product, strategy, or ideas.'}
           </motion.p>
         </AnimatePresence>
@@ -1046,7 +1209,13 @@ Your Name`;
                       ? "Customers who hate our list import, customers who need more django filters, customers who will help me build a new feature..."
                       : mode === 'brainstorm'
                         ? "Like talking to a version of you who remembers everything"
-                        : "Ask me anything..."
+                        : mode === 'brand-messaging'
+                          ? draftStep === 'questions'
+                            ? `Answer question ${currentQuestionIndex + 1} of ${questions.length}...`
+                            : draftStep === 'vocabulary'
+                              ? `Define term ${currentTermIndex + 1} of ${teamTerms.length}...`
+                              : "Share your brand messaging strategy, goals, and key focus areas..."
+                          : "Ask me anything..."
                 }
                 disabled={loading}
                 rows={4}
@@ -1103,17 +1272,17 @@ Your Name`;
                     </motion.button>
                     <motion.button
                 type="button"
-                onClick={() => handleModeChange('strategy')}
+                onClick={() => handleModeChange('brand-messaging')}
                       className={`p-2.5 rounded-full transition-all duration-200 ${
-                  mode === 'strategy' 
+                  mode === 'brand-messaging' 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
                           : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
                 }`}
-                title="Strategy"
+                title="Brand Messaging"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
               >
-                <Target className="w-4 h-4" />
+                <Megaphone className="w-4 h-4" />
                     </motion.button>
             </div>
                   <div className="flex-1" />
