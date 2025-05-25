@@ -35,8 +35,6 @@ function triggerAgenticNotification(prd: PRD) {
 export default function MyWorkPage() {
   const prds = usePRDStore((state) => state.prds)
   const setPRDs = usePRDStore((state) => state.setPRDs)
-  const updatePRD = usePRDStore((state) => state.updatePRD)
-  const addPRD = usePRDStore((state) => state.addPRD)
   const [filteredPrds, setFilteredPrds] = useState<PRD[]>([])
   const [loading, setLoading] = useState(true)
   const [, setTasks] = useState<Task[]>([])
@@ -266,7 +264,7 @@ export default function MyWorkPage() {
       window.removeEventListener('savedPRDUpdated', handleCustomEvent)
       window.removeEventListener('savedBrandMessagingUpdated', handleCustomEvent)
     }
-  }, [loadPrds, fetchMyWorkData])
+  }, [loadPrds, fetchMyWorkData, applyFilters])
 
   if (loading) {
     return (

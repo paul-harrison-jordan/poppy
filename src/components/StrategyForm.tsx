@@ -59,7 +59,7 @@ export default function StrategyForm() {
       setShowDocLink(showDocLink)
       setDocLink(docLink)
     }
-  }, [])
+  }, [title, query, showQuery, questions, showQuestions, submitted, showDocLink, docLink])
 
   // Save state to localStorage
   useEffect(() => {
