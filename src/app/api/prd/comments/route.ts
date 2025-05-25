@@ -22,6 +22,7 @@ export async function GET(request: Request) {
     })
 
     const drive = google.drive({ version: 'v3', auth: oauth2Client })
+    const docs = google.docs({ version: 'v1', auth: oauth2Client })
 
     // Fetch both comments and file metadata in parallel
     const [commentsResponse, fileResponse] = await Promise.all([
@@ -80,9 +81,22 @@ export async function GET(request: Request) {
       return [mainComment, ...replies]
     }) || []
 
-    return NextResponse.json({ 
+    let documentTitle = null;
+    try {
+      const document = await docs.documents.get({
+        documentId: documentId,
+        fields: 'title'
+      });
+      documentTitle = document.data.title || null;
+    } catch (error) {
+      console.error('Error fetching document title:', error);
+      // Continue without the title - we'll use the existing one
+    }
+
+    return NextResponse.json({
       comments: formattedComments,
-      last_modified: fileResponse.data.modifiedTime
+      last_modified: fileResponse.data.modifiedTime,
+      title: documentTitle
     })
   } catch (error) {
     console.error('Error fetching document data:', error)

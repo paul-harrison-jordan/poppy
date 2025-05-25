@@ -2,45 +2,80 @@
 
 import { useEffect, useState, useCallback } from 'react'
 
-import { Prd, Comment, Task, Reviewer } from '@/types/my-work'
+import { Comment, Task, Reviewer } from '@/types/my-work'
+import { determineCategory, analyzeSummary } from '@/lib/prdCategorization'
 
 import PrdCard from './PrdCard'
 import FilterBar, { FilterState } from './FilterBar'
+import { usePRDStore, PRD } from '@/store/prdStore'
 
 interface SavedPRD {
-  id: string
-  title: string
-  url: string
-  createdAt: string
+  id: string;
+  title: string;
+  url: string;
+  createdAt: string;
+}
+
+// Helper to trigger agentic notification
+function triggerAgenticNotification(prd: PRD) {
+  const summary = prd.metadata?.open_questions_summary || '';
+  const summaryAnalysis = analyzeSummary(summary);
+  const openQuestions = summaryAnalysis.hasQuestions && summary
+    ? summary.split(/[\n\r]+/).filter((line: string) => line.includes('?'))
+    : [];
+  window.dispatchEvent(new CustomEvent('poppy-agentic-message', {
+    detail: {
+      prdTitle: prd.title,
+      openQuestions,
+      prdId: prd.id
+    }
+  }));
 }
 
 export default function MyWorkPage() {
-  const [prds, setPrds] = useState<Prd[]>([])
-  const [filteredPrds, setFilteredPrds] = useState<Prd[]>([])
+  const prds = usePRDStore((state) => state.prds)
+  const setPRDs = usePRDStore((state) => state.setPRDs)
+  const updatePRD = usePRDStore((state) => state.updatePRD)
+  const addPRD = usePRDStore((state) => state.addPRD)
+  const [filteredPrds, setFilteredPrds] = useState<PRD[]>([])
   const [loading, setLoading] = useState(true)
   const [, setTasks] = useState<Task[]>([])
   const [, setReviewers] = useState<Reviewer[]>([])
+  const [activeCategory, setActiveCategory] = useState<string>('all')
   const [, setFilters] = useState<FilterState>({
     minComments: 0,
     minCommentors: 0,
     maxDaysSinceEdit: 0
   })
+  const [prevPrdCategories, setPrevPrdCategories] = useState<Record<string, string>>({});
 
   const fetchComments = async (documentId: string) => {
     try {
+      // Validate documentId format
+      if (!documentId || documentId === '1' || !/^[A-Za-z0-9_-]{10,}$/.test(documentId)) {
+        console.warn(`Invalid document ID format: ${documentId}`);
+        return {
+          comments: [],
+          last_modified: null,
+          title: null
+        };
+      }
+
       const response = await fetch(`/api/prd/comments?documentId=${documentId}`)
       if (!response.ok) throw new Error('Failed to fetch comments')
       const data = await response.json()
 
       return {
         comments: data.comments,
-        last_modified: data.last_modified
+        last_modified: data.last_modified,
+        title: data.title
       }
     } catch (error) {
       console.error(`Error fetching data for ${documentId}:`, error)
       return {
         comments: [],
-        last_modified: null
+        last_modified: null,
+        title: null
       }
     }
   }
@@ -88,11 +123,23 @@ export default function MyWorkPage() {
         // Fetch comments for each PRD
         const prdsWithComments = await Promise.all(
           savedPrds.map(async (prd) => {
-            const { comments, last_modified } = await fetchComments(prd.id)
+            const { comments, last_modified, title } = await fetchComments(prd.id)
             const summary = await fetchSummary(prd.id, comments, last_modified)
+            
+            // Check if we need to update the title
+            const needsTitleUpdate = title && title !== prd.title
+            
+            // If title needs update, update it in localStorage
+            if (needsTitleUpdate) {
+              const updatedPrds = savedPrds.map(p => 
+                p.id === prd.id ? { ...p, title } : p
+              )
+              localStorage.setItem('savedPRD', JSON.stringify(updatedPrds))
+            }
+
             return {
               id: prd.id,
-              title: prd.title,
+              title: needsTitleUpdate ? title : prd.title,
               status: 'Draft' as const,
               created_at: prd.createdAt,
               last_edited_at: last_modified,
@@ -104,23 +151,23 @@ export default function MyWorkPage() {
                 edit_history: [],
                 open_questions_summary: summary
               }
-            }
+            } as PRD
           })
         )
 
-        setPrds(prdsWithComments)
+        setPRDs(prdsWithComments)
         setFilteredPrds(prdsWithComments)
       } catch (error) {
         console.error('Error parsing saved PRDs:', error)
-        setPrds([])
+        setPRDs([])
         setFilteredPrds([])
       }
     } else {
-      setPrds([])
+      setPRDs([])
       setFilteredPrds([])
     }
     setLoading(false)
-  }, [])
+  }, [setPRDs])
 
   const fetchMyWorkData = useCallback(async () => {
     try {
@@ -138,6 +185,13 @@ export default function MyWorkPage() {
   const applyFilters = (newFilters: FilterState) => {
     setFilters(newFilters)
     const filtered = prds.filter(prd => {
+      const category = determineCategory(prd)
+      
+      // If a specific category is selected, only show PRDs in that category
+      if (activeCategory !== 'all' && category !== activeCategory) {
+        return false
+      }
+
       const commentCount = prd.metadata?.comments?.length || 0
       const uniqueCommentors = new Set(prd.metadata?.comments?.map(c => c.user_id)).size
       const daysSinceEdit = prd.last_edited_at 
@@ -152,6 +206,40 @@ export default function MyWorkPage() {
     })
     setFilteredPrds(filtered)
   }
+
+  // Add effect to reapply filters when category changes
+  useEffect(() => {
+    applyFilters({
+      minComments: 0,
+      minCommentors: 0,
+      maxDaysSinceEdit: 0
+    })
+  }, [activeCategory])
+
+  // On load, trigger notifications for all at risk PRDs
+  useEffect(() => {
+    prds.forEach(prd => {
+      const category = determineCategory(prd);
+      if (category === 'at-risk') {
+        triggerAgenticNotification(prd);
+      }
+    });
+    // Store initial categories
+    setPrevPrdCategories(Object.fromEntries(prds.map(prd => [prd.id, determineCategory(prd)])));
+  }, [prds]);
+
+  // On PRD update, trigger notification for new at risk PRDs
+  useEffect(() => {
+    prds.forEach(prd => {
+      const prev = prevPrdCategories[prd.id];
+      const curr = determineCategory(prd);
+      if (prev && prev !== 'at-risk' && curr === 'at-risk') {
+        triggerAgenticNotification(prd);
+      }
+    });
+    // Update previous categories
+    setPrevPrdCategories(Object.fromEntries(prds.map(prd => [prd.id, determineCategory(prd)])));
+  }, [prds, prevPrdCategories]);
 
   useEffect(() => {
     loadPrds()
@@ -171,10 +259,12 @@ export default function MyWorkPage() {
 
     window.addEventListener('storage', handleStorageChange)
     window.addEventListener('savedPRDUpdated', handleCustomEvent)
+    window.addEventListener('savedBrandMessagingUpdated', handleCustomEvent)
 
     return () => {
       window.removeEventListener('storage', handleStorageChange)
       window.removeEventListener('savedPRDUpdated', handleCustomEvent)
+      window.removeEventListener('savedBrandMessagingUpdated', handleCustomEvent)
     }
   }, [loadPrds, fetchMyWorkData])
 
@@ -187,25 +277,56 @@ export default function MyWorkPage() {
   }
 
   return (
-    <div>
-      <FilterBar onFilterChange={applyFilters} />
-      <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredPrds.map(prd => (
-          <PrdCard
-            key={prd.id}
-            prd={prd}
+    <div className="min-h-screen bg-gray-50/50">
+      {/* Page Header */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-semibold text-gray-900">My Work</h1>
+          </div>
+        </div>
+      </div>
 
-            loadSummary={() =>
-              fetchSummary(prd.id, prd.metadata?.comments || [], prd.last_edited_at)
-            }
-
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <FilterBar 
+            onFilterChange={applyFilters} 
+            activeCategory={activeCategory}
+            onCategoryChange={setActiveCategory}
+            prds={prds}
           />
-        ))}
-        {filteredPrds.length === 0 && (
-          <p className="text-center col-span-full text-muted-foreground">
-            {prds.length === 0 ? 'No PRDs yet' : 'No PRDs match the current filters'}
-          </p>
-        )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredPrds.map(prd => (
+            <PrdCard
+              key={prd.id}
+              prd={prd}
+              category={determineCategory(prd)}
+              loadSummary={() =>
+                fetchSummary(prd.id, prd.metadata?.comments || [], prd.last_edited_at)
+              }
+            />
+          ))}
+          {filteredPrds.length === 0 && (
+            <div className="col-span-full flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+              <div className="w-24 h-24 mb-4 text-gray-400">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-1">
+                {prds.length === 0 ? 'No PRDs yet' : 'No PRDs match the current filters'}
+              </h3>
+              <p className="text-sm text-gray-500 text-center max-w-sm">
+                {prds.length === 0 
+                  ? 'Create your first PRD to get started'
+                  : 'Try adjusting your filters to see more results'}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

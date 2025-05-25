@@ -14,10 +14,12 @@ import PrdModal from './PrdModal'
 
 export default function PrdCard({
   prd,
-  loadSummary
+  loadSummary,
+  category
 }: {
   prd: Prd
   loadSummary: () => Promise<string | undefined>
+  category: string
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
@@ -223,15 +225,58 @@ export default function PrdCard({
   const commentStats = getCommentStats()
   const spiciestThread = getSpiciestThread()
 
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'active':
+        return 'bg-green-50 text-green-700 border-green-200'
+      case 'at-risk':
+        return 'bg-amber-50 text-amber-700 border-amber-200'
+      case 'blocked':
+        return 'bg-red-50 text-red-700 border-red-200'
+      case 'needs-review':
+        return 'bg-purple-50 text-purple-700 border-purple-200'
+      case 'ready-for-review':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      case 'in-progress':
+        return 'bg-blue-50 text-blue-700 border-blue-200'
+      case 'inactive':
+        return 'bg-gray-50 text-gray-700 border-gray-200'
+      default:
+        return 'bg-gray-50 text-gray-700 border-gray-200'
+    }
+  }
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'at-risk':
+        return 'At Risk'
+      case 'blocked':
+        return 'Blocked'
+      case 'needs-review':
+        return 'Needs Review'
+      case 'ready-for-review':
+        return 'Ready for Review'
+      case 'in-progress':
+        return 'In Progress'
+      case 'active':
+        return 'Active'
+      case 'inactive':
+        return 'Inactive'
+      default:
+        return category.charAt(0).toUpperCase() + category.slice(1)
+    }
+  }
+
   return (
     <>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
+        className="group"
       >
         <Card
-          className="bg-white hover:shadow-lg transition-shadow duration-200"
+          className="bg-white border border-gray-200 hover:border-poppy-100 hover:shadow-lg hover:shadow-poppy-50/50 transition-all duration-200"
           onClick={() => {
             const next = !isExpanded
             setIsExpanded(next)
@@ -241,9 +286,14 @@ export default function PrdCard({
           <CardHeader className="pb-2">
             <div className="flex justify-between items-start gap-4">
               <div className="flex-1 min-w-0">
-                <CardTitle className="text-lg font-semibold text-gray-900 truncate">
-                  {prd.title}
-                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-lg font-semibold text-gray-900 truncate">
+                    {prd.title}
+                  </CardTitle>
+                  <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getCategoryColor(category)}`}>
+                    {getCategoryLabel(category)}
+                  </span>
+                </div>
                 <div className="flex items-center gap-2 mt-1">
                   <DeadlineBadge dueDate={prd.due_date} />
                   <span className="text-sm text-gray-500">
@@ -263,7 +313,7 @@ export default function PrdCard({
                   await ensureSummary()
                   setIsModalOpen(true)
                 }}
-                className="h-8 w-8"
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <Expand className="h-4 w-4" />
               </Button>
@@ -271,13 +321,23 @@ export default function PrdCard({
           </CardHeader>
 
           <CardContent className="space-y-4">
+            {/* Progress Bar */}
+            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-poppy-600 transition-all duration-300 ease-out"
+                style={{ 
+                  width: `${Math.min(100, ((commentStats.total - commentStats.unresolved) / commentStats.total) * 100)}%` 
+                }}
+              />
+            </div>
+
             {/* Status Bar */}
-            <div className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+            <div className="flex items-center justify-between p-2 bg-gray-50/50 rounded-md">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-poppy" />
+                  <MessageSquare className="w-4 h-4 text-poppy-600" />
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium">
+                    <span className="text-sm font-medium text-gray-900">
                       {commentStats.openThreads} open threads
                     </span>
                     <span className="text-xs text-gray-500">
@@ -286,8 +346,8 @@ export default function PrdCard({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-poppy" />
-                  <span className="text-sm font-medium">
+                  <Users className="w-4 h-4 text-poppy-600" />
+                  <span className="text-sm font-medium text-gray-900">
                     {commentStats.uniqueCommenters} commenters
                   </span>
                 </div>
@@ -297,7 +357,7 @@ export default function PrdCard({
 
             {/* Spiciest Thread Preview */}
             {spiciestThread && (
-              <div className="p-2 bg-gray-50 rounded-md border border-gray-100">
+              <div className="p-2 bg-gray-50/50 rounded-md border border-gray-100">
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -319,7 +379,7 @@ export default function PrdCard({
                         {!spiciestThread.mainComment.resolved && (
                           <>
                             <span>•</span>
-                            <span className="text-poppy">Unresolved</span>
+                            <span className="text-poppy-600">Unresolved</span>
                           </>
                         )}
                       </div>
@@ -350,13 +410,13 @@ export default function PrdCard({
                     </div>
                   ) : availableSlots.length > 0 ? (
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-700">Schedule a meeting:</p>
+                      <p className="text-sm font-medium text-gray-900">Schedule a meeting:</p>
                       {availableSlots.map((slot) => (
                         <Button
                           key={slot.start}
                           size="sm"
                           variant="outline"
-                          className="w-full justify-start"
+                          className="w-full justify-start border-poppy-100 hover:border-poppy-200 hover:bg-poppy-50/50"
                           disabled={schedulingStatus === 'creating-event'}
                           onClick={(e) => {
                             e.stopPropagation()
@@ -375,7 +435,7 @@ export default function PrdCard({
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="w-full"
+                        className="w-full text-gray-500 hover:text-gray-700"
                         onClick={(e) => {
                           e.stopPropagation()
                           setAvailableSlots([])
@@ -388,7 +448,7 @@ export default function PrdCard({
                     <div className="flex items-center gap-2">
                       {schedulingStatus === 'finding-times' ? (
                         <>
-                          <svg className="animate-spin h-4 w-4 text-poppy" viewBox="0 0 24 24">
+                          <svg className="animate-spin h-4 w-4 text-poppy-600" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                           </svg>
@@ -398,7 +458,7 @@ export default function PrdCard({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="text-poppy hover:text-poppy/90"
+                          className="text-poppy-600 hover:text-poppy-700"
                           onClick={(e) => {
                             e.stopPropagation()
                             findAvailableTimes()
@@ -420,7 +480,7 @@ export default function PrdCard({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 border-poppy-100 hover:border-poppy-200 hover:bg-poppy-50/50"
                   onClick={(e) => {
                     e.stopPropagation()
                     window.open(prd.url, '_blank')
@@ -432,7 +492,7 @@ export default function PrdCard({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 border-poppy-100 hover:border-poppy-200 hover:bg-poppy-50/50"
                   onClick={(e) => {
                     e.stopPropagation()
                     setIsModalOpen(true)
@@ -448,7 +508,7 @@ export default function PrdCard({
             {isExpanded && summary && (
               <div className="pt-2 border-t border-gray-100">
                 <div className="flex items-start gap-2 text-sm text-gray-600">
-                  <Lightbulb className="w-4 h-4 text-poppy mt-0.5 flex-shrink-0" />
+                  <Lightbulb className="w-4 h-4 text-poppy-600 mt-0.5 flex-shrink-0" />
                   <div className="space-y-1">
                     <p className="font-medium text-gray-900">Open Questions</p>
                     <p className="line-clamp-3">{summary}</p>

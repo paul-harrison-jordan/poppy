@@ -5,6 +5,9 @@ import Link from "next/link";
 import { Settings, RefreshCw, CheckCircle } from "lucide-react";
 import Sidebar from './Sidebar'
 import { cn } from "@/lib/utils";
+import { determineCategory, analyzeSummary } from '@/lib/prdCategorization'
+import { usePRDStore } from '@/store/prdStore';
+import { useAgenticPRDNotifications } from '@/hooks/useAgenticPRDNotifications';
 
 interface PersonalContext {
   teamStrategy: string;
@@ -53,6 +56,22 @@ const stepsConfig: StepConfig[] = [
   }
 ];
 
+// Helper to trigger agentic notification
+function triggerAgenticNotification(prd: any) {
+  const summary = prd.metadata?.open_questions_summary || '';
+  const summaryAnalysis = analyzeSummary(summary);
+  const openQuestions = summaryAnalysis.hasQuestions && summary
+    ? summary.split(/[\n\r]+/).filter((line: string) => line.includes('?'))
+    : [];
+  window.dispatchEvent(new CustomEvent('poppy-agentic-message', {
+    detail: {
+      prdTitle: prd.title,
+      openQuestions,
+      prdId: prd.id
+    }
+  }));
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
   // Fallback for SSR/Next.js: usePathname hook
@@ -64,6 +83,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     { complete: false },
     { complete: false }
   ]);
+
+  // Track notified PRDs to avoid duplicate notifications
+  const [notifiedPrdIds, setNotifiedPrdIds] = useState<Set<string>>(new Set());
+
+  const setPRDs = usePRDStore((state) => state.setPRDs);
+  useAgenticPRDNotifications();
+
+  useEffect(() => {
+    // On pageload, load PRDs from localStorage into Zustand store
+    const saved = localStorage.getItem('savedPRD');
+    if (saved) {
+      setPRDs(JSON.parse(saved));
+    }
+    // Optionally, subscribe to API or localStorage for updates
+  }, [setPRDs]);
 
   useEffect(() => {
     // On pageload, check if prds exists and update syncedDocs accordingly
@@ -81,6 +115,34 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       { complete: stepsConfig[1].checkComplete(syncedDocs) }
     ]);
   }, []);
+
+  // On mount, check all PRDs for at risk and trigger notifications
+  useEffect(() => {
+    const prds = require('@/store/prdStore').usePRDStore.getState().prds;
+    prds.forEach((prd: any) => {
+      // Fetch full metadata if available (simulate for now)
+      // In a real app, you might fetch comments/summary here
+      if (prd.metadata && determineCategory(prd) === 'at-risk' && !notifiedPrdIds.has(prd.id)) {
+        triggerAgenticNotification(prd);
+        setNotifiedPrdIds(prev => new Set(prev).add(prd.id));
+      }
+    });
+  }, []);
+
+  // Listen for localStorage changes to catch new/updated PRDs
+  useEffect(() => {
+    function handleStorageChange() {
+      const prds = require('@/store/prdStore').usePRDStore.getState().prds;
+      prds.forEach((prd: any) => {
+        if (prd.metadata && determineCategory(prd) === 'at-risk' && !notifiedPrdIds.has(prd.id)) {
+          triggerAgenticNotification(prd);
+          setNotifiedPrdIds(prev => new Set(prev).add(prd.id));
+        }
+      });
+    }
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [notifiedPrdIds]);
 
   const completedCount = steps.filter((s) => s.complete).length;
   const totalCount = steps.length;

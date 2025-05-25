@@ -29,15 +29,19 @@ export async function generateDocument(
     })
     const markdown = await collectStream(contentRes)
 
+    // Extract title from markdown content
+    const titleMatch = markdown.match(/^# (.+)$/m)
+    const finalTitle = titleMatch ? titleMatch[1] : title
+
     // Create Google Doc
     const docRes = await fetch('/api/create-google-doc', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, content: markdown })
+      body: JSON.stringify({ title: finalTitle, content: markdown })
     })
     if (!docRes.ok) throw new Error('Failed to create Google Doc')
     const docData = await docRes.json()
-    return docData
+    return { ...docData, title: finalTitle }
   }
 
   // Initial setup path
