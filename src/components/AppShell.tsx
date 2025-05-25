@@ -6,7 +6,7 @@ import { Settings, RefreshCw, CheckCircle } from "lucide-react";
 import Sidebar from './Sidebar'
 import { cn } from "@/lib/utils";
 import { determineCategory, analyzeSummary } from '@/lib/prdCategorization'
-import { usePRDStore } from '@/store/prdStore';
+import { usePRDStore, PRD } from '@/store/prdStore';
 import { useAgenticPRDNotifications } from '@/hooks/useAgenticPRDNotifications';
 
 interface PersonalContext {
@@ -57,7 +57,7 @@ const stepsConfig: StepConfig[] = [
 ];
 
 // Helper to trigger agentic notification
-function triggerAgenticNotification(prd: any) {
+function triggerAgenticNotification(prd: PRD) {
   const summary = prd.metadata?.open_questions_summary || '';
   const summaryAnalysis = analyzeSummary(summary);
   const openQuestions = summaryAnalysis.hasQuestions && summary
@@ -118,8 +118,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   // On mount, check all PRDs for at risk and trigger notifications
   useEffect(() => {
-    const prds = require('@/store/prdStore').usePRDStore.getState().prds;
-    prds.forEach((prd: any) => {
+    const prds = usePRDStore.getState().prds;
+    prds.forEach((prd: PRD) => {
       // Fetch full metadata if available (simulate for now)
       // In a real app, you might fetch comments/summary here
       if (prd.metadata && determineCategory(prd) === 'at-risk' && !notifiedPrdIds.has(prd.id)) {
@@ -127,13 +127,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         setNotifiedPrdIds(prev => new Set(prev).add(prd.id));
       }
     });
-  }, []);
+  }, [notifiedPrdIds]);
 
   // Listen for localStorage changes to catch new/updated PRDs
   useEffect(() => {
     function handleStorageChange() {
-      const prds = require('@/store/prdStore').usePRDStore.getState().prds;
-      prds.forEach((prd: any) => {
+      const prds = usePRDStore.getState().prds;
+      prds.forEach((prd: PRD) => {
         if (prd.metadata && determineCategory(prd) === 'at-risk' && !notifiedPrdIds.has(prd.id)) {
           triggerAgenticNotification(prd);
           setNotifiedPrdIds(prev => new Set(prev).add(prd.id));

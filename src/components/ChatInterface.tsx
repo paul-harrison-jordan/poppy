@@ -12,9 +12,6 @@ declare global {
     usePRDStore: typeof import('@/store/prdStore').usePRDStore;
   }
 }
-if (typeof window !== 'undefined') {
-  window.usePRDStore = require('@/store/prdStore').usePRDStore;
-}
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -67,7 +64,6 @@ export default function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [schedulingMessageId, setSchedulingMessageId] = useState<number | null>(null);
   const [pendingSummary, setPendingSummary] = useState<string | null>(null);
-  const [hasAgenticNotification, setHasAgenticNotification] = useState(false);
   const agenticMessages = usePRDStore((state) => state.agenticMessages);
   const clearAgenticMessages = usePRDStore((state) => state.clearAgenticMessages);
   const [notifiedPrdIds, setNotifiedPrdIds] = useState<Set<string>>(new Set());
@@ -150,30 +146,15 @@ export default function ChatInterface() {
     }
   }, [mode, pendingSummary]);
 
-  // Example: Simulate a PRD going at risk (replace with real detection logic)
-  useEffect(() => {
-    // This would be triggered by MyWorkPage or a global event
-    const atRiskPRD = {
-      prdTitle: 'Example At Risk PRD',
-      openQuestions: ['What is the timeline?', 'Who is the owner?'],
-    };
-    // Simulate detection
-    // setTimeout(() => {
-    //   setAgenticMessages([atRiskPRD]);
-    //   setHasAgenticNotification(true);
-    // }, 2000);
-  }, []);
-
   // Listen for poppy-agentic-message events
   useEffect(() => {
-    function handleAgenticMessage(event: any) {
+    function handleAgenticMessage(event: CustomEvent<{ prdId: string }>) {
       const { prdId } = event.detail || {};
       if (!prdId || notifiedPrdIds.has(prdId)) return;
-      setHasAgenticNotification(true);
       setNotifiedPrdIds(prev => new Set(prev).add(prdId));
     }
-    window.addEventListener('poppy-agentic-message', handleAgenticMessage);
-    return () => window.removeEventListener('poppy-agentic-message', handleAgenticMessage);
+    window.addEventListener('poppy-agentic-message', handleAgenticMessage as EventListener);
+    return () => window.removeEventListener('poppy-agentic-message', handleAgenticMessage as EventListener);
   }, [notifiedPrdIds]);
 
   // Bounce the agentic button a few times when agentic messages appear
@@ -439,71 +420,6 @@ export default function ChatInterface() {
         role: 'assistant',
         content: "Sorry, I encountered an error while generating questions. Please try again."
       }]);
-    }
-  };
-
-  const handleSummarizeAndSave = async () => {
-    if (!messages.length) return;
-    try {
-      setLoading(true);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: "I&apos;m summarizing our conversation and preparing to start the PRD..." 
-      }]);
-
-      const storedContext = localStorage.getItem("personalContext");
-      const teamTerms = JSON.parse(localStorage.getItem("teamTerms") || "{}");
-      const chatMessages = [
-        ...messages.map((m) => ({ role: m.role, content: m.content })),
-      ];
-      const res = await fetch('/api/brainstorm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: chatMessages,
-          additionalContext: Array.isArray(matchedContext) ? matchedContext.join("\n") : "",
-          teamTerms,
-          storedContext,
-          startPrd: true
-        }),
-      });
-
-      // First get the text response
-      const text = await res.text();
-      console.log('Raw response:', text);
-
-      // Parse the JSON
-      let prd;
-      try {
-        prd = JSON.parse(text);
-        console.log('Parsed PRD:', prd);
-      } catch (e) {
-        console.error('Failed to parse PRD:', e);
-        alert('Failed to parse PRD summary. Please try again.');
-        return;
-      }
-
-      // Remove the loading message
-      setMessages(prev => prev.filter(msg => msg.content !== "I&apos;m summarizing our conversation and preparing to start the PRD..."));
-
-      // Store the summary before switching modes
-      setPendingSummary(prd.summary);
-
-      // Switch to PRD mode and set up initial state
-      setMode('draft');
-      setDraftStep('initial');
-      
-      // Clear existing messages and add the summary
-      setMessages([{
-        role: 'assistant',
-        content: "I&apos;ll help you draft a PRD. Please share your product idea or concept, and I&apos;ll guide you through the process."
-      }]);
-
-    } catch (error) {
-      console.error(error);
-      alert('Failed to generate PRD summary.');
-    } finally {
-      setLoading(false);
     }
   };
 

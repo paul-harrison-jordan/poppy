@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Search, X } from 'lucide-react'
-import { motion } from 'framer-motion'
 import { Prd } from '@/types/my-work'
 import { determineCategory } from '@/lib/prdCategorization'
 
