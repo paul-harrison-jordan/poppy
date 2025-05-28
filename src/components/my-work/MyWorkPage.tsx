@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 
 import { Comment, Task, Reviewer } from '@/types/my-work'
 import { determineCategory, analyzeSummary } from '@/lib/prdCategorization'
@@ -45,7 +45,7 @@ export default function MyWorkPage() {
     minCommentors: 0,
     maxDaysSinceEdit: 0
   })
-  const [prevPrdCategories, setPrevPrdCategories] = useState<Record<string, string>>({});
+  const prevCategoriesRef = useRef<Record<string, string>>({});
 
   const fetchComments = async (documentId: string) => {
     try {
@@ -60,7 +60,30 @@ export default function MyWorkPage() {
       }
 
       const response = await fetch(`/api/prd/comments?documentId=${documentId}`)
-      if (!response.ok) throw new Error('Failed to fetch comments')
+      if (!response.ok) {
+        // Handle specific error cases
+        if (response.status === 404) {
+          console.warn(`Document not found: ${documentId}`);
+          // Remove the document from localStorage if it no longer exists
+          const stored = localStorage.getItem('savedPRD');
+          if (stored) {
+            try {
+              const savedPrds: SavedPRD[] = JSON.parse(stored);
+              const updatedPrds = savedPrds.filter(p => p.id !== documentId);
+              localStorage.setItem('savedPRD', JSON.stringify(updatedPrds));
+            } catch (e) {
+              console.error('Error updating localStorage:', e);
+            }
+          }
+        } else {
+          console.error(`Failed to fetch comments for ${documentId}:`, response.statusText);
+        }
+        return {
+          comments: [],
+          last_modified: null,
+          title: null
+        };
+      }
       const data = await response.json()
 
       return {
@@ -105,9 +128,31 @@ export default function MyWorkPage() {
         const data = await response.json()
         localStorage.setItem(cacheKey, data.summary)
         return data.summary as string
+      } else if (response.status === 500) {
+        // Handle Pinecone connection errors
+        console.warn('Pinecone connection error - using cached summary if available');
+        // Try to get the most recent cached summary for this PRD
+        const allKeys = Object.keys(localStorage);
+        const summaryKeys = allKeys.filter(key => key.startsWith(`summary:${prdId}:`));
+        if (summaryKeys.length > 0) {
+          // Sort by timestamp (newest first) and return the most recent
+          const latestKey = summaryKeys.sort().pop();
+          if (latestKey) {
+            return localStorage.getItem(latestKey) || undefined;
+          }
+        }
       }
     } catch (err) {
       console.error('Error fetching summary:', err)
+      // Try to get cached summary on error
+      const allKeys = Object.keys(localStorage);
+      const summaryKeys = allKeys.filter(key => key.startsWith(`summary:${prdId}:`));
+      if (summaryKeys.length > 0) {
+        const latestKey = summaryKeys.sort().pop();
+        if (latestKey) {
+          return localStorage.getItem(latestKey) || undefined;
+        }
+      }
     }
     return undefined
   }
@@ -121,35 +166,55 @@ export default function MyWorkPage() {
         // Fetch comments for each PRD
         const prdsWithComments = await Promise.all(
           savedPrds.map(async (prd) => {
-            const { comments, last_modified, title } = await fetchComments(prd.id)
-            const summary = await fetchSummary(prd.id, comments, last_modified)
-            
-            // Check if we need to update the title
-            const needsTitleUpdate = title && title !== prd.title
-            
-            // If title needs update, update it in localStorage
-            if (needsTitleUpdate) {
-              const updatedPrds = savedPrds.map(p => 
-                p.id === prd.id ? { ...p, title } : p
-              )
-              localStorage.setItem('savedPRD', JSON.stringify(updatedPrds))
-            }
-
-            return {
-              id: prd.id,
-              title: needsTitleUpdate ? title : prd.title,
-              status: 'Draft' as const,
-              created_at: prd.createdAt,
-              last_edited_at: last_modified,
-              owner_id: 'user',
-              due_date: null,
-              url: prd.url,
-              metadata: {
-                comments,
-                edit_history: [],
-                open_questions_summary: summary
+            try {
+              const { comments, last_modified, title } = await fetchComments(prd.id)
+              const summary = await fetchSummary(prd.id, comments, last_modified)
+              
+              // Check if we need to update the title
+              const needsTitleUpdate = title && title !== prd.title
+              
+              // If title needs update, update it in localStorage
+              if (needsTitleUpdate) {
+                const updatedPrds = savedPrds.map(p => 
+                  p.id === prd.id ? { ...p, title } : p
+                )
+                localStorage.setItem('savedPRD', JSON.stringify(updatedPrds))
               }
-            } as PRD
+
+              return {
+                id: prd.id,
+                title: needsTitleUpdate ? title : prd.title,
+                status: 'Draft' as const,
+                created_at: prd.createdAt,
+                last_edited_at: last_modified,
+                owner_id: 'user',
+                due_date: null,
+                url: prd.url,
+                metadata: {
+                  comments,
+                  edit_history: [],
+                  open_questions_summary: summary
+                }
+              } as PRD
+            } catch (error) {
+              console.error(`Error processing PRD ${prd.id}:`, error);
+              // Return a basic PRD object without comments if there's an error
+              return {
+                id: prd.id,
+                title: prd.title,
+                status: 'Draft' as const,
+                created_at: prd.createdAt,
+                last_edited_at: undefined,
+                owner_id: 'user',
+                due_date: null,
+                url: prd.url,
+                metadata: {
+                  comments: [],
+                  edit_history: [],
+                  open_questions_summary: undefined
+                }
+              } as PRD
+            }
           })
         )
 
@@ -180,7 +245,7 @@ export default function MyWorkPage() {
     }
   }, [])
 
-  const applyFilters = (newFilters: FilterState) => {
+  const applyFilters = useCallback((newFilters: FilterState) => {
     setFilters(newFilters)
     const filtered = prds.filter(prd => {
       const category = determineCategory(prd)
@@ -203,7 +268,7 @@ export default function MyWorkPage() {
       )
     })
     setFilteredPrds(filtered)
-  }
+  }, [prds, activeCategory])
 
   // Add effect to reapply filters when category changes
   useEffect(() => {
@@ -212,32 +277,28 @@ export default function MyWorkPage() {
       minCommentors: 0,
       maxDaysSinceEdit: 0
     })
-  }, [activeCategory])
+  }, [activeCategory, applyFilters])
 
-  // On load, trigger notifications for all at risk PRDs
+  // On load and PRD updates, check for at-risk PRDs and trigger notifications
   useEffect(() => {
+    const newCategories = Object.fromEntries(prds.map(prd => [prd.id, determineCategory(prd)]));
+    
+    // Only process PRDs that have changed categories
     prds.forEach(prd => {
-      const category = determineCategory(prd);
-      if (category === 'at-risk') {
+      const prev = prevCategoriesRef.current[prd.id];
+      const curr = newCategories[prd.id];
+      
+      // Trigger notification if:
+      // 1. This is the first time we're seeing this PRD (no prev category)
+      // 2. The PRD just became at-risk (prev exists and wasn't at-risk, but now is)
+      if (!prev || (prev !== 'at-risk' && curr === 'at-risk')) {
         triggerAgenticNotification(prd);
       }
     });
-    // Store initial categories
-    setPrevPrdCategories(Object.fromEntries(prds.map(prd => [prd.id, determineCategory(prd)])));
-  }, [prds]);
 
-  // On PRD update, trigger notification for new at risk PRDs
-  useEffect(() => {
-    prds.forEach(prd => {
-      const prev = prevPrdCategories[prd.id];
-      const curr = determineCategory(prd);
-      if (prev && prev !== 'at-risk' && curr === 'at-risk') {
-        triggerAgenticNotification(prd);
-      }
-    });
-    // Update previous categories
-    setPrevPrdCategories(Object.fromEntries(prds.map(prd => [prd.id, determineCategory(prd)])));
-  }, [prds, prevPrdCategories]);
+    // Update the ref with new categories
+    prevCategoriesRef.current = newCategories;
+  }, [prds]); // Only depend on prds changes
 
   useEffect(() => {
     loadPrds()
@@ -264,7 +325,7 @@ export default function MyWorkPage() {
       window.removeEventListener('savedPRDUpdated', handleCustomEvent)
       window.removeEventListener('savedBrandMessagingUpdated', handleCustomEvent)
     }
-  }, [loadPrds, fetchMyWorkData, applyFilters])
+  }, [loadPrds, fetchMyWorkData])
 
   if (loading) {
     return (
