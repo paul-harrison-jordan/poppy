@@ -167,12 +167,15 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
         }));
         setDocuments(initialDocs);
 
-        const syncPromises = fetchedDocs.map(async (doc: GoogleDoc) => {
+        const syncPromises = fetchedDocs.map(async (doc: { id: string; name: string }) => {
           try {
             const response = await fetch('/api/chunk-docs', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ documentId: doc.id }),
+              body: JSON.stringify({ 
+                documentId: doc.id,
+                documentName: doc.name 
+              }),
             });
 
             if (!response.ok) {

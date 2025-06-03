@@ -4,6 +4,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { withAuth } from '@/lib/api';
 import { chunkTextByMultiParagraphs } from '@/app/chunk';
 import { Session } from 'next-auth';
+import { withErrorHandling } from '@/lib/api';
 
 interface DocumentContent {
   name: string;
@@ -11,9 +12,8 @@ interface DocumentContent {
 }
 
 export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
-  try {
-    const body = await request.json();
-    const documentId = body.documentId;
+  return withErrorHandling(async () => {
+    const { documentId, documentName } = await request.json();
 
     if (!documentId) {
       return NextResponse.json(
@@ -33,32 +33,41 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
     // Initialize the Drive API
     const drive = google.drive({ version: 'v3', auth });
 
-    // Fetch document content as HTML
-    const contentResponse = await drive.files.export({
-      fileId: documentId,
-      mimeType: 'text/html',
-    });
+    try {
+      // Get document content
+      const response = await drive.files.export({
+        fileId: documentId,
+        mimeType: 'text/plain',
+      });
 
-    // Get document name
-    const fileResponse = await drive.files.get({
-      fileId: documentId,
-      fields: 'name',
-    });
+      const content = response.data;
 
-    const documentContent: DocumentContent = {
-      name: fileResponse.data.name || 'Untitled Document',
-      content: contentResponse.data as string,
-    };
+      // Process content and return chunks
+      const chunks = chunkTextByMultiParagraphs(content as string);
+      return NextResponse.json({ chunks, documentName });
+    } catch (error: any) {
+      console.error('Error chunking document:', error);
+      
+      // Handle specific Google Drive API errors
+      if (error.code === 404) {
+        return NextResponse.json(
+          { error: 'Document not found or access denied' },
+          { status: 404 }
+        );
+      }
+      
+      if (error.code === 403) {
+        return NextResponse.json(
+          { error: 'Permission denied to access document' },
+          { status: 403 }
+        );
+      }
 
-    // Chunk the content
-    const chunks = chunkTextByMultiParagraphs(documentContent.content);
-
-    return NextResponse.json({ chunks });
-  } catch (error) {
-    console.error('Error chunking document:', error);
-    return NextResponse.json(
-      { error: 'Failed to chunk document' },
-      { status: 500 }
-    );
-  }
+      // Handle other errors
+      return NextResponse.json(
+        { error: 'Failed to process document' },
+        { status: 500 }
+      );
+    }
+  });
 }); 

@@ -54,11 +54,28 @@ export default function SyncPage() {
     try {
       setResyncingDoc(docId);
       
+      // Get document name first
+      const docResponse = await fetch('/api/fetch-docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId: docId }),
+      });
+
+      if (!docResponse.ok) {
+        throw new Error('Failed to fetch document details');
+      }
+
+      const { documents } = await docResponse.json();
+      const doc = documents[0];
+
       // Get document content and chunk it
       const chunkResponse = await fetch('/api/chunk-docs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentId: docId }),
+        body: JSON.stringify({ 
+          documentId: docId,
+          documentName: doc.name
+        }),
       });
 
       if (!chunkResponse.ok) {

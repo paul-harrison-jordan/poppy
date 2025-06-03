@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { collectStream } from "@/lib/collectStream"
 import { useRouter } from 'next/navigation';
 
@@ -12,9 +12,21 @@ export default function BrainstormChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showStartPrdButton, setShowStartPrdButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [matchedContext, setMatchedContext] = useState<string[]>([])
   const router = useRouter();
+
+  // Add useEffect to show Start PRD button after 3 messages
+  useEffect(() => {
+    const userMessages = messages.filter(msg => msg.role === 'user');
+    console.log('Message count:', {
+      total: messages.length,
+      user: userMessages.length,
+      showButton: userMessages.length >= 3
+    });
+    setShowStartPrdButton(userMessages.length >= 3);
+  }, [messages]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,9 +36,17 @@ export default function BrainstormChat() {
     try{
         // Add user message to chat immediately
         const userMessage: ChatMessage = { role: 'user', content: input };
-        setMessages(prev => [...prev, userMessage]);
+        console.log('Adding user message:', userMessage);
+        setMessages(prev => {
+          const newMessages = [...prev, userMessage];
+          console.log('Updated messages:', newMessages);
+          return newMessages;
+        });
         setInput('');
         setLoading(true);
+
+        // Add thinking message
+        setMessages(prev => [...prev, { role: 'assistant', content: "Thinking..." }]);
 
         const embedRes = await fetch("/api/embed-request", {
             method: "POST",
@@ -67,14 +87,21 @@ export default function BrainstormChat() {
           const response = await collectStream(genRes)
           console.log("PRD generation response:", response)
           
-          // Add assistant's response to chat
-          setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+          // Remove the thinking message and add assistant's response
+          setMessages(prev => {
+            const withoutThinking = prev.filter(msg => msg.content !== "Thinking...");
+            return [...withoutThinking, { role: 'assistant', content: response }];
+          });
     } catch (error) {
       console.error("Error:", error)
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: "Sorry, I encountered an error. Please try again." 
-      }]);
+      // Remove the thinking message and add error message
+      setMessages(prev => {
+        const withoutThinking = prev.filter(msg => msg.content !== "Thinking...");
+        return [...withoutThinking, { 
+          role: 'assistant', 
+          content: "Sorry, I encountered an error. Please try again." 
+        }];
+      });
     } finally {
       setLoading(false);
     }
@@ -173,14 +200,20 @@ export default function BrainstormChat() {
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
         </button>
-        <button
-          type="button"
-          className="px-5 py-3 rounded-full bg-neutral text-primary font-medium text-base hover:bg-neutral/80 transition-all duration-150 shadow-md border-0 ml-2 font-sans"
-          onClick={handleSummarizeAndSave}
-          disabled={loading || !messages.length}
-        >
-          Summarize &amp; Start as PRD
-        </button>
+        {/* Debug info */}
+        <div className="text-xs text-gray-500">
+          {`Messages: ${messages.length}, User: ${messages.filter(m => m.role === 'user').length}, Show: ${showStartPrdButton}`}
+        </div>
+        {showStartPrdButton && (
+          <button
+            type="button"
+            className="px-5 py-3 rounded-full bg-neutral text-primary font-medium text-base hover:bg-neutral/80 transition-all duration-150 shadow-md border-0 ml-2 font-sans"
+            onClick={handleSummarizeAndSave}
+            disabled={loading || !messages.length}
+          >
+            Summarize &amp; Start as PRD
+          </button>
+        )}
       </form>
     </div>
   );
