@@ -952,173 +952,173 @@ export default function ChatInterface() {
         </div>
       )}
 
-      <div className="flex flex-col h-screen w-full max-w-5xl mx-auto font-sans" style={{ background: 'none' }}>
-        {/* Fixed header */}
-        <div className="flex-none text-center bg-neutral/80 backdrop-blur-sm py-8 z-10">
-          <motion.h1 
-            initial={{ opacity: 0, y: -20 }}
+    <div className="flex flex-col h-screen w-full max-w-5xl mx-auto font-sans" style={{ background: 'none' }}>
+      {/* Fixed header */}
+      <div className="flex-none text-center bg-neutral/80 backdrop-blur-sm py-8 z-10">
+        <motion.h1 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-6xl font-semibold text-primary font-sans tracking-tight mb-3"
+        >
+          Chat with <span className="text-poppy">Poppy</span>
+        </motion.h1>
+        <AnimatePresence mode="wait">
+          <motion.p 
+            key={mode}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-6xl font-semibold text-primary font-sans tracking-tight mb-3"
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ 
+              duration: 0.3,
+              ease: "easeOut"
+            }}
+            className="text-xl text-primary/80 font-sans max-w-2xl mx-auto"
           >
-            Chat with <span className="text-poppy">Poppy</span>
-          </motion.h1>
-          <AnimatePresence mode="wait">
-            <motion.p 
-              key={mode}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ 
-                duration: 0.3,
-                ease: "easeOut"
-              }}
-              className="text-xl text-primary/80 font-sans max-w-2xl mx-auto"
-            >
-              {mode === 'draft' ? 'Drafting a PRD' : 
-               mode === 'schedule' ? 'Search for feedback and send outreach emails' :
-               mode === 'brainstorm' ? 'Start with an idea or JTBD and let Poppy help you brainstorm' :
+            {mode === 'draft' ? 'Drafting a PRD' : 
+             mode === 'schedule' ? 'Search for feedback and send outreach emails' :
+             mode === 'brainstorm' ? 'Start with an idea or JTBD and let Poppy help you brainstorm' :
                mode === 'brand-messaging' ? 'Create a comprehensive brand messaging document' :
-               'Ask me anything about your product, strategy, or ideas.'}
-            </motion.p>
-          </AnimatePresence>
+             'Ask me anything about your product, strategy, or ideas.'}
+          </motion.p>
+        </AnimatePresence>
         </div>
 
-        {/* Scrollable message container */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-          <div className="relative z-0 flex flex-col space-y-4">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={mode}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className="flex flex-col space-y-4"
-              >
-                <AnimatePresence mode="popLayout">
-                  {messages
-                    .filter(msg => !(msg.role === 'assistant' && msg.content === 'Thinking...'))
-                    .map((msg, idx) => (
+      {/* Scrollable message container */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+        <div className="relative z-0 flex flex-col space-y-4">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={mode}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="flex flex-col space-y-4"
+            >
+              <AnimatePresence mode="popLayout">
+          {messages
+            .filter(msg => !(msg.role === 'assistant' && msg.content === 'Thinking...'))
+            .map((msg, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ 
+                        duration: 0.3,
+                        ease: "easeOut"
+                      }}
+                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-2 transition-all duration-300 group`}
+                    >
                       <motion.div
-                        key={idx}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
                         transition={{ 
                           duration: 0.3,
                           ease: "easeOut"
                         }}
-                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-2 transition-all duration-300 group`}
+                        className={
+                  msg.role === 'user'
+                            ? 'px-6 py-4 rounded-2xl max-w-[75%] font-semibold text-white bg-poppy shadow-lg hover:shadow-xl transition-shadow duration-200'
+                            : `px-6 py-4 rounded-2xl max-w-[75%] font-sans text-primary bg-white/90 shadow-md hover:shadow-lg transition-shadow duration-200 whitespace-pre-line relative ${msg.className || ''}`
+                        }
                       >
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ 
-                            duration: 0.3,
-                            ease: "easeOut"
-                          }}
-                          className={
-                            msg.role === 'user'
-                              ? 'px-6 py-4 rounded-2xl max-w-[75%] font-semibold text-white bg-poppy shadow-lg hover:shadow-xl transition-shadow duration-200'
-                              : `px-6 py-4 rounded-2xl max-w-[75%] font-sans text-primary bg-white/90 shadow-md hover:shadow-lg transition-shadow duration-200 whitespace-pre-line relative ${msg.className || ''}`
-                          }
-                        >
-                          {msg.content}
-                          {msg.role === 'assistant' && mode === 'schedule' && typeof msg.content === 'string' && msg.content.includes('Feedback:') && (
-                            <motion.div
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ 
-                                duration: 0.3,
-                                delay: 0.2,
-                                ease: "easeOut"
-                              }}
-                            >
-                              {msg.content.includes('hasRecentOutreach: true') ? (
-                                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                                  ⚠️ Someone has reached out to them in the last 28 days
-                                </div>
-                              ) : (
-                                <button
-                                  className={`absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-200 px-4 py-2 rounded-full text-white hover:opacity-90 text-sm font-medium flex items-center gap-2 ${
-                                    schedulingMessageId === idx ? 'opacity-100' : ''
-                                  } bg-poppy shadow-md hover:shadow-lg`}
-                                  onClick={async () => {
-                                    try {
-                                      setSchedulingMessageId(idx);
-                                      const content = msg.content as string;
-                                      // Extract row number from the message content
-                                      const rowMatch = content.match(/Row: (\d+)/);
-                                      if (!rowMatch) {
-                                        console.error("Could not find row number in message");
-                                        return;
-                                      }
-                                      const rowNumber = parseInt(rowMatch[1]);
+                  {msg.content}
+                  {msg.role === 'assistant' && mode === 'schedule' && typeof msg.content === 'string' && msg.content.includes('Feedback:') && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ 
+                              duration: 0.3,
+                              delay: 0.2,
+                              ease: "easeOut"
+                            }}
+                          >
+                      {msg.content.includes('hasRecentOutreach: true') ? (
+                              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                          ⚠️ Someone has reached out to them in the last 28 days
+                        </div>
+                      ) : (
+                        <button
+                                className={`absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-200 px-4 py-2 rounded-full text-white hover:opacity-90 text-sm font-medium flex items-center gap-2 ${
+                            schedulingMessageId === idx ? 'opacity-100' : ''
+                                } bg-poppy shadow-md hover:shadow-lg`}
+                          onClick={async () => {
+                            try {
+                              setSchedulingMessageId(idx);
+                              const content = msg.content as string;
+                              // Extract row number from the message content
+                              const rowMatch = content.match(/Row: (\d+)/);
+                              if (!rowMatch) {
+                                console.error("Could not find row number in message");
+                                return;
+                              }
+                              const rowNumber = parseInt(rowMatch[1]);
 
-                                      // Extract Klaviyo Account ID from the message content
-                                      const klaviyoMatch = content.match(/Klaviyo Account ID: ([^\n]+)/);
-                                      if (!klaviyoMatch) {
-                                        console.error("Could not find Klaviyo Account ID in message");
-                                        return;
-                                      }
-                                      const klaviyoAccountId = klaviyoMatch[1];
+                              // Extract Klaviyo Account ID from the message content
+                              const klaviyoMatch = content.match(/Klaviyo Account ID: ([^\n]+)/);
+                              if (!klaviyoMatch) {
+                                console.error("Could not find Klaviyo Account ID in message");
+                                return;
+                              }
+                              const klaviyoAccountId = klaviyoMatch[1];
 
-                                      // Extract feedback data from the message
-                                      const feedbackData = {
-                                        NPS_VERBATIM: content.match(/Feedback: ([^\n]+)/)?.[1] || '',
-                                        NPS_SCORE_RAW: content.match(/Score: ([^\n]+)/)?.[1] || '',
-                                        SURVEY_END_DATE: content.match(/Date: ([^\n]+)/)?.[1] || '',
-                                        RECIPIENT_EMAIL: content.match(/Email: ([^\n]+)/)?.[1] || '',
-                                        GMV: content.match(/GMV: ([^\n]+)/)?.[1] || ''
-                                      };
+                              // Extract feedback data from the message
+                              const feedbackData = {
+                                NPS_VERBATIM: content.match(/Feedback: ([^\n]+)/)?.[1] || '',
+                                NPS_SCORE_RAW: content.match(/Score: ([^\n]+)/)?.[1] || '',
+                                SURVEY_END_DATE: content.match(/Date: ([^\n]+)/)?.[1] || '',
+                                RECIPIENT_EMAIL: content.match(/Email: ([^\n]+)/)?.[1] || '',
+                                GMV: content.match(/GMV: ([^\n]+)/)?.[1] || ''
+                              };
 
-                                      // Get the email first
-                                      const response = await fetch('/api/get-email', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                          documentId: '1OTgVU9sTa2D8QFiDhYy-NuYAN3fQnKQQgrD1iR63jUo',
-                                          rowNumber: rowNumber,
-                                          columnIndex: 1 // Email is in column B (index 1)
-                                        })
-                                      });
+                              // Get the email first
+                              const response = await fetch('/api/get-email', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  documentId: '1OTgVU9sTa2D8QFiDhYy-NuYAN3fQnKQQgrD1iR63jUo',
+                                  rowNumber: rowNumber,
+                                  columnIndex: 1 // Email is in column B (index 1)
+                                })
+                              });
 
-                                      if (!response.ok) {
-                                        console.error("Failed to fetch email");
-                                        return;
-                                      }
-                                      const { email, hasRecentOutreach } = await response.json();
-                                      console.log('Got email:', email, 'Has recent outreach:', hasRecentOutreach);
+                              if (!response.ok) {
+                                console.error("Failed to fetch email");
+                                return;
+                              }
+                              const { email, hasRecentOutreach } = await response.json();
+                              console.log('Got email:', email, 'Has recent outreach:', hasRecentOutreach);
 
-                                      if (hasRecentOutreach) {
-                                        // Update the message content to include the outreach status
-                                        setMessages(prev => prev.map((m, i) => 
-                                          i === idx 
-                                            ? { ...m, content: m.content + '\n\nhasRecentOutreach: true' }
-                                            : m
-                                        ));
-                                        setSchedulingMessageId(null);
-                                        return;
-                                      }
+                              if (hasRecentOutreach) {
+                                // Update the message content to include the outreach status
+                                setMessages(prev => prev.map((m, i) => 
+                                  i === idx 
+                                    ? { ...m, content: m.content + '\n\nhasRecentOutreach: true' }
+                                    : m
+                                ));
+                                setSchedulingMessageId(null);
+                                return;
+                              }
 
-                                      // Update the sheet with the feedback data
-                                      const updateResponse = await fetch('/api/update-sheet', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                          documentId: '1OTgVU9sTa2D8QFiDhYy-NuYAN3fQnKQQgrD1iR63jUo',
-                                          klaviyoAccountId,
-                                          feedbackData,
-                                          email
-                                        })
-                                      });
+                              // Update the sheet with the feedback data
+                              const updateResponse = await fetch('/api/update-sheet', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  documentId: '1OTgVU9sTa2D8QFiDhYy-NuYAN3fQnKQQgrD1iR63jUo',
+                                  klaviyoAccountId,
+                                  feedbackData,
+                                  email
+                                })
+                              });
 
-                                      if (!updateResponse.ok) {
-                                        console.error("Failed to update sheet");
-                                        return;
-                                      }
+                              if (!updateResponse.ok) {
+                                console.error("Failed to update sheet");
+                                return;
+                              }
 
-                                      const emailContent = `Hi there,
+                              const emailContent = `Hi there,
 
 Thank you for taking the time to share your thoughts!
 
@@ -1133,79 +1133,79 @@ I&apos;d love to schedule some time to discuss this further. Would you be availa
 Best regards,
 Your Name`;
 
-                                      console.log('Email content:', emailContent);
-                                      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&body=${encodeURIComponent(emailContent)}`;
-                                      console.log('Opening Gmail URL:', gmailUrl);
-                                      
-                                      // Try to open the window
-                                      window.open(gmailUrl, '_blank', 'noopener,noreferrer');
-                                    } catch (error) {
-                                      console.error('Error:', error);
-                                    }
-                                    setSchedulingMessageId(null);
-                                  }}
-                                  disabled={schedulingMessageId === idx || (typeof msg.content === 'string' && msg.content.includes('hasRecentOutreach: true'))}
-                                >
-                                  {schedulingMessageId === idx ? (
-                                    <>
-                                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                      </svg>
-                                      Scheduling...
-                                    </>
-                                  ) : typeof msg.content === 'string' && msg.content.includes('hasRecentOutreach: true') ? (
-                                    'Already Contacted'
-                                  ) : (
-                                    'Schedule Time'
-                                  )}
-                                </button>
-                              )}
-                            </motion.div>
+                              console.log('Email content:', emailContent);
+                              const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&body=${encodeURIComponent(emailContent)}`;
+                              console.log('Opening Gmail URL:', gmailUrl);
+                              
+                              // Try to open the window
+                              window.open(gmailUrl, '_blank', 'noopener,noreferrer');
+                            } catch (error) {
+                              console.error('Error:', error);
+                            }
+                            setSchedulingMessageId(null);
+                          }}
+                          disabled={schedulingMessageId === idx || (typeof msg.content === 'string' && msg.content.includes('hasRecentOutreach: true'))}
+                        >
+                          {schedulingMessageId === idx ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                              Scheduling...
+                            </>
+                          ) : typeof msg.content === 'string' && msg.content.includes('hasRecentOutreach: true') ? (
+                            'Already Contacted'
+                          ) : (
+                            'Schedule Time'
                           )}
-                        </motion.div>
+                        </button>
+                      )}
+                          </motion.div>
+                  )}
                       </motion.div>
-                    ))}
-                </AnimatePresence>
-                {loading && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="flex justify-start"
-                  >
-                    <div className="px-6 py-4 rounded-2xl bg-white/90 text-primary/60 text-base font-sans animate-pulse shadow-md">
-                      {mode === 'schedule' ? 'Searching...' : 'Thinking...'}
-                    </div>
-                  </motion.div>
-                )}
-              </motion.div>
-            </AnimatePresence>
-            <div ref={messagesEndRef} className="h-4" />
-          </div>
+                    </motion.div>
+            ))}
+              </AnimatePresence>
+          {loading && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="flex justify-start"
+                >
+                  <div className="px-6 py-4 rounded-2xl bg-white/90 text-primary/60 text-base font-sans animate-pulse shadow-md">
+                {mode === 'schedule' ? 'Searching...' : 'Thinking...'}
+              </div>
+                </motion.div>
+          )}
+            </motion.div>
+          </AnimatePresence>
+          <div ref={messagesEndRef} className="h-4" />
         </div>
+      </div>
 
-        {/* Fixed input form */}
-        <div className="flex-none px-4 py-6 bg-transparent">
-          <form onSubmit={sendMessage} className="flex gap-3 items-center">
-            <div className="flex-1 relative">
-              <div className="w-full border border-neutral/40 rounded-xl bg-white/90 overflow-hidden flex flex-col shadow-lg hover:shadow-xl transition-shadow duration-200">
-                <div className="w-full border-2 border-poppy/50 rounded-xl bg-white/90 overflow-hidden flex flex-col">
-                  <textarea
-                    className="w-full rounded-t-xl px-6 py-4 focus:ring-2 focus:ring-poppy focus:outline-none text-base bg-neutral/80 placeholder-gray-400 transition-all font-sans resize-none border-0 shadow-none"
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    placeholder={
-                      mode === 'draft' 
-                        ? draftStep === 'questions' 
-                          ? `Answer question ${currentQuestionIndex + 1} of ${questions.length}...`
-                          : draftStep === 'vocabulary'
-                            ? `Define term ${currentTermIndex + 1} of ${teamTerms.length}...`
-                            : "Share your product idea..."
-                        : mode === 'schedule'
-                          ? "Customers who hate our list import, customers who need more django filters, customers who will help me build a new feature..."
-                          : mode === 'brainstorm'
-                            ? "Like talking to a version of you who remembers everything"
+      {/* Fixed input form */}
+      <div className="flex-none px-4 py-6 bg-transparent">
+        <form onSubmit={sendMessage} className="flex gap-3 items-center">
+        <div className="flex-1 relative">
+            <div className="w-full border border-neutral/40 rounded-xl bg-white/90 overflow-hidden flex flex-col shadow-lg hover:shadow-xl transition-shadow duration-200">
+              <div className="w-full border-2 border-poppy/50 rounded-xl bg-white/90 overflow-hidden flex flex-col">
+              <textarea
+                  className="w-full rounded-t-xl px-6 py-4 focus:ring-2 focus:ring-poppy focus:outline-none text-base bg-neutral/80 placeholder-gray-400 transition-all font-sans resize-none border-0 shadow-none"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                placeholder={
+                  mode === 'draft' 
+                    ? draftStep === 'questions' 
+                      ? `Answer question ${currentQuestionIndex + 1} of ${questions.length}...`
+                      : draftStep === 'vocabulary'
+                        ? `Define term ${currentTermIndex + 1} of ${teamTerms.length}...`
+                        : "Share your product idea..."
+                    : mode === 'schedule'
+                      ? "Customers who hate our list import, customers who need more django filters, customers who will help me build a new feature..."
+                      : mode === 'brainstorm'
+                        ? "Like talking to a version of you who remembers everything"
                             : mode === 'brand-messaging'
                               ? draftStep === 'questions'
                                 ? `Answer question ${currentQuestionIndex + 1} of ${questions.length}...`
@@ -1213,78 +1213,78 @@ Your Name`;
                                   ? `Define term ${currentTermIndex + 1} of ${teamTerms.length}...`
                                   : "Share your brand messaging strategy, goals, and key focus areas..."
                         : "Ask me anything..."
-                    }
-                    disabled={loading}
-                    rows={4}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        sendMessage(e);
-                      }
-                    }}
-                  />
-                  <div className="flex gap-3 p-3 border-t border-neutral/40 bg-neutral/80">
-                    <div className="flex gap-3">
-                      <motion.button
-                        type="button"
-                        onClick={() => handleModeChange('brainstorm')}
-                        className={`p-2.5 rounded-full transition-all duration-200 ${
-                          mode === 'brainstorm' 
+                }
+                disabled={loading}
+                rows={4}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage(e);
+                  }
+                }}
+              />
+                <div className="flex gap-3 p-3 border-t border-neutral/40 bg-neutral/80">
+                  <div className="flex gap-3">
+                    <motion.button
+                type="button"
+                onClick={() => handleModeChange('brainstorm')}
+                      className={`p-2.5 rounded-full transition-all duration-200 ${
+                  mode === 'brainstorm' 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
                           : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
-                        }`}
-                        title="Brainstorm"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <Sparkles className="w-4 h-4" />
-                      </motion.button>
-                      <motion.button
-                        type="button"
-                        onClick={() => handleModeChange('draft')}
-                        className={`p-2.5 rounded-full transition-all duration-200 ${
-                          mode === 'draft' 
+                }`}
+                title="Brainstorm"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+              >
+                <Sparkles className="w-4 h-4" />
+                    </motion.button>
+                    <motion.button
+                      type="button"
+                      onClick={() => handleModeChange('draft')}
+                      className={`p-2.5 rounded-full transition-all duration-200 ${
+                        mode === 'draft' 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
                           : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
-                        }`}
-                        title="Draft PRD"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <FileText className="w-4 h-4" />
-                      </motion.button>
-                      <motion.button
-                        type="button"
-                        onClick={() => handleModeChange('schedule')}
-                        className={`p-2.5 rounded-full transition-all duration-200 ${
-                          mode === 'schedule' 
+                      }`}
+                      title="Draft PRD"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <FileText className="w-4 h-4" />
+                    </motion.button>
+                    <motion.button
+                type="button"
+                onClick={() => handleModeChange('schedule')}
+                      className={`p-2.5 rounded-full transition-all duration-200 ${
+                  mode === 'schedule' 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
                           : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
-                        }`}
-                        title="Schedule"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <Calendar className="w-4 h-4" />
-                      </motion.button>
-                      <motion.button
-                        type="button"
+                }`}
+                title="Schedule"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+              >
+                <Calendar className="w-4 h-4" />
+                    </motion.button>
+                    <motion.button
+                type="button"
                         onClick={() => handleModeChange('brand-messaging')}
-                        className={`p-2.5 rounded-full transition-all duration-200 ${
+                      className={`p-2.5 rounded-full transition-all duration-200 ${
                           mode === 'brand-messaging' 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
                           : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
-                        }`}
+                }`}
                         title="Brand Messaging"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+              >
                         <Megaphone className="w-4 h-4" />
-                      </motion.button>
+                    </motion.button>
                       {/* Agentic (Bot) button: show if agentic messages exist or in agent mode */}
                       {(agenticMessages.length > 0 || mode === 'agent') && (
-                        <motion.button
-                          type="button"
+                    <motion.button
+            type="button"
                           className={`p-2.5 rounded-full transition-all duration-200 bg-poppy/20 text-poppy shadow-inner ${
                             showBounce ? 'animate-bounce-slow' : ''
                           } ${mode === 'agent' ? 'ring-2 ring-poppy bg-poppy text-white' : ''}`}
@@ -1292,32 +1292,32 @@ Your Name`;
                           onClick={openAgentMode}
                           whileHover={{ scale: 1.08 }}
                           whileTap={{ scale: 0.96 }}
-                        >
+                      >
                           <Bot className="w-4 h-4" />
-                        </motion.button>
-                      )}
+                    </motion.button>
+        )}
                     </div>
                     <div className="flex-1" />
-                    <motion.button
-                      type="submit"
-                      className={`p-2.5 rounded-full transition-all duration-200 ${
-                        input.trim() 
-                          ? 'bg-poppy text-white hover:bg-poppy/90' 
-                          : 'bg-white/80 text-poppy/40 hover:bg-white'
-                      }`}
-                      disabled={loading || !input.trim()}
-                      whileHover={{ scale: input.trim() ? 1.02 : 1 }}
-                      whileTap={{ scale: input.trim() ? 0.98 : 1 }}
-                    >
-                      <svg className="w-4 h-4 -rotate-45" fill={input.trim() ? "none" : "currentColor"} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                      </svg>
-                    </motion.button>
-                  </div>
+                  <motion.button
+                    type="submit"
+                    className={`p-2.5 rounded-full transition-all duration-200 ${
+                      input.trim() 
+                        ? 'bg-poppy text-white hover:bg-poppy/90' 
+                        : 'bg-white/80 text-poppy/40 hover:bg-white'
+                    }`}
+                    disabled={loading || !input.trim()}
+                    whileHover={{ scale: input.trim() ? 1.02 : 1 }}
+                    whileTap={{ scale: input.trim() ? 0.98 : 1 }}
+                  >
+                    <svg className="w-4 h-4 -rotate-45" fill={input.trim() ? "none" : "currentColor"} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                    </svg>
+                  </motion.button>
                 </div>
               </div>
             </div>
-          </form>
+          </div>
+      </form>
         </div>
       </div>
     </div>

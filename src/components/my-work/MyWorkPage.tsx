@@ -168,7 +168,7 @@ export default function MyWorkPage() {
           savedPrds.map(async (prd) => {
             try {
               const { comments, last_modified, title } = await fetchComments(prd.id)
-              const summary = await fetchSummary(prd.id, comments, last_modified)
+            const summary = await fetchSummary(prd.id, comments, last_modified)
               
               // Check if we need to update the title
               const needsTitleUpdate = title && title !== prd.title
@@ -181,20 +181,20 @@ export default function MyWorkPage() {
                 localStorage.setItem('savedPRD', JSON.stringify(updatedPrds))
               }
 
-              return {
-                id: prd.id,
+            return {
+              id: prd.id,
                 title: needsTitleUpdate ? title : prd.title,
-                status: 'Draft' as const,
-                created_at: prd.createdAt,
-                last_edited_at: last_modified,
-                owner_id: 'user',
-                due_date: null,
-                url: prd.url,
-                metadata: {
-                  comments,
-                  edit_history: [],
-                  open_questions_summary: summary
-                }
+              status: 'Draft' as const,
+              created_at: prd.createdAt,
+              last_edited_at: last_modified,
+              owner_id: 'user',
+              due_date: null,
+              url: prd.url,
+              metadata: {
+                comments,
+                edit_history: [],
+                open_questions_summary: summary
+              }
               } as PRD
             } catch (error) {
               console.error(`Error processing PRD ${prd.id}:`, error);
@@ -358,17 +358,17 @@ export default function MyWorkPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPrds.map(prd => (
-            <PrdCard
-              key={prd.id}
-              prd={prd}
+        {filteredPrds.map(prd => (
+          <PrdCard
+            key={prd.id}
+            prd={prd}
               category={determineCategory(prd)}
-              loadSummary={() =>
-                fetchSummary(prd.id, prd.metadata?.comments || [], prd.last_edited_at)
-              }
-            />
-          ))}
-          {filteredPrds.length === 0 && (
+            loadSummary={() =>
+              fetchSummary(prd.id, prd.metadata?.comments || [], prd.last_edited_at)
+            }
+          />
+        ))}
+        {filteredPrds.length === 0 && (
             <div className="col-span-full flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
               <div className="w-24 h-24 mb-4 text-gray-400">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -376,15 +376,15 @@ export default function MyWorkPage() {
                 </svg>
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-1">
-                {prds.length === 0 ? 'No PRDs yet' : 'No PRDs match the current filters'}
+            {prds.length === 0 ? 'No PRDs yet' : 'No PRDs match the current filters'}
               </h3>
               <p className="text-sm text-gray-500 text-center max-w-sm">
                 {prds.length === 0 
                   ? 'Create your first PRD to get started'
                   : 'Try adjusting your filters to see more results'}
-              </p>
+          </p>
             </div>
-          )}
+        )}
         </div>
       </div>
     </div>

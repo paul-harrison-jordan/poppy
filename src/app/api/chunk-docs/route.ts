@@ -5,11 +5,7 @@ import { withAuth } from '@/lib/api';
 import { chunkTextByMultiParagraphs } from '@/app/chunk';
 import { Session } from 'next-auth';
 import { withErrorHandling } from '@/lib/api';
-
-interface DocumentContent {
-  name: string;
-  content: string;
-}
+import { GaxiosError } from 'gaxios';
 
 export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
   return withErrorHandling(async () => {
@@ -45,22 +41,24 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
       // Process content and return chunks
       const chunks = chunkTextByMultiParagraphs(content as string);
       return NextResponse.json({ chunks, documentName });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error chunking document:', error);
       
       // Handle specific Google Drive API errors
-      if (error.code === 404) {
-        return NextResponse.json(
-          { error: 'Document not found or access denied' },
-          { status: 404 }
-        );
-      }
-      
-      if (error.code === 403) {
-        return NextResponse.json(
-          { error: 'Permission denied to access document' },
-          { status: 403 }
-        );
+      if (error instanceof GaxiosError) {
+        if (error.response?.status === 404) {
+          return NextResponse.json(
+            { error: 'Document not found or access denied' },
+            { status: 404 }
+          );
+        }
+        
+        if (error.response?.status === 403) {
+          return NextResponse.json(
+            { error: 'Permission denied to access document' },
+            { status: 403 }
+          );
+        }
       }
 
       // Handle other errors

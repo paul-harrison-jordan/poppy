@@ -287,9 +287,9 @@ export default function PrdCard({
             <div className="flex justify-between items-start gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <CardTitle className="text-lg font-semibold text-gray-900 truncate">
-                    {prd.title}
-                  </CardTitle>
+                <CardTitle className="text-lg font-semibold text-gray-900 truncate">
+                  {prd.title}
+                </CardTitle>
                   <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getCategoryColor(category)}`}>
                     {getCategoryLabel(category)}
                   </span>

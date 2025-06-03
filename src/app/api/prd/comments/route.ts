@@ -93,7 +93,7 @@ export async function GET(request: Request) {
       // Continue without the title - we'll use the existing one
     }
 
-    return NextResponse.json({
+    return NextResponse.json({ 
       comments: formattedComments,
       last_modified: fileResponse.data.modifiedTime,
       title: documentTitle
