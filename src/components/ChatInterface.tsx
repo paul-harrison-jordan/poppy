@@ -6,6 +6,7 @@ import { FileText, Sparkles, Calendar, Megaphone, Bot } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion";
 import PoppyProactiveMessage from './poppy/PoppyProactiveMessage';
 import { usePRDStore } from '@/store/prdStore';
+import { useRouter } from 'next/navigation';
 
 declare global {
   interface Window {
@@ -68,6 +69,8 @@ export default function ChatInterface() {
   const clearAgenticMessages = usePRDStore((state) => state.clearAgenticMessages);
   const [notifiedPrdIds, setNotifiedPrdIds] = useState<Set<string>>(new Set());
   const [showBounce, setShowBounce] = useState(false);
+  const [showStartPrdButton, setShowStartPrdButton] = useState(false);
+  const router = useRouter();
 
   const DOCUMENT_TYPES = {
     'brand-messaging': {
@@ -169,6 +172,99 @@ export default function ChatInterface() {
       setShowBounce(false);
     }
   }, [agenticMessages.length, mode]);
+
+  // Debug effect to log input changes
+  useEffect(() => {
+    console.log('Input state changed to:', input);
+  }, [input]);
+
+  // Add useEffect to show Start PRD button after 3 messages in brainstorm mode
+  useEffect(() => {
+    if (mode === 'brainstorm') {
+      const userMessages = messages.filter(msg => msg.role === 'user');
+      console.log('Brainstorm Message count:', {
+        total: messages.length,
+        user: userMessages.length,
+        showButton: userMessages.length >= 3
+      });
+      setShowStartPrdButton(userMessages.length >= 3);
+    } else {
+      setShowStartPrdButton(false);
+    }
+  }, [messages, mode]);
+
+  // Summarize and save as PRD for brainstorm mode
+  const handleSummarizeAndSave = async () => {
+    if (!messages.length || mode !== 'brainstorm') return;
+    try {
+      setLoading(true);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: "I'm summarizing our conversation and preparing to start the PRD..." 
+      }]);
+
+      const storedContext = localStorage.getItem("personalContext");
+      const teamTerms = JSON.parse(localStorage.getItem("teamTerms") || "{}");
+      const chatMessages = [
+        ...messages.map((m) => ({ role: m.role, content: m.content })),
+      ];
+      const res = await fetch('/api/brainstorm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: chatMessages,
+          additionalContext: matchedContext.join("\n"),
+          teamTerms,
+          storedContext,
+          startPrd: true
+        }),
+      });
+      const prd = await res.json();
+
+      console.log('PRD response received:', prd);
+      console.log('Summary to set:', prd.summary);
+      console.log('Title received:', prd.title);
+
+      // Store the summary to set after state changes
+      const summaryToSet = prd.summary || '';
+
+      // Switch to draft mode first
+      setMode('draft');
+      
+      // Reset other states for draft mode
+      setDraftStep('initial');
+      setQuestions([]);
+      setCurrentQuestionIndex(-1);
+      setQuestionAnswers({});
+      setTeamTerms([]);
+      setCurrentTermIndex(-1);
+      setTermDefinitions({});
+      setShowStartPrdButton(false);
+
+      // Clear the chat messages and switch to draft mode LAST
+      // This prevents the useEffect from clearing our input
+      setTimeout(() => {
+        setMessages([{
+          role: 'assistant',
+          content: "Share your product idea or concept, a JTDB, and any extra context you have that you want me to know"
+        }]);
+        
+        // Set input after the assistant message and all state changes
+        setTimeout(() => {
+          console.log('Setting input after all state changes:', summaryToSet);
+          setInput(summaryToSet);
+        }, 50);
+      }, 50);
+
+    } catch (error) {
+      console.error(error);
+      alert('Failed to generate PRD summary.');
+      // Remove the loading message on error
+      setMessages(prev => prev.filter(msg => msg.content !== "I'm summarizing our conversation and preparing to start the PRD..."));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleModeChange = (newMode: ChatMode) => {
     setMode(newMode);
@@ -1298,6 +1394,18 @@ Your Name`;
         )}
                     </div>
                     <div className="flex-1" />
+                  {showStartPrdButton && mode === 'brainstorm' && (
+                    <motion.button
+                      type="button"
+                      className="px-4 py-2 rounded-full bg-neutral text-primary font-medium text-sm hover:bg-neutral/80 transition-all duration-150 shadow-md border-0 mr-2 font-sans"
+                      onClick={handleSummarizeAndSave}
+                      disabled={loading || !messages.length}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Summarize & Start as PRD
+                    </motion.button>
+                  )}
                   <motion.button
                     type="submit"
                     className={`p-2.5 rounded-full transition-all duration-200 ${

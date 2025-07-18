@@ -263,6 +263,25 @@ your summary must be returned in JSON format as follows:
   "title": "<title of the PRD>",
   "summary": "<summary of the PRD>"
 }`;
+    
+    const chatMessages: ChatCompletionMessageParam[] = [
+      { role: 'system', content: systemPrompt },
+      ...messages.map(m => ({ role: m.role, content: m.content })),
+    ];
+    
+    const completion = await openai.chat.completions.create({
+      model: 'o3',
+      messages: chatMessages,
+      response_format: { type: 'json_object' },
+    });
+    
+    try {
+      const response = JSON.parse(completion.choices[0].message.content || '{}');
+      return NextResponse.json(response);
+    } catch (error) {
+      console.error('Error parsing brainstorm summary response:', error);
+      return NextResponse.json({ error: 'Failed to parse summary' }, { status: 500 });
+    }
   } else {
     systemPrompt = `You are a tool being used by a product manager to brainstorm. You may get messages that are about an idea, a problem they're trying to solve, or a feature they're trying to build. Your mission is to expertly coax great ideas out of the user with short, pointed questions and comments that help them think through their idea. Over time, the user should be able to summarize the conversation and use it to draft a PRD.
 
@@ -277,17 +296,18 @@ PMs are trusting you to help them think through their ideas, and have shared som
 Answer the user's question using the above context and terms. If the context is not enough, say so. You are meant to be a representation of the users work, so you should know the answers to the questions.
 
 Your responses should be concise and to the point, and must be no more than 200 words. You should strive to be helpful, insightful, and concise. You must propose a single question or comment at a time.`;
+    
+    const chatMessages: ChatCompletionMessageParam[] = [
+      { role: 'system', content: systemPrompt },
+      ...messages.map(m => ({ role: m.role, content: m.content })),
+    ];
+    const stream = await openai.chat.completions.create({
+      model: 'o3',
+      messages: chatMessages,
+      stream: true,
+    });
+    return streamTextResponse(stream, 'text/plain');
   }
-  const chatMessages: ChatCompletionMessageParam[] = [
-    { role: 'system', content: systemPrompt },
-    ...messages.map(m => ({ role: m.role, content: m.content })),
-  ];
-  const stream = await openai.chat.completions.create({
-    model: 'o3',
-    messages: chatMessages,
-    stream: true,
-  });
-  return streamTextResponse(stream, 'text/plain');
 }
 
 export interface VocabularyRequest {
