@@ -119,7 +119,7 @@ export async function generateQuestions(opts: GenerateQuestionsRequest): Promise
 Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of terms over time.
 
 You must respond with a JSON object containing two arrays:
-1. questions: An array of question objects, each with id, text, and reasoning fields. you must return 5 questions. you must only return questions that are relevant to the user's query. these questions should be the most important questions that you need answers to in order to write a good PRD that solves the stated customer probelm in the job to be done statement.
+1. questions: An array of question objects, each with id, text, and reasoning fields. you must return 5 questions. you must only return questions that are relevant to the user's query. these questions should be the most important questions that you need answers to in order to write a good PRD that solves the stated customer probelm in the job to be done statement. It's important that these questions steer the user towards the best possible PRD.
 2. internalTerms: An array of terms that need clarification
 
 Example JSON response:
