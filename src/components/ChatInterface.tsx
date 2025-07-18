@@ -6,7 +6,6 @@ import { FileText, Sparkles, Calendar, Megaphone, Bot } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion";
 import PoppyProactiveMessage from './poppy/PoppyProactiveMessage';
 import { usePRDStore } from '@/store/prdStore';
-import { useRouter } from 'next/navigation';
 
 declare global {
   interface Window {
@@ -70,7 +69,6 @@ export default function ChatInterface() {
   const [notifiedPrdIds, setNotifiedPrdIds] = useState<Set<string>>(new Set());
   const [showBounce, setShowBounce] = useState(false);
   const [showStartPrdButton, setShowStartPrdButton] = useState(false);
-  const router = useRouter();
 
   const DOCUMENT_TYPES = {
     'brand-messaging': {
