@@ -1,11 +1,13 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { collectStream } from "@/lib/collectStream"
 import { generateDocument } from '@/lib/services/documentGenerator'
 import { FileText, Sparkles, Calendar, Megaphone, Bot, Paintbrush } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion";
 import PoppyProactiveMessage from './poppy/PoppyProactiveMessage';
 import { usePRDStore } from '@/store/prdStore';
+import { createClient } from '@/utils/supabase/client';
 
 declare global {
   interface Window {
@@ -48,6 +50,7 @@ type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'schedule' | 'brand-messaging'
 
 
 export default function ChatInterface() {
+  const { data: session } = useSession();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -321,6 +324,31 @@ export default function ChatInterface() {
         }]);
         
         console.log('Switched to design mode with URL:', newDemoUrl, 'and chatId:', newChatId);
+        
+        // Update Supabase with v0 demo link
+        if (session?.user?.email && result.chat.demo) {
+          try {
+            const supabase = createClient();
+            const savedDocs = JSON.parse(localStorage.getItem("savedPRD") || "[]");
+            const latestPrd = savedDocs[savedDocs.length - 1]; // Get the most recent PRD
+            
+            if (latestPrd?.url) {
+              const { error } = await supabase
+                .from('prds')
+                .update({ 'v0-link': result.chat.demo })
+                .eq('drive-link', latestPrd.url)
+                .eq('user', session.user.email);
+              
+              if (error) {
+                console.error('Error updating v0 link in database:', error);
+              } else {
+                console.log('Updated PRD with v0 demo link in database:', result.chat.demo);
+              }
+            }
+          } catch (error) {
+            console.error('Error updating v0 link in database:', error);
+          }
+        }
         
         // Force a re-render by logging after state updates
         setTimeout(() => {
@@ -642,6 +670,15 @@ export default function ChatInterface() {
         localStorage.setItem("savedPRD", JSON.stringify(savedDocs));
         window.dispatchEvent(new CustomEvent("prdCountUpdated", { detail: { count: savedDocs.length } }));
         window.dispatchEvent(new CustomEvent("savedPRDUpdated"));
+
+        // Save to Supabase database
+        if (session?.user?.email) {
+          await savePrdToDatabase({
+            url: docData.url,
+            title: docData.title,
+            userEmail: session.user.email
+          });
+        }
       } catch (error) {
         console.error("Error generating content:", error);
         setMessages(prev => {
@@ -1139,6 +1176,15 @@ export default function ChatInterface() {
                 localStorage.setItem("savedPRD", JSON.stringify(savedDocs));
                 window.dispatchEvent(new CustomEvent("prdCountUpdated", { detail: { count: savedDocs.length } }));
                 window.dispatchEvent(new CustomEvent("savedPRDUpdated"));
+
+                // Save to Supabase database
+                if (session?.user?.email) {
+                  await savePrdToDatabase({
+                    url: docData.url,
+                    title: docData.title,
+                    userEmail: session.user.email
+                  });
+                }
               } catch (error) {
                 console.error("Error generating content:", error);
                 setMessages(prev => {
@@ -1496,6 +1542,33 @@ export default function ChatInterface() {
       setInput(
         `Poppy noticed your PRD "${msg.prdTitle}" is at risk. Open questions:\n- ${msg.openQuestions.join('\n- ')}`
       );
+    }
+  };
+
+  // Helper function to save PRD to Supabase database
+  const savePrdToDatabase = async (prdData: { url: string; title: string; userEmail: string }) => {
+    try {
+      const supabase = createClient();
+      
+      const { error } = await supabase
+        .from('prds')
+        .insert([
+          {
+            'drive-link': prdData.url,
+            'v0-link': '', // Empty for now, will be filled when design is created
+            'user': prdData.userEmail,
+            'shipped': false, // New PRDs start as not shipped
+            'title': prdData.title
+          }
+        ]);
+      
+      if (error) {
+        console.error('Error saving PRD to database:', error);
+      } else {
+        console.log('PRD saved to database successfully');
+      }
+    } catch (error) {
+      console.error('Error saving PRD to database:', error);
     }
   };
 
