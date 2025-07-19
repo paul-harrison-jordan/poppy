@@ -3,7 +3,7 @@ import { createClient } from 'v0-sdk';
 
 export async function POST(request: NextRequest) {
   try {
-    const { chatId, message } = await request.json();
+    const { chatId, message, apiKey } = await request.json();
 
     if (!chatId || !message) {
       return NextResponse.json(
@@ -12,9 +12,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize v0 client
+    if (!apiKey || typeof apiKey !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'V0 API key is required. Please configure it in Settings.' },
+        { status: 400 }
+      );
+    }
+
+    // Initialize v0 client with user's API key
     const v0 = createClient({
-      apiKey: process.env.V0_API_KEY,
+      apiKey: apiKey,
     });
 
     // Send message to existing chat
@@ -37,7 +44,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error sending v0 chat message:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to send chat message' },
+      { success: false, error: 'Failed to send chat message. Please check your API key.' },
       { status: 500 }
     );
   }

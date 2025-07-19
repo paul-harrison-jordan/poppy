@@ -238,19 +238,55 @@ export default function ChatInterface() {
       setIsCreatingDesign(true);
       console.log('Creating design with PRD content');
 
+      // Add engaging loading message
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: (
+          <div className="flex flex-col items-center gap-3 py-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 border-4 border-poppy border-t-transparent rounded-full animate-spin" />
+              <span className="text-lg font-medium text-gray-700">Creating your design...</span>
+            </div>
+            <div className="text-sm text-gray-500 animate-pulse">
+              ✨ Analyzing your PRD and generating UI components
+            </div>
+          </div>
+        )
+      }]);
+
+      // Get the user's V0 API key from localStorage
+      const v0ApiKey = localStorage.getItem('v0_api_key');
+      if (!v0ApiKey) {
+        // Remove loading message and show error
+        setMessages(prev => prev.filter(msg => 
+          !(typeof msg.content === 'object' && React.isValidElement(msg.content))
+        ));
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: "Please configure your V0 API key in Settings before using Design Mode."
+        }]);
+        return;
+      }
+
       const response = await fetch('/api/create-v0-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: `Create a UI design based on this PRD: ${prdContent}`
+          message: `Create a UI design based on this PRD: ${prdContent}`,
+          apiKey: v0ApiKey
         }),
       });
 
       console.log('API response status:', response.status);
       const result = await response.json();
       console.log('Design creation result:', result);
+
+      // Remove loading message
+      setMessages(prev => prev.filter(msg => 
+        !(typeof msg.content === 'object' && React.isValidElement(msg.content))
+      ));
 
       if (result.success) {
         console.log('Design created successfully:', result.chat.id);
@@ -269,7 +305,19 @@ export default function ChatInterface() {
         // Set the design mode message directly with the known URL
         setMessages([{
           role: 'assistant',
-          content: "Your design is ready! You can view it above and iterate by describing changes you'd like to make."
+          content: (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <div className="flex items-center gap-2 text-green-600">
+                <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                  <span className="text-sm">✓</span>
+                </div>
+                <span className="font-medium">Design created successfully!</span>
+              </div>
+              <p className="text-gray-600 text-center">
+                Your design is ready above. Describe any changes you'd like to make and I'll iterate on it for you.
+              </p>
+            </div>
+          )
         }]);
         
         console.log('Switched to design mode with URL:', newDemoUrl, 'and chatId:', newChatId);
@@ -281,11 +329,45 @@ export default function ChatInterface() {
         }, 100);
       } else {
         console.error('Design creation failed:', result);
-        alert('Failed to create design');
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <div className="flex items-center gap-2 text-red-600">
+                <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
+                  <span className="text-sm">✗</span>
+                </div>
+                <span className="font-medium">Design creation failed</span>
+              </div>
+              <p className="text-gray-600 text-center">
+                {result.error || 'Something went wrong. Please try again or check your API key in Settings.'}
+              </p>
+            </div>
+          )
+        }]);
       }
     } catch (error) {
       console.error('Error creating design:', error);
-      alert('Error creating design');
+      // Remove loading message and show error
+      setMessages(prev => prev.filter(msg => 
+        !(typeof msg.content === 'object' && React.isValidElement(msg.content))
+      ));
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: (
+          <div className="flex flex-col items-center gap-3 py-4">
+            <div className="flex items-center gap-2 text-red-600">
+              <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
+                <span className="text-sm">✗</span>
+              </div>
+              <span className="font-medium">Connection error</span>
+            </div>
+            <p className="text-gray-600 text-center">
+              Unable to connect to the design service. Please check your internet connection and try again.
+            </p>
+          </div>
+        )
+      }]);
     } finally {
       console.log('Setting isCreatingDesign to false');
       setIsCreatingDesign(false);
@@ -532,9 +614,16 @@ export default function ChatInterface() {
                   <button
                     onClick={() => handleCreateDesign(prdMarkdown)}
                     disabled={isCreatingDesign}
-                    className="px-6 py-3 bg-orange-500 text-white rounded-full font-medium hover:bg-orange-600 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-3 bg-orange-500 text-white rounded-full font-medium hover:bg-orange-600 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    {isCreatingDesign ? 'Creating Design...' : 'Create Design'}
+                    {isCreatingDesign ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Creating Design...
+                      </>
+                    ) : (
+                      'Create Design'
+                    )}
                   </button>
                 </div>
               </div>
@@ -689,20 +778,55 @@ export default function ChatInterface() {
           // No active session - create a new design
           console.log('Creating new design from design mode input:', input);
           
+          // Add engaging loading message for new design creation
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: (
+              <div className="flex flex-col items-center gap-3 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 border-4 border-poppy border-t-transparent rounded-full animate-spin" />
+                  <span className="text-lg font-medium text-gray-700">Bringing your idea to life...</span>
+                </div>
+                <div className="text-sm text-gray-500 animate-pulse">
+                  🎨 Crafting UI components based on your description
+                </div>
+              </div>
+            )
+          }]);
+          
+          // Get the user's V0 API key from localStorage
+          const v0ApiKey = localStorage.getItem('v0_api_key');
+          if (!v0ApiKey) {
+            // Remove loading message
+            setMessages(prev => prev.filter(msg => 
+              !(typeof msg.content === 'object' && React.isValidElement(msg.content))
+            ));
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: "Please configure your V0 API key in Settings before using Design Mode. Click the Settings icon in the top right corner."
+            }]);
+            setLoading(false);
+            return;
+          }
+          
           const response = await fetch('/api/create-v0-chat', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              message: input // Use the user's input directly as the design prompt
+              message: input, // Use the user's input directly as the design prompt
+              apiKey: v0ApiKey
             }),
           });
 
           const result = await response.json();
           
-          // Remove thinking message
-          setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
+          // Remove loading message and thinking message
+          setMessages(prev => prev.filter(msg => 
+            msg.content !== "Thinking..." && 
+            !(typeof msg.content === 'object' && React.isValidElement(msg.content))
+          ));
 
           if (result.success) {
             // Set up the new design session
@@ -714,18 +838,73 @@ export default function ChatInterface() {
             
             setMessages(prev => [...prev, {
               role: 'assistant',
-              content: "Great! I've created your design. You can see it above and continue iterating by describing changes you'd like to make."
+              content: (
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <div className="flex items-center gap-2 text-green-600">
+                    <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                      <span className="text-sm">✓</span>
+                    </div>
+                    <span className="font-medium">Design created!</span>
+                  </div>
+                  <p className="text-gray-600 text-center">
+                    Your design is live above. Keep iterating by describing changes you'd like to make.
+                  </p>
+                </div>
+              )
             }]);
             
             console.log('New design created with URL:', newDemoUrl, 'and chatId:', newChatId);
           } else {
             setMessages(prev => [...prev, {
               role: 'assistant',
-              content: "Sorry, I encountered an error while creating the design. Please try again."
+              content: (
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <div className="flex items-center gap-2 text-red-600">
+                    <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
+                      <span className="text-sm">✗</span>
+                    </div>
+                    <span className="font-medium">Design creation failed</span>
+                  </div>
+                  <p className="text-gray-600 text-center">
+                    {result.error || "Something went wrong. Please try again or check your API key in Settings."}
+                  </p>
+                </div>
+              )
             }]);
           }
         } else {
           // Existing session - update the design
+          // Add engaging loading message for design updates
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: (
+              <div className="flex flex-col items-center gap-3 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-lg font-medium text-gray-700">Updating your design...</span>
+                </div>
+                <div className="text-sm text-gray-500 animate-pulse">
+                  🔄 Applying your changes and regenerating components
+                </div>
+              </div>
+            )
+          }]);
+          
+          // Get the user's V0 API key from localStorage
+          const v0ApiKey = localStorage.getItem('v0_api_key');
+          if (!v0ApiKey) {
+            // Remove loading message
+            setMessages(prev => prev.filter(msg => 
+              !(typeof msg.content === 'object' && React.isValidElement(msg.content))
+            ));
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: "Your V0 API key is missing. Please reconfigure it in Settings."
+            }]);
+            setLoading(false);
+            return;
+          }
+          
           const response = await fetch('/api/update-v0-chat', {
             method: 'POST',
             headers: {
@@ -733,14 +912,18 @@ export default function ChatInterface() {
             },
             body: JSON.stringify({
               chatId: v0ChatId,
-              message: input
+              message: input,
+              apiKey: v0ApiKey
             }),
           });
 
           const result = await response.json();
           
-          // Remove thinking message
-          setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
+          // Remove loading message and thinking message
+          setMessages(prev => prev.filter(msg => 
+            msg.content !== "Thinking..." && 
+            !(typeof msg.content === 'object' && React.isValidElement(msg.content))
+          ));
 
           if (result.success) {
             // Update the demo URL with the new iteration
@@ -748,12 +931,36 @@ export default function ChatInterface() {
             
             setMessages(prev => [...prev, {
               role: 'assistant',
-              content: "Design updated! The changes should be reflected in the preview above."
+              content: (
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <div className="flex items-center gap-2 text-blue-600">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-sm">✓</span>
+                    </div>
+                    <span className="font-medium">Design updated!</span>
+                  </div>
+                  <p className="text-gray-600 text-center">
+                    Your changes have been applied. The updated design is now showing above.
+                  </p>
+                </div>
+              )
             }]);
           } else {
             setMessages(prev => [...prev, {
               role: 'assistant',
-              content: "Sorry, I encountered an error while updating the design. Please try again."
+              content: (
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <div className="flex items-center gap-2 text-red-600">
+                    <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
+                      <span className="text-sm">✗</span>
+                    </div>
+                    <span className="font-medium">Update failed</span>
+                  </div>
+                  <p className="text-gray-600 text-center">
+                    {result.error || "Unable to update the design. Please try again or check your API key."}
+                  </p>
+                </div>
+              )
             }]);
           }
         }
@@ -904,9 +1111,16 @@ export default function ChatInterface() {
                           <button
                             onClick={() => handleCreateDesign(prdMarkdown)}
                             disabled={isCreatingDesign}
-                            className="px-6 py-3 bg-orange-500 text-white rounded-full font-medium hover:bg-orange-600 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-6 py-3 bg-orange-500 text-white rounded-full font-medium hover:bg-orange-600 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                           >
-                            {isCreatingDesign ? 'Creating Design...' : 'Create Design'}
+                            {isCreatingDesign ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                Creating Design...
+                              </>
+                            ) : (
+                              'Create Design'
+                            )}
                           </button>
                         </div>
                       </div>
@@ -1172,9 +1386,16 @@ export default function ChatInterface() {
                           <button
                             onClick={() => handleCreateDesign(docData.markdown || '')}
                             disabled={isCreatingDesign}
-                            className="px-6 py-3 bg-orange-500 text-white rounded-full font-medium hover:bg-orange-600 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-6 py-3 bg-orange-500 text-white rounded-full font-medium hover:bg-orange-600 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                           >
-                            {isCreatingDesign ? 'Creating Design...' : 'Create Design'}
+                            {isCreatingDesign ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                Creating Design...
+                              </>
+                            ) : (
+                              'Create Design'
+                            )}
                           </button>
                         </div>
                         {demoUrl && (
@@ -1399,8 +1620,11 @@ export default function ChatInterface() {
                   </motion.div>
                 ))}
               {loading && (
-                <div className="text-xs p-2 rounded-lg bg-gray-100 text-gray-600 mr-4 animate-pulse">
-                  Updating design...
+                <div className="text-xs p-2 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 mr-4 flex items-center gap-2">
+                  <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-blue-700 font-medium">
+                    {v0ChatId ? 'Updating design...' : 'Creating design...'}
+                  </span>
                 </div>
               )}
             </div>
