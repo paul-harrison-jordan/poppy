@@ -135,12 +135,12 @@ export default function ChatInterface() {
         } else {
           setMessages([{
             role: 'assistant',
-            content: "Welcome to design mode! Describe what you'd like to design and I'll create it for you using v0."
+            content: "Welcome to design mode! Describe what you&apos;d like to design and I&apos;ll create it for you using v0."
           }]);
         }
       }
     }
-  }, [mode, messages.length]);
+  }, [mode, messages.length, demoUrl]);
 
   // Add useEffect for auto-scrolling
   useEffect(() => {
@@ -314,7 +314,7 @@ export default function ChatInterface() {
                 <span className="font-medium">Design created successfully!</span>
               </div>
               <p className="text-gray-600 text-center">
-                Your design is ready above. Describe any changes you'd like to make and I'll iterate on it for you.
+                Your design is ready above. Describe any changes you&apos;d like to make and I&apos;ll iterate on it for you.
               </p>
             </div>
           )
@@ -487,7 +487,7 @@ export default function ChatInterface() {
       } else {
         setMessages([{
           role: 'assistant',
-          content: "Welcome to design mode! Describe what you'd like to design and I'll create it for you using v0."
+          content: "Welcome to design mode! Describe what you&apos;d like to design and I&apos;ll create it for you using v0."
         }]);
       }
     }
@@ -847,7 +847,7 @@ export default function ChatInterface() {
                     <span className="font-medium">Design created!</span>
                   </div>
                   <p className="text-gray-600 text-center">
-                    Your design is live above. Keep iterating by describing changes you'd like to make.
+                    Your design is live above. Keep iterating by describing changes you&apos;d like to make.
                   </p>
                 </div>
               )

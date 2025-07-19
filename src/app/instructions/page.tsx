@@ -125,7 +125,7 @@ export default function InstructionsPage() {
                   <li>Copy and paste it above</li>
                 </ol>
                 <p className="mt-2 text-xs text-gray-500">
-                  Your API key is stored locally in your browser and is only used to communicate with v0's API for design generation.
+                  Your API key is stored locally in your browser and is only used to communicate with v0&apos;s API for design generation.
                 </p>
               </div>
             </div>
@@ -170,7 +170,7 @@ export default function InstructionsPage() {
                   <li>Product roadmaps</li>
                 </ul>
               </li>
-              <li>Your team&apos;`s key terms and definitions</li>
+              <li>Your team&apos;s key terms and definitions</li>
               <li>Historical context from past conversations</li>
             </ul>
           </div>
