@@ -136,9 +136,9 @@ export default function ChatInterface() {
           setMessages([{
             role: 'assistant',
             content: "Welcome to design mode! Describe what you&apos;d like to design and I&apos;ll create it for you using v0."
-          }]);
-        }
+        }]);
       }
+    }
     }
   }, [mode, messages.length, demoUrl]);
 
@@ -603,14 +603,14 @@ export default function ChatInterface() {
               <div className="flex flex-col items-center gap-4">
                 <p>Your {docType.text} is ready! Click below to view it in Google Docs or create a design prototype.</p>
                 <div className="flex gap-3">
-                  <a
-                    href={docData.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
-                  >
-                    View {docType.title} in Google Docs
-                  </a>
+                <a
+                  href={docData.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
+                >
+                  View {docType.title} in Google Docs
+                </a>
                   <button
                     onClick={() => handleCreateDesign(prdMarkdown)}
                     disabled={isCreatingDesign}
@@ -1100,14 +1100,14 @@ export default function ChatInterface() {
                       <div className="flex flex-col items-center gap-4">
                         <p>Your {docType.text} is ready! Click below to view it in Google Docs or create a design prototype.</p>
                         <div className="flex gap-3">
-                          <a
-                            href={docData.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
-                          >
-                            View {docType.title} in Google Docs
-                          </a>
+                        <a
+                          href={docData.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
+                        >
+                          View {docType.title} in Google Docs
+                        </a>
                           <button
                             onClick={() => handleCreateDesign(prdMarkdown)}
                             disabled={isCreatingDesign}
@@ -1375,14 +1375,14 @@ export default function ChatInterface() {
                       <div className="flex flex-col items-center gap-4">
                         <p>Your {docType.text} is ready! Click below to view it in Google Docs or create a design prototype.</p>
                         <div className="flex gap-3">
-                          <a
-                            href={docData.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
-                          >
-                            View {docType.title} in Google Docs
-                          </a>
+                        <a
+                          href={docData.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
+                        >
+                          View {docType.title} in Google Docs
+                        </a>
                           <button
                             onClick={() => handleCreateDesign(docData.markdown || '')}
                             disabled={isCreatingDesign}
@@ -1520,33 +1520,33 @@ export default function ChatInterface() {
     <div className={`flex flex-col h-screen w-full font-sans ${mode === ('design' as ChatMode) ? '' : 'max-w-5xl mx-auto'}`} style={{ background: 'none' }}>
       {/* Fixed header - hidden in design mode */}
       {mode !== ('design' as ChatMode) && (
-        <div className="flex-none text-center bg-neutral/80 backdrop-blur-sm py-8 z-10">
-          <motion.h1 
-            initial={{ opacity: 0, y: -20 }}
+      <div className="flex-none text-center bg-neutral/80 backdrop-blur-sm py-8 z-10">
+        <motion.h1 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-6xl font-semibold text-primary font-sans tracking-tight mb-3"
+        >
+          Chat with <span className="text-poppy">Poppy</span>
+        </motion.h1>
+        <AnimatePresence mode="wait">
+          <motion.p 
+            key={mode}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-6xl font-semibold text-primary font-sans tracking-tight mb-3"
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ 
+              duration: 0.3,
+              ease: "easeOut"
+            }}
+            className="text-xl text-primary/80 font-sans max-w-2xl mx-auto"
           >
-            Chat with <span className="text-poppy">Poppy</span>
-          </motion.h1>
-          <AnimatePresence mode="wait">
-            <motion.p 
-              key={mode}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ 
-                duration: 0.3,
-                ease: "easeOut"
-              }}
-              className="text-xl text-primary/80 font-sans max-w-2xl mx-auto"
-            >
-              {mode === 'draft' ? 'Drafting a PRD' : 
-               mode === 'schedule' ? 'Search for feedback and send outreach emails' :
-               mode === 'brainstorm' ? 'Start with an idea or JTBD and let Poppy help you brainstorm' :
+            {mode === 'draft' ? 'Drafting a PRD' : 
+             mode === 'schedule' ? 'Search for feedback and send outreach emails' :
+             mode === 'brainstorm' ? 'Start with an idea or JTBD and let Poppy help you brainstorm' :
               mode === ('design' as ChatMode) ? 'Interactive design preview powered by v0' :
-               'Ask me anything about your product, strategy, or ideas.'}
-            </motion.p>
-          </AnimatePresence>
+             'Ask me anything about your product, strategy, or ideas.'}
+          </motion.p>
+        </AnimatePresence>
         </div>
       )}
 
@@ -1755,21 +1755,21 @@ export default function ChatInterface() {
         </div>
       ) : (
         // Regular chat mode: scrollable message container
-        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-          <div className="relative z-0 flex flex-col space-y-4">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={mode}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className="flex flex-col space-y-4"
-              >
-                <AnimatePresence mode="popLayout">
-            {messages
-              .filter(msg => !(msg.role === 'assistant' && msg.content === 'Thinking...'))
-              .map((msg, idx) => (
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+        <div className="relative z-0 flex flex-col space-y-4">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={mode}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="flex flex-col space-y-4"
+            >
+              <AnimatePresence mode="popLayout">
+          {messages
+            .filter(msg => !(msg.role === 'assistant' && msg.content === 'Thinking...'))
+            .map((msg, idx) => (
                     <motion.div
                       key={idx}
                       initial={{ opacity: 0, y: 10 }}
@@ -1959,7 +1959,7 @@ Your Name`;
 
       {/* Fixed input form - show in all modes except design */}
       {mode !== ('design' as ChatMode) && (
-        <div className="flex-none px-4 py-6 bg-transparent">
+      <div className="flex-none px-4 py-6 bg-transparent">
         <form onSubmit={sendMessage} className="flex gap-3 items-center">
         <div className="flex-1 relative">
             <div className="w-full border border-neutral/40 rounded-xl bg-white/90 overflow-hidden flex flex-col shadow-lg hover:shadow-xl transition-shadow duration-200">
@@ -2027,32 +2027,32 @@ Your Name`;
                       <FileText className="w-4 h-4" />
                     </motion.button>
                     <motion.button
-                      type="button"
+                type="button"
                       onClick={() => handleSafeModeChange('schedule')}
                       className={`p-2.5 rounded-full transition-all duration-200 ${
-                        mode === 'schedule' 
+                  mode === 'schedule' 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
                           : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
-                      }`}
-                      title="Schedule"
+                }`}
+                title="Schedule"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                    >
-                      <Calendar className="w-4 h-4" />
+              >
+                <Calendar className="w-4 h-4" />
                     </motion.button>
                     <motion.button
-                      type="button"
+                type="button"
                       onClick={() => handleSafeModeChange('brand-messaging')}
                       className={`p-2.5 rounded-full transition-all duration-200 ${
-                        mode === 'brand-messaging' 
+                          mode === 'brand-messaging' 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
                           : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
-                      }`}
-                      title="Brand Messaging"
+                }`}
+                        title="Brand Messaging"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                    >
-                      <Megaphone className="w-4 h-4" />
+              >
+                        <Megaphone className="w-4 h-4" />
                     </motion.button>
                     <motion.button
                       type="button"
@@ -2068,23 +2068,23 @@ Your Name`;
                     >
                       <Paintbrush className="w-4 h-4" />
                     </motion.button>
-                    {/* Agentic (Bot) button: show if agentic messages exist or in agent mode */}
-                    {(agenticMessages.length > 0 || mode === 'agent') && (
-                      <motion.button
-                        type="button"
-                        className={`p-2.5 rounded-full transition-all duration-200 bg-poppy/20 text-poppy shadow-inner ${
-                          showBounce ? 'animate-bounce-slow' : ''
-                        } ${mode === 'agent' ? 'ring-2 ring-poppy bg-poppy text-white' : ''}`}
-                        title="Poppy has a suggestion!"
-                        onClick={openAgentMode}
-                        whileHover={{ scale: 1.08 }}
-                        whileTap={{ scale: 0.96 }}
+                      {/* Agentic (Bot) button: show if agentic messages exist or in agent mode */}
+                      {(agenticMessages.length > 0 || mode === 'agent') && (
+                    <motion.button
+            type="button"
+                          className={`p-2.5 rounded-full transition-all duration-200 bg-poppy/20 text-poppy shadow-inner ${
+                            showBounce ? 'animate-bounce-slow' : ''
+                          } ${mode === 'agent' ? 'ring-2 ring-poppy bg-poppy text-white' : ''}`}
+                          title="Poppy has a suggestion!"
+                          onClick={openAgentMode}
+                          whileHover={{ scale: 1.08 }}
+                          whileTap={{ scale: 0.96 }}
                       >
-                        <Bot className="w-4 h-4" />
-                      </motion.button>
-                    )}
-                  </div>
-                  <div className="flex-1" />
+                          <Bot className="w-4 h-4" />
+                    </motion.button>
+        )}
+                    </div>
+                    <div className="flex-1" />
                   {showStartPrdButton && mode === 'brainstorm' && (
                     <motion.button
                       type="button"
@@ -2116,8 +2116,8 @@ Your Name`;
               </div>
             </div>
           </div>
-        </form>
-      </div>
+      </form>
+        </div>
       )}
 
       {/* Mode change confirmation modal */}
@@ -2147,7 +2147,7 @@ Your Name`;
           </div>
         </div>
       )}
-    </div>
+      </div>
     </div>
   );
-}
+} 
