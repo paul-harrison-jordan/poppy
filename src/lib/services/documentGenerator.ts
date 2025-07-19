@@ -41,7 +41,7 @@ export async function generateDocument(
     })
     if (!docRes.ok) throw new Error('Failed to create Google Doc')
     const docData = await docRes.json()
-    return { ...docData, title: finalTitle }
+    return { ...docData, title: finalTitle, markdown: markdown }
   }
 
   // Initial setup path

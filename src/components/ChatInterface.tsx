@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { collectStream } from "@/lib/collectStream"
 import { generateDocument } from '@/lib/services/documentGenerator'
-import { FileText, Sparkles, Calendar, Megaphone, Bot } from "lucide-react"
+import { FileText, Sparkles, Calendar, Megaphone, Bot, Paintbrush } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion";
 import PoppyProactiveMessage from './poppy/PoppyProactiveMessage';
 import { usePRDStore } from '@/store/prdStore';
@@ -44,7 +44,7 @@ interface MatchedContext {
   };
 }
 
-type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'schedule' | 'brand-messaging' | 'agent';
+type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'schedule' | 'brand-messaging' | 'agent' | 'design';
 
 
 export default function ChatInterface() {
@@ -69,6 +69,10 @@ export default function ChatInterface() {
   const [notifiedPrdIds, setNotifiedPrdIds] = useState<Set<string>>(new Set());
   const [showBounce, setShowBounce] = useState(false);
   const [showStartPrdButton, setShowStartPrdButton] = useState(false);
+  const [completedPrdContent, setCompletedPrdContent] = useState<string>('');
+  const [demoUrl, setDemoUrl] = useState<string | null>(null);
+  const [isCreatingDesign, setIsCreatingDesign] = useState(false);
+  const [v0ChatId, setV0ChatId] = useState<string | null>(null);
 
   const DOCUMENT_TYPES = {
     'brand-messaging': {
@@ -120,6 +124,18 @@ export default function ChatInterface() {
           role: 'assistant',
           content: "Share your brand messaging document. Please share your brand messaging strategy, goals, or the key areas you'd like to focus on."
         }]);
+      } else if (mode === 'design') {
+        if (demoUrl) {
+          setMessages([{
+            role: 'assistant',
+            content: "Your design is ready! You can view it above and iterate by describing changes you'd like to make."
+          }]);
+        } else {
+          setMessages([{
+            role: 'assistant',
+            content: "Welcome to design mode! Create a design by completing a PRD first, then clicking 'Create Design'."
+          }]);
+        }
       }
     }
   }, [mode, messages.length]);
@@ -190,6 +206,75 @@ export default function ChatInterface() {
       setShowStartPrdButton(false);
     }
   }, [messages, mode]);
+
+  // Effect to log demoUrl changes
+  useEffect(() => {
+    console.log('demoUrl useEffect triggered - demoUrl:', demoUrl, 'mode:', mode);
+    if (demoUrl) {
+      console.log('Demo URL updated:', demoUrl);
+    } else {
+      console.log('Demo URL is null or undefined');
+    }
+  }, [demoUrl, mode]);
+
+  const handleCreateDesign = async (prdContent: string) => {
+    try {
+      setIsCreatingDesign(true);
+      console.log('Creating design with PRD content');
+
+      const response = await fetch('/api/create-v0-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: `Create a UI design based on this PRD: ${prdContent}`
+        }),
+      });
+
+      console.log('API response status:', response.status);
+      const result = await response.json();
+      console.log('Design creation result:', result);
+
+      if (result.success) {
+        console.log('Design created successfully:', result.chat.id);
+        console.log('Demo URL:', result.chat.demo);
+        console.log('Setting demoUrl state to:', result.chat.demo);
+        console.log('Current mode before switch:', mode);
+        
+        // SENIOR ENGINEER FIX: Direct state update with immediate mode transition
+        const newDemoUrl = result.chat.demo || null;
+        const newChatId = result.chat.id || null;
+        
+        setDemoUrl(newDemoUrl);
+        setV0ChatId(newChatId);
+        setMode('design');
+        
+        // Set the design mode message directly with the known URL
+        setMessages([{
+          role: 'assistant',
+          content: "Your design is ready! You can view it above and iterate by describing changes you'd like to make."
+        }]);
+        
+        console.log('Switched to design mode with URL:', newDemoUrl, 'and chatId:', newChatId);
+        
+        // Force a re-render by logging after state updates
+        setTimeout(() => {
+          console.log('After state updates - demoUrl should be:', newDemoUrl);
+          console.log('After state updates - mode should be: design');
+        }, 100);
+      } else {
+        console.error('Design creation failed:', result);
+        alert('Failed to create design');
+      }
+    } catch (error) {
+      console.error('Error creating design:', error);
+      alert('Error creating design');
+    } finally {
+      console.log('Setting isCreatingDesign to false');
+      setIsCreatingDesign(false);
+    }
+  };
 
   // Summarize and save as PRD for brainstorm mode
   const handleSummarizeAndSave = async () => {
@@ -295,6 +380,18 @@ export default function ChatInterface() {
         role: 'assistant',
         content: "I&apos;ll help you create a brand messaging document. Please share your brand messaging strategy, goals, or the key areas you&apos;d like to focus on."
       }]);
+    } else if (newMode === 'design') {
+      if (demoUrl) {
+        setMessages([{
+          role: 'assistant',
+          content: "Your design is ready! You can view it above and iterate by describing changes you'd like to make."
+        }]);
+      } else {
+        setMessages([{
+          role: 'assistant',
+          content: "Welcome to design mode! Create a design by completing a PRD first, then clicking 'Create Design'."
+        }]);
+      }
     }
   };
 
@@ -342,6 +439,10 @@ export default function ChatInterface() {
           throw new Error("No document URL received");
         }
 
+        // Store the generated PRD markdown content
+        const prdMarkdown = docData.markdown || '';
+        setCompletedPrdContent(prdMarkdown);
+
         // Remove the thinking message
         setMessages(prev => prev.filter(msg => {
           if (typeof msg.content === 'string') {
@@ -376,15 +477,24 @@ export default function ChatInterface() {
             role: 'assistant',
             content: (
               <div className="flex flex-col items-center gap-4">
-                <p>Your {docType.text} is ready! Click below to view it in Google Docs.</p>
-                <a
-                  href={docData.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
-                >
-                  View {docType.title} in Google Docs
-                </a>
+                <p>Your {docType.text} is ready! Click below to view it in Google Docs or create a design prototype.</p>
+                <div className="flex gap-3">
+                  <a
+                    href={docData.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
+                  >
+                    View {docType.title} in Google Docs
+                  </a>
+                  <button
+                    onClick={() => handleCreateDesign(prdMarkdown)}
+                    disabled={isCreatingDesign}
+                    className="px-6 py-3 bg-orange-500 text-white rounded-full font-medium hover:bg-orange-600 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isCreatingDesign ? 'Creating Design...' : 'Create Design'}
+                  </button>
+                </div>
               </div>
             )
           }];
@@ -531,7 +641,49 @@ export default function ChatInterface() {
         content: "Thinking..." 
       }]);
 
-      if (mode === 'draft') {
+      if (mode === 'design') {
+        // Design mode: send message to v0 chat for iteration
+        if (!v0ChatId) {
+          setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: "No active design session. Please create a design first by completing a PRD."
+          }]);
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch('/api/update-v0-chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chatId: v0ChatId,
+            message: input
+          }),
+        });
+
+        const result = await response.json();
+        
+        // Remove thinking message
+        setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
+
+        if (result.success) {
+          // Update the demo URL with the new iteration
+          setDemoUrl(result.chat.demo || null);
+          
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: "Design updated! The changes should be reflected in the preview above."
+          }]);
+        } else {
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: "Sorry, I encountered an error while updating the design. Please try again."
+          }]);
+        }
+      } else if (mode === 'draft') {
         switch (draftStep) {
           case 'initial':
             // First, embed the request
@@ -645,6 +797,10 @@ export default function ChatInterface() {
                   throw new Error("No document URL received");
                 }
 
+                // Store the generated PRD markdown content
+                const prdMarkdown = docData.markdown || '';
+                setCompletedPrdContent(prdMarkdown);
+
                 // Remove the writing message
                 setMessages(prev => {
                   const withoutWriting = prev.filter(msg => {
@@ -661,15 +817,24 @@ export default function ChatInterface() {
                     role: 'assistant',
                     content: (
                       <div className="flex flex-col items-center gap-4">
-                        <p>Your {docType.text} is ready! Click below to view it in Google Docs.</p>
-                        <a
-                          href={docData.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
-                        >
-                          View {docType.title} in Google Docs
-                        </a>
+                        <p>Your {docType.text} is ready! Click below to view it in Google Docs or create a design prototype.</p>
+                        <div className="flex gap-3">
+                          <a
+                            href={docData.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
+                          >
+                            View {docType.title} in Google Docs
+                          </a>
+                          <button
+                            onClick={() => handleCreateDesign(prdMarkdown)}
+                            disabled={isCreatingDesign}
+                            className="px-6 py-3 bg-orange-500 text-white rounded-full font-medium hover:bg-orange-600 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isCreatingDesign ? 'Creating Design...' : 'Create Design'}
+                          </button>
+                        </div>
                       </div>
                     )
                   }];
@@ -920,15 +1085,38 @@ export default function ChatInterface() {
                     role: 'assistant',
                     content: (
                       <div className="flex flex-col items-center gap-4">
-                        <p>Your {docType.text} is ready! Click below to view it in Google Docs.</p>
-                        <a
-                          href={docData.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
-                        >
-                          View {docType.title} in Google Docs
-                        </a>
+                        <p>Your {docType.text} is ready! Click below to view it in Google Docs or create a design prototype.</p>
+                        <div className="flex gap-3">
+                          <a
+                            href={docData.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
+                          >
+                            View {docType.title} in Google Docs
+                          </a>
+                          <button
+                            onClick={() => handleCreateDesign(docData.markdown || '')}
+                            disabled={isCreatingDesign}
+                            className="px-6 py-3 bg-orange-500 text-white rounded-full font-medium hover:bg-orange-600 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isCreatingDesign ? 'Creating Design...' : 'Create Design'}
+                          </button>
+                        </div>
+                        {demoUrl && (
+                          <div className="mt-4 w-full max-w-2xl">
+                            <p className="text-sm text-gray-600 mb-2">Design Preview:</p>
+                            <div className="w-full h-96 border rounded-lg overflow-hidden shadow-lg">
+                              <iframe 
+                                src={demoUrl}
+                                width="100%" 
+                                height="100%"
+                                className="border-0"
+                                title="v0 Design Demo"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )
                   }];
@@ -1072,27 +1260,116 @@ export default function ChatInterface() {
              mode === 'schedule' ? 'Search for feedback and send outreach emails' :
              mode === 'brainstorm' ? 'Start with an idea or JTBD and let Poppy help you brainstorm' :
                mode === 'brand-messaging' ? 'Create a comprehensive brand messaging document' :
+               mode === 'design' ? 'Interactive design preview powered by v0' :
              'Ask me anything about your product, strategy, or ideas.'}
           </motion.p>
         </AnimatePresence>
         </div>
 
-      {/* Scrollable message container */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-        <div className="relative z-0 flex flex-col space-y-4">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={mode}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className="flex flex-col space-y-4"
-            >
-              <AnimatePresence mode="popLayout">
-          {messages
-            .filter(msg => !(msg.role === 'assistant' && msg.content === 'Thinking...'))
-            .map((msg, idx) => (
+      {/* Main content area */}
+      {mode === 'design' ? (
+        // Design mode: iframe from demoUrl or placeholder
+        <div className="flex-1 px-4 py-6">
+          {demoUrl ? (
+            <div className="w-full h-full border rounded-lg overflow-hidden shadow-lg bg-white">
+              <iframe 
+                src={demoUrl}
+                width="100%" 
+                height="100%"
+                className="border-0"
+                title="v0 Design Demo"
+              />
+            </div>
+          ) : (
+            <div className="w-full h-full border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+              <div className="text-center">
+                <Paintbrush className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">Design Mode</h3>
+                <p className="text-gray-500">Create a design from a PRD to see it here</p>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : mode === 'draft' ? (
+        // Regular draft mode: normal chat messages
+        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+          <div className="relative z-0 flex flex-col space-y-4">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={mode}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="flex flex-col space-y-4"
+              >
+                <AnimatePresence mode="popLayout">
+            {messages
+              .filter(msg => !(msg.role === 'assistant' && msg.content === 'Thinking...'))
+              .map((msg, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ 
+                        duration: 0.3,
+                        ease: "easeOut"
+                      }}
+                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-2 transition-all duration-300 group`}
+                    >
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ 
+                          duration: 0.3,
+                          ease: "easeOut"
+                        }}
+                        className={
+                  msg.role === 'user'
+                            ? 'px-6 py-4 rounded-2xl max-w-[75%] font-semibold text-white bg-poppy shadow-lg hover:shadow-xl transition-shadow duration-200'
+                            : `px-6 py-4 rounded-2xl max-w-[75%] font-sans text-primary bg-white/90 shadow-md hover:shadow-lg transition-shadow duration-200 whitespace-pre-line relative ${msg.className || ''}`
+                        }
+                      >
+                  {msg.content}
+                      </motion.div>
+                    </motion.div>
+            ))}
+                </AnimatePresence>
+            {loading && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="flex justify-start"
+                >
+                  <div className="px-6 py-4 rounded-2xl bg-white/90 text-primary/60 text-base font-sans animate-pulse shadow-md">
+                Thinking...
+              </div>
+                </motion.div>
+            )}
+              </motion.div>
+            </AnimatePresence>
+            <div ref={messagesEndRef} className="h-4" />
+          </div>
+        </div>
+      ) : (
+        // Regular chat mode: scrollable message container
+        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+          <div className="relative z-0 flex flex-col space-y-4">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={mode}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="flex flex-col space-y-4"
+              >
+                <AnimatePresence mode="popLayout">
+            {messages
+              .filter(msg => !(msg.role === 'assistant' && msg.content === 'Thinking...'))
+              .map((msg, idx) => (
                     <motion.div
                       key={idx}
                       initial={{ opacity: 0, y: 10 }}
@@ -1269,7 +1546,7 @@ Your Name`;
                   className="flex justify-start"
                 >
                   <div className="px-6 py-4 rounded-2xl bg-white/90 text-primary/60 text-base font-sans animate-pulse shadow-md">
-                {mode === 'schedule' ? 'Searching...' : 'Thinking...'}
+                Thinking...
               </div>
                 </motion.div>
           )}
@@ -1278,8 +1555,9 @@ Your Name`;
           <div ref={messagesEndRef} className="h-4" />
         </div>
       </div>
+      )}
 
-      {/* Fixed input form */}
+      {/* Fixed input form - show in all modes */}
       <div className="flex-none px-4 py-6 bg-transparent">
         <form onSubmit={sendMessage} className="flex gap-3 items-center">
         <div className="flex-1 relative">
@@ -1348,50 +1626,64 @@ Your Name`;
                       <FileText className="w-4 h-4" />
                     </motion.button>
                     <motion.button
-                type="button"
-                onClick={() => handleModeChange('schedule')}
+                      type="button"
+                      onClick={() => handleModeChange('schedule')}
                       className={`p-2.5 rounded-full transition-all duration-200 ${
-                  mode === 'schedule' 
+                        mode === 'schedule' 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
                           : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
-                }`}
-                title="Schedule"
+                      }`}
+                      title="Schedule"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-              >
-                <Calendar className="w-4 h-4" />
+                    >
+                      <Calendar className="w-4 h-4" />
                     </motion.button>
                     <motion.button
-                type="button"
-                        onClick={() => handleModeChange('brand-messaging')}
+                      type="button"
+                      onClick={() => handleModeChange('brand-messaging')}
                       className={`p-2.5 rounded-full transition-all duration-200 ${
-                          mode === 'brand-messaging' 
+                        mode === 'brand-messaging' 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
                           : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
-                }`}
-                        title="Brand Messaging"
+                      }`}
+                      title="Brand Messaging"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-              >
-                        <Megaphone className="w-4 h-4" />
+                    >
+                      <Megaphone className="w-4 h-4" />
                     </motion.button>
-                      {/* Agentic (Bot) button: show if agentic messages exist or in agent mode */}
-                      {(agenticMessages.length > 0 || mode === 'agent') && (
                     <motion.button
-            type="button"
-                          className={`p-2.5 rounded-full transition-all duration-200 bg-poppy/20 text-poppy shadow-inner ${
-                            showBounce ? 'animate-bounce-slow' : ''
-                          } ${mode === 'agent' ? 'ring-2 ring-poppy bg-poppy text-white' : ''}`}
-                          title="Poppy has a suggestion!"
-                          onClick={openAgentMode}
-                          whileHover={{ scale: 1.08 }}
-                          whileTap={{ scale: 0.96 }}
+                      type="button"
+                      onClick={() => handleModeChange('design')}
+                      className={`p-2.5 rounded-full transition-all duration-200 ${
+                        mode === 'design' 
+                          ? 'bg-poppy/20 text-poppy shadow-inner' 
+                          : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
+                      }`}
+                      title="Design"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Paintbrush className="w-4 h-4" />
+                    </motion.button>
+                    {/* Agentic (Bot) button: show if agentic messages exist or in agent mode */}
+                    {(agenticMessages.length > 0 || mode === 'agent') && (
+                      <motion.button
+                        type="button"
+                        className={`p-2.5 rounded-full transition-all duration-200 bg-poppy/20 text-poppy shadow-inner ${
+                          showBounce ? 'animate-bounce-slow' : ''
+                        } ${mode === 'agent' ? 'ring-2 ring-poppy bg-poppy text-white' : ''}`}
+                        title="Poppy has a suggestion!"
+                        onClick={openAgentMode}
+                        whileHover={{ scale: 1.08 }}
+                        whileTap={{ scale: 0.96 }}
                       >
-                          <Bot className="w-4 h-4" />
-                    </motion.button>
-        )}
-                    </div>
-                    <div className="flex-1" />
+                        <Bot className="w-4 h-4" />
+                      </motion.button>
+                    )}
+                  </div>
+                  <div className="flex-1" />
                   {showStartPrdButton && mode === 'brainstorm' && (
                     <motion.button
                       type="button"
@@ -1423,9 +1715,9 @@ Your Name`;
               </div>
             </div>
           </div>
-      </form>
-        </div>
+        </form>
       </div>
     </div>
+    </div>
   );
-} 
+}

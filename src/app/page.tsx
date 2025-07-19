@@ -47,8 +47,8 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral/80 flex flex-col items-center justify-center relative">
-      <div className="absolute top-6 right-8 flex flex-col gap-4">
+    <div className="min-h-screen bg-neutral/80 flex flex-col relative">
+      <div className="absolute top-6 right-8 flex flex-col gap-4 z-10">
         <Link href="/my-work" className="text-poppy hover:text-poppy/80 transition-colors" aria-label="View my work">
           <PenLine className="w-7 h-7" />
         </Link>
@@ -56,7 +56,12 @@ export default function Home() {
           <Settings className="w-7 h-7" />
         </Link>
       </div>
-      <ChatInterface />
+      
+      <div className="flex flex-1 items-center justify-center p-8">
+        <div className="w-full max-w-5xl">
+          <ChatInterface />
+        </div>
+      </div>
     </div>
   );
 }
