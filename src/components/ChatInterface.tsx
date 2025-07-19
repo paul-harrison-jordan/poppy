@@ -69,7 +69,7 @@ export default function ChatInterface() {
   const [notifiedPrdIds, setNotifiedPrdIds] = useState<Set<string>>(new Set());
   const [showBounce, setShowBounce] = useState(false);
   const [showStartPrdButton, setShowStartPrdButton] = useState(false);
-  const [completedPrdContent, setCompletedPrdContent] = useState<string>('');
+  const [, setCompletedPrdContent] = useState<string>('');
   const [demoUrl, setDemoUrl] = useState<string | null>(null);
   const [isCreatingDesign, setIsCreatingDesign] = useState(false);
   const [v0ChatId, setV0ChatId] = useState<string | null>(null);
