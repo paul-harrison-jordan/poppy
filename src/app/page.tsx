@@ -57,8 +57,8 @@ export default function Home() {
         </Link>
       </div>
       
-      <div className="flex flex-1 items-center justify-center p-8">
-        <div className="w-full max-w-5xl">
+      <div className="flex flex-1 items-center justify-center p-8 design-mode-container">
+        <div className="w-full max-w-5xl design-mode-content">
           <ChatInterface />
         </div>
       </div>

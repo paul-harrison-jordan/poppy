@@ -69,10 +69,12 @@ export default function ChatInterface() {
   const [notifiedPrdIds, setNotifiedPrdIds] = useState<Set<string>>(new Set());
   const [showBounce, setShowBounce] = useState(false);
   const [showStartPrdButton, setShowStartPrdButton] = useState(false);
-  const [, setCompletedPrdContent] = useState<string>('');
+  const [completedPrdContent, setCompletedPrdContent] = useState<string>('');
   const [demoUrl, setDemoUrl] = useState<string | null>(null);
   const [isCreatingDesign, setIsCreatingDesign] = useState(false);
   const [v0ChatId, setV0ChatId] = useState<string | null>(null);
+  const [showModeChangeConfirm, setShowModeChangeConfirm] = useState(false);
+  const [pendingModeChange, setPendingModeChange] = useState<ChatMode | null>(null);
 
   const DOCUMENT_TYPES = {
     'brand-messaging': {
@@ -133,7 +135,7 @@ export default function ChatInterface() {
         } else {
           setMessages([{
             role: 'assistant',
-            content: "Welcome to design mode! Create a design by completing a PRD first, then clicking 'Create Design'."
+            content: "Welcome to design mode! Describe what you'd like to design and I'll create it for you using v0."
           }]);
         }
       }
@@ -216,6 +218,20 @@ export default function ChatInterface() {
       console.log('Demo URL is null or undefined');
     }
   }, [demoUrl, mode]);
+
+  // Effect to handle full-screen mode for design
+  useEffect(() => {
+    if (mode === 'design') {
+      document.body.classList.add('design-mode-fullscreen');
+    } else {
+      document.body.classList.remove('design-mode-fullscreen');
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('design-mode-fullscreen');
+    };
+  }, [mode]);
 
   const handleCreateDesign = async (prdContent: string) => {
     try {
@@ -389,10 +405,36 @@ export default function ChatInterface() {
       } else {
         setMessages([{
           role: 'assistant',
-          content: "Welcome to design mode! Create a design by completing a PRD first, then clicking 'Create Design'."
+          content: "Welcome to design mode! Describe what you'd like to design and I'll create it for you using v0."
         }]);
       }
     }
+  };
+
+  const handleSafeModeChange = (newMode: ChatMode) => {
+    // If leaving design mode with an active session, show confirmation
+    if (mode === 'design' && v0ChatId && newMode !== 'design') {
+      setPendingModeChange(newMode);
+      setShowModeChangeConfirm(true);
+    } else {
+      handleModeChange(newMode);
+    }
+  };
+
+  const confirmModeChange = () => {
+    if (pendingModeChange) {
+      // Clear design session data when leaving design mode
+      setDemoUrl(null);
+      setV0ChatId(null);
+      handleModeChange(pendingModeChange);
+    }
+    setShowModeChangeConfirm(false);
+    setPendingModeChange(null);
+  };
+
+  const cancelModeChange = () => {
+    setShowModeChangeConfirm(false);
+    setPendingModeChange(null);
   };
 
   const showNextQuestion = async () => {
@@ -642,46 +684,78 @@ export default function ChatInterface() {
       }]);
 
       if (mode === 'design') {
-        // Design mode: send message to v0 chat for iteration
+        // Design mode: send message to v0 chat for iteration OR create new design
         if (!v0ChatId) {
-          setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
-          setMessages(prev => [...prev, {
-            role: 'assistant',
-            content: "No active design session. Please create a design first by completing a PRD."
-          }]);
-          setLoading(false);
-          return;
-        }
-
-        const response = await fetch('/api/update-v0-chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            chatId: v0ChatId,
-            message: input
-          }),
-        });
-
-        const result = await response.json();
-        
-        // Remove thinking message
-        setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
-
-        if (result.success) {
-          // Update the demo URL with the new iteration
-          setDemoUrl(result.chat.demo || null);
+          // No active session - create a new design
+          console.log('Creating new design from design mode input:', input);
           
-          setMessages(prev => [...prev, {
-            role: 'assistant',
-            content: "Design updated! The changes should be reflected in the preview above."
-          }]);
+          const response = await fetch('/api/create-v0-chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message: input // Use the user's input directly as the design prompt
+            }),
+          });
+
+          const result = await response.json();
+          
+          // Remove thinking message
+          setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
+
+          if (result.success) {
+            // Set up the new design session
+            const newDemoUrl = result.chat.demo || null;
+            const newChatId = result.chat.id || null;
+            
+            setDemoUrl(newDemoUrl);
+            setV0ChatId(newChatId);
+            
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: "Great! I've created your design. You can see it above and continue iterating by describing changes you'd like to make."
+            }]);
+            
+            console.log('New design created with URL:', newDemoUrl, 'and chatId:', newChatId);
+          } else {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: "Sorry, I encountered an error while creating the design. Please try again."
+            }]);
+          }
         } else {
-          setMessages(prev => [...prev, {
-            role: 'assistant',
-            content: "Sorry, I encountered an error while updating the design. Please try again."
-          }]);
+          // Existing session - update the design
+          const response = await fetch('/api/update-v0-chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              chatId: v0ChatId,
+              message: input
+            }),
+          });
+
+          const result = await response.json();
+          
+          // Remove thinking message
+          setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
+
+          if (result.success) {
+            // Update the demo URL with the new iteration
+            setDemoUrl(result.chat.demo || null);
+            
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: "Design updated! The changes should be reflected in the preview above."
+            }]);
+          } else {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: "Sorry, I encountered an error while updating the design. Please try again."
+            }]);
+          }
         }
       } else if (mode === 'draft') {
         switch (draftStep) {
@@ -1192,18 +1266,6 @@ export default function ChatInterface() {
     }
   };
 
-  // const isStrategyMode = (mode: ChatMode): mode is 'brand-messaging' => {
-  //   return mode === 'brand-messaging';
-  // };
-
-  // const getDocumentTypeText = (mode: ChatMode): string => {
-  //   return isStrategyMode(mode) ? 'brand messaging' : 'PRD';
-  // };
-
-  // const getDocumentTitle = (mode: ChatMode): string => {
-  //   return isStrategyMode(mode) ? 'Brand Messaging' : 'PRD';
-  // };
-
   // Handler to open agent mode
   const openAgentMode = () => {
     setMode('agent');
@@ -1234,61 +1296,176 @@ export default function ChatInterface() {
         </div>
       )}
 
-    <div className="flex flex-col h-screen w-full max-w-5xl mx-auto font-sans" style={{ background: 'none' }}>
-      {/* Fixed header */}
-      <div className="flex-none text-center bg-neutral/80 backdrop-blur-sm py-8 z-10">
-        <motion.h1 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-6xl font-semibold text-primary font-sans tracking-tight mb-3"
-        >
-          Chat with <span className="text-poppy">Poppy</span>
-        </motion.h1>
-        <AnimatePresence mode="wait">
-          <motion.p 
-            key={mode}
-            initial={{ opacity: 0, y: 10 }}
+    <div className={`flex flex-col h-screen w-full font-sans ${mode === 'design' ? '' : 'max-w-5xl mx-auto'}`} style={{ background: 'none' }}>
+      {/* Fixed header - hidden in design mode */}
+      {mode !== 'design' && (
+        <div className="flex-none text-center bg-neutral/80 backdrop-blur-sm py-8 z-10">
+          <motion.h1 
+            initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ 
-              duration: 0.3,
-              ease: "easeOut"
-            }}
-            className="text-xl text-primary/80 font-sans max-w-2xl mx-auto"
+            className="text-6xl font-semibold text-primary font-sans tracking-tight mb-3"
           >
-            {mode === 'draft' ? 'Drafting a PRD' : 
-             mode === 'schedule' ? 'Search for feedback and send outreach emails' :
-             mode === 'brainstorm' ? 'Start with an idea or JTBD and let Poppy help you brainstorm' :
-               mode === 'brand-messaging' ? 'Create a comprehensive brand messaging document' :
-               mode === 'design' ? 'Interactive design preview powered by v0' :
-             'Ask me anything about your product, strategy, or ideas.'}
-          </motion.p>
-        </AnimatePresence>
+            Chat with <span className="text-poppy">Poppy</span>
+          </motion.h1>
+          <AnimatePresence mode="wait">
+            <motion.p 
+              key={mode}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ 
+                duration: 0.3,
+                ease: "easeOut"
+              }}
+              className="text-xl text-primary/80 font-sans max-w-2xl mx-auto"
+            >
+              {mode === 'draft' ? 'Drafting a PRD' : 
+               mode === 'schedule' ? 'Search for feedback and send outreach emails' :
+               mode === 'brainstorm' ? 'Start with an idea or JTBD and let Poppy help you brainstorm' :
+                 mode === 'brand-messaging' ? 'Create a comprehensive brand messaging document' :
+                 mode === 'design' ? 'Interactive design preview powered by v0' :
+               'Ask me anything about your product, strategy, or ideas.'}
+            </motion.p>
+          </AnimatePresence>
         </div>
+      )}
 
       {/* Main content area */}
       {mode === 'design' ? (
-        // Design mode: iframe from demoUrl or placeholder
-        <div className="flex-1 px-4 py-6">
-          {demoUrl ? (
-            <div className="w-full h-full border rounded-lg overflow-hidden shadow-lg bg-white">
-              <iframe 
-                src={demoUrl}
-                width="100%" 
-                height="100%"
-                className="border-0"
-                title="v0 Design Demo"
-              />
-            </div>
-          ) : (
-            <div className="w-full h-full border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-              <div className="text-center">
-                <Paintbrush className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">Design Mode</h3>
-                <p className="text-gray-500">Create a design from a PRD to see it here</p>
+        // Design mode: left sidebar + main iframe area
+        <div className="flex-1 flex">
+          {/* Left sidebar with chat and input */}
+          <motion.div 
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 320, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            className="flex flex-col bg-white/95 backdrop-blur-sm border-r border-gray-200 shadow-lg"
+          >
+            {/* Mode navigation */}
+            <div className="p-3 border-b border-gray-200 bg-white/90">
+              <div className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">
+                Mode
+              </div>
+              <div className="flex flex-wrap gap-1">
+                <button
+                  onClick={() => handleSafeModeChange('brainstorm')}
+                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-poppy/10 text-poppy/80 hover:text-poppy transition-colors"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  Brainstorm
+                </button>
+                <button
+                  onClick={() => handleSafeModeChange('draft')}
+                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-poppy/10 text-poppy/80 hover:text-poppy transition-colors"
+                >
+                  <FileText className="w-3 h-3" />
+                  Draft PRD
+                </button>
+                <button
+                  onClick={() => handleSafeModeChange('schedule')}
+                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-poppy/10 text-poppy/80 hover:text-poppy transition-colors"
+                >
+                  <Calendar className="w-3 h-3" />
+                  Schedule
+                </button>
+                <div className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-poppy/20 text-poppy">
+                  <Paintbrush className="w-3 h-3" />
+                  Design
+                </div>
               </div>
             </div>
-          )}
+
+            {/* Compact chat messages */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              <div className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">
+                Design Chat
+              </div>
+              {messages
+                .filter(msg => !(msg.role === 'assistant' && msg.content === 'Thinking...'))
+                .slice(-6) // Show only last 6 messages to keep it compact
+                .map((msg, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className={`text-xs p-2 rounded-lg ${
+                      msg.role === 'user' 
+                        ? 'bg-poppy text-white ml-4' 
+                        : 'bg-gray-100 text-gray-800 mr-4'
+                    }`}
+                  >
+                    {typeof msg.content === 'string' ? msg.content : 'Design action'}
+                  </motion.div>
+                ))}
+              {loading && (
+                <div className="text-xs p-2 rounded-lg bg-gray-100 text-gray-600 mr-4 animate-pulse">
+                  Updating design...
+                </div>
+              )}
+            </div>
+            
+            {/* Compact input form */}
+            <div className="p-3 border-t border-gray-200 bg-white/90">
+              <form onSubmit={sendMessage} className="space-y-2">
+                <textarea
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  placeholder="Describe design changes..."
+                  disabled={loading}
+                  rows={3}
+                  className="w-full text-sm px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-poppy focus:border-poppy resize-none"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage(e);
+                    }
+                  }}
+                />
+                <div className="flex justify-between items-center">
+                  <div className="text-xs text-gray-500">
+                    {v0ChatId ? '✓ Design session active' : '⚠ No active session'}
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading || !input.trim()}
+                    className="px-3 py-1 text-sm bg-poppy text-white rounded-md hover:bg-poppy/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Update
+                  </button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+
+          {/* Main iframe area */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex-1 p-4"
+          >
+            {demoUrl ? (
+              <div className="w-full h-full border rounded-lg overflow-hidden shadow-xl bg-white">
+                <iframe 
+                  src={demoUrl}
+                  width="100%" 
+                  height="100%"
+                  className="border-0"
+                  title="v0 Design Demo"
+                />
+              </div>
+            ) : (
+              <div className="w-full h-full border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                  <Paintbrush className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-600 mb-2">Design Preview</h3>
+                  <p className="text-gray-500">Your design will appear here</p>
+                </div>
+              </div>
+            )}
+          </motion.div>
         </div>
       ) : mode === 'draft' ? (
         // Regular draft mode: normal chat messages
@@ -1557,8 +1734,9 @@ Your Name`;
       </div>
       )}
 
-      {/* Fixed input form - show in all modes */}
-      <div className="flex-none px-4 py-6 bg-transparent">
+      {/* Fixed input form - show in all modes except design */}
+      {mode !== 'design' && (
+        <div className="flex-none px-4 py-6 bg-transparent">
         <form onSubmit={sendMessage} className="flex gap-3 items-center">
         <div className="flex-1 relative">
             <div className="w-full border border-neutral/40 rounded-xl bg-white/90 overflow-hidden flex flex-col shadow-lg hover:shadow-xl transition-shadow duration-200">
@@ -1599,7 +1777,7 @@ Your Name`;
                   <div className="flex gap-3">
                     <motion.button
                 type="button"
-                onClick={() => handleModeChange('brainstorm')}
+                onClick={() => handleSafeModeChange('brainstorm')}
                       className={`p-2.5 rounded-full transition-all duration-200 ${
                   mode === 'brainstorm' 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
@@ -1613,7 +1791,7 @@ Your Name`;
                     </motion.button>
                     <motion.button
                       type="button"
-                      onClick={() => handleModeChange('draft')}
+                      onClick={() => handleSafeModeChange('draft')}
                       className={`p-2.5 rounded-full transition-all duration-200 ${
                         mode === 'draft' 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
@@ -1627,7 +1805,7 @@ Your Name`;
                     </motion.button>
                     <motion.button
                       type="button"
-                      onClick={() => handleModeChange('schedule')}
+                      onClick={() => handleSafeModeChange('schedule')}
                       className={`p-2.5 rounded-full transition-all duration-200 ${
                         mode === 'schedule' 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
@@ -1641,7 +1819,7 @@ Your Name`;
                     </motion.button>
                     <motion.button
                       type="button"
-                      onClick={() => handleModeChange('brand-messaging')}
+                      onClick={() => handleSafeModeChange('brand-messaging')}
                       className={`p-2.5 rounded-full transition-all duration-200 ${
                         mode === 'brand-messaging' 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
@@ -1655,7 +1833,7 @@ Your Name`;
                     </motion.button>
                     <motion.button
                       type="button"
-                      onClick={() => handleModeChange('design')}
+                      onClick={() => handleSafeModeChange('design')}
                       className={`p-2.5 rounded-full transition-all duration-200 ${
                         mode === 'design' 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
@@ -1717,6 +1895,35 @@ Your Name`;
           </div>
         </form>
       </div>
+      )}
+
+      {/* Mode change confirmation modal */}
+      {showModeChangeConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              Leave Design Mode?
+            </h3>
+            <p className="text-gray-600 mb-4">
+              You have an active design session. Leaving design mode will end this session and you'll lose the ability to iterate on this design.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={cancelModeChange}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Stay in Design Mode
+              </button>
+              <button
+                onClick={confirmModeChange}
+                className="px-4 py-2 bg-poppy text-white rounded-md hover:bg-poppy/90 transition-colors"
+              >
+                Leave Design Mode
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </div>
   );

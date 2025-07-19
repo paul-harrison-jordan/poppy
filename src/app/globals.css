@@ -127,3 +127,14 @@
 .animate-bounce-slow {
   animation: bounce-slow 0.8s cubic-bezier(0.8,0,1,1) 0s 3;
 }
+
+/* Design Mode Full Screen Styles */
+.design-mode-fullscreen .design-mode-container {
+  padding: 0 !important;
+}
+
+.design-mode-fullscreen .design-mode-content {
+  max-width: none !important;
+  width: 100vw !important;
+  height: 100vh !important;
+}
