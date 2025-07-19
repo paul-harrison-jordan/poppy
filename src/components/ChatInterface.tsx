@@ -126,7 +126,7 @@ export default function ChatInterface() {
           role: 'assistant',
           content: "Share your brand messaging document. Please share your brand messaging strategy, goals, or the key areas you'd like to focus on."
         }]);
-      } else if (mode === 'design') {
+      } else if (mode === ('design' as ChatMode)) {
         if (demoUrl) {
           setMessages([{
             role: 'assistant',
@@ -221,7 +221,7 @@ export default function ChatInterface() {
 
   // Effect to handle full-screen mode for design
   useEffect(() => {
-    if (mode === 'design') {
+    if (mode === ('design' as ChatMode)) {
       document.body.classList.add('design-mode-fullscreen');
     } else {
       document.body.classList.remove('design-mode-fullscreen');
@@ -396,7 +396,7 @@ export default function ChatInterface() {
         role: 'assistant',
         content: "I&apos;ll help you create a brand messaging document. Please share your brand messaging strategy, goals, or the key areas you&apos;d like to focus on."
       }]);
-    } else if (newMode === 'design') {
+    } else if (newMode === ('design' as ChatMode)) {
       if (demoUrl) {
         setMessages([{
           role: 'assistant',
@@ -413,7 +413,7 @@ export default function ChatInterface() {
 
   const handleSafeModeChange = (newMode: ChatMode) => {
     // If leaving design mode with an active session, show confirmation
-    if (mode === 'design' && v0ChatId && newMode !== 'design') {
+    if (mode === ('design' as ChatMode) && v0ChatId && newMode !== ('design' as ChatMode)) {
       setPendingModeChange(newMode);
       setShowModeChangeConfirm(true);
     } else {
@@ -683,7 +683,7 @@ export default function ChatInterface() {
         content: "Thinking..." 
       }]);
 
-      if (mode === 'design') {
+      if (mode === ('design' as ChatMode)) {
         // Design mode: send message to v0 chat for iteration OR create new design
         if (!v0ChatId) {
           // No active session - create a new design
@@ -1296,9 +1296,9 @@ export default function ChatInterface() {
         </div>
       )}
 
-    <div className={`flex flex-col h-screen w-full font-sans ${mode === 'design' ? '' : 'max-w-5xl mx-auto'}`} style={{ background: 'none' }}>
+    <div className={`flex flex-col h-screen w-full font-sans ${mode === ('design' as ChatMode) ? '' : 'max-w-5xl mx-auto'}`} style={{ background: 'none' }}>
       {/* Fixed header - hidden in design mode */}
-      {mode !== 'design' && (
+      {mode !== ('design' as ChatMode) && (
         <div className="flex-none text-center bg-neutral/80 backdrop-blur-sm py-8 z-10">
           <motion.h1 
             initial={{ opacity: 0, y: -20 }}
@@ -1322,7 +1322,7 @@ export default function ChatInterface() {
               {mode === 'draft' ? 'Drafting a PRD' : 
                mode === 'schedule' ? 'Search for feedback and send outreach emails' :
                mode === 'brainstorm' ? 'Start with an idea or JTBD and let Poppy help you brainstorm' :
-              mode === 'design' ? 'Interactive design preview powered by v0' :
+              mode === ('design' as ChatMode) ? 'Interactive design preview powered by v0' :
                'Ask me anything about your product, strategy, or ideas.'}
             </motion.p>
           </AnimatePresence>
@@ -1330,7 +1330,7 @@ export default function ChatInterface() {
       )}
 
       {/* Main content area */}
-      {mode === 'design' ? (
+      {mode === ('design' as ChatMode) ? (
         // Design mode: left sidebar + main iframe area
         <div className="flex-1 flex">
           {/* Left sidebar with chat and input */}
@@ -1734,7 +1734,7 @@ Your Name`;
       )}
 
       {/* Fixed input form - show in all modes except design */}
-      {mode !== 'design' && (
+      {mode !== ('design' as ChatMode) && (
         <div className="flex-none px-4 py-6 bg-transparent">
         <form onSubmit={sendMessage} className="flex gap-3 items-center">
         <div className="flex-1 relative">
@@ -1834,7 +1834,7 @@ Your Name`;
                       type="button"
                       onClick={() => handleSafeModeChange('design')}
                       className={`p-2.5 rounded-full transition-all duration-200 ${
-                        mode === 'design' 
+                        mode === ('design' as ChatMode) 
                           ? 'bg-poppy/20 text-poppy shadow-inner' 
                           : 'hover:bg-poppy/10 text-poppy/80 hover:text-poppy hover:shadow-md'
                       }`}
