@@ -1322,8 +1322,7 @@ export default function ChatInterface() {
               {mode === 'draft' ? 'Drafting a PRD' : 
                mode === 'schedule' ? 'Search for feedback and send outreach emails' :
                mode === 'brainstorm' ? 'Start with an idea or JTBD and let Poppy help you brainstorm' :
-                 mode === 'brand-messaging' ? 'Create a comprehensive brand messaging document' :
-                 mode === 'design' ? 'Interactive design preview powered by v0' :
+              mode === 'design' ? 'Interactive design preview powered by v0' :
                'Ask me anything about your product, strategy, or ideas.'}
             </motion.p>
           </AnimatePresence>
