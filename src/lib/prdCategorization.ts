@@ -1,4 +1,13 @@
-import { Comment } from '@/types/my-work'
+// Define Comment interface inline since we removed my-work types
+export interface Comment {
+  id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  resolved: boolean;
+  is_reply?: boolean;
+  parent_id?: string;
+}
 
 export interface CommentMetrics {
   totalComments: number
