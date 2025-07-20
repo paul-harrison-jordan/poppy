@@ -20,6 +20,7 @@
     "@radix-ui/react-slot": "^1.2.2",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.52.0",
+    "@tailwindcss/typography": "^0.5.16",
     "@vercel/blob": "^1.1.1",
     "child_process": "^1.0.2",
     "class-variance-authority": "^0.7.1",

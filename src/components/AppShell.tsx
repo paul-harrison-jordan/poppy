@@ -65,9 +65,9 @@ function triggerAgenticNotification(prd: PRD) {
     : [];
   window.dispatchEvent(new CustomEvent('poppy-agentic-message', {
     detail: {
-      prdTitle: prd.title,
+      prdTitle: prd.title || '',
       openQuestions,
-      prdId: prd.id
+      prdId: prd.id || ''
     }
   }));
 }
@@ -122,9 +122,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     prds.forEach((prd: PRD) => {
       // Fetch full metadata if available (simulate for now)
       // In a real app, you might fetch comments/summary here
-      if (prd.metadata && determineCategory(prd) === 'at-risk' && !notifiedPrdIds.has(prd.id)) {
+      if (prd.metadata && prd.id && determineCategory(prd) === 'at-risk' && !notifiedPrdIds.has(prd.id)) {
         triggerAgenticNotification(prd);
-        setNotifiedPrdIds(prev => new Set(prev).add(prd.id));
+        setNotifiedPrdIds(prev => new Set(prev).add(prd.id!));
       }
     });
   }, [notifiedPrdIds]);
@@ -134,9 +134,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     function handleStorageChange() {
       const prds = usePRDStore.getState().prds;
       prds.forEach((prd: PRD) => {
-        if (prd.metadata && determineCategory(prd) === 'at-risk' && !notifiedPrdIds.has(prd.id)) {
+        if (prd.metadata && prd.id && determineCategory(prd) === 'at-risk' && !notifiedPrdIds.has(prd.id)) {
           triggerAgenticNotification(prd);
-          setNotifiedPrdIds(prev => new Set(prev).add(prd.id));
+          setNotifiedPrdIds(prev => new Set(prev).add(prd.id!));
         }
       });
     }

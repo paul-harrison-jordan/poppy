@@ -11,6 +11,7 @@ export function useAgenticPRDNotifications() {
     prds.forEach((prd) => {
       if (
         prd.metadata &&
+        prd.id &&
         determineCategory(prd) === 'at-risk' &&
         !notifiedPrdIds.current.has(prd.id)
       ) {
@@ -22,7 +23,7 @@ export function useAgenticPRDNotifications() {
             : [];
         addAgenticMessage({
           prdId: prd.id,
-          prdTitle: prd.title,
+          prdTitle: prd.title || '',
           openQuestions,
         });
         notifiedPrdIds.current.add(prd.id);
