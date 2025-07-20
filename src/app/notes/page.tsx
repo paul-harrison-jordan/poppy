@@ -32,7 +32,7 @@ async function addPrd(formData: FormData) {
 export default async function Notes() {
   const supabase = await createClient();
 
-  let { data: prds, error } = await supabase
+  const { data: prds } = await supabase
     .from('prds')
     .select('*')
   
