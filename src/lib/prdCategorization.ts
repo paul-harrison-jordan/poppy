@@ -1,4 +1,4 @@
-// Define Comment interface inline since we removed my-work types
+// Comment interface for PRD feedback functionality
 export interface Comment {
   id: string;
   user_id: string;

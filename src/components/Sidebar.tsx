@@ -26,11 +26,6 @@ export default function Sidebar() {
       label: "Key Terms",
       icon: <BookOpen className="w-4 h-4" />,
     },
-    {
-      href: "/my-work",
-      label: "My Work",
-      icon: <BookOpen className="w-4 h-4" />,
-    }
   ];
 
   return (

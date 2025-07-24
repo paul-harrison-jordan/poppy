@@ -365,12 +365,27 @@ export default function FeatureDetailClient({
                     </div>
                   )}
                 </div>
-              ) : (
+              ) : feature['v0-link'] ? (
                 <iframe
                   src={feature['v0-link']}
                   className="w-full h-full border-0"
                   title={extractTitle(feature['v0-link'], 'design')}
                 />
+              ) : (
+                <div className="flex items-center justify-center h-full bg-gray-50">
+                  <div className="text-center">
+                    <Palette className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No design created yet</h3>
+                    <p className="text-gray-500 mb-4">Create a design prototype for this feature</p>
+                    <button 
+                      onClick={() => window.open(`/?mode=design&prd=${encodeURIComponent(feature['drive-link'])}`, '_blank')}
+                      className="bg-poppy text-white px-6 py-2 rounded-lg hover:bg-poppy/90 transition-colors flex items-center gap-2 mx-auto"
+                    >
+                      <Palette className="w-4 h-4" />
+                      Create Design
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
 

@@ -129,12 +129,20 @@
 }
 
 /* Design Mode Full Screen Styles */
+.design-mode-fullscreen {
+  height: 100vh !important;
+  overflow: hidden !important;
+}
+
 .design-mode-fullscreen .design-mode-container {
   padding: 0 !important;
+  height: 100vh !important;
+  align-items: stretch !important;
 }
 
 .design-mode-fullscreen .design-mode-content {
   max-width: none !important;
   width: 100vw !important;
   height: 100vh !important;
+  overflow: hidden !important;
 }

@@ -1,7 +1,22 @@
 import { create } from 'zustand';
-import { Prd } from '@/types/my-work';
 
-export type PRD = Prd;
+interface Comment {
+  id: string;
+  content: string;
+  user_id: string;
+  user_name: string;
+  created_at: string;
+  resolved: boolean;
+}
+
+export interface PRD {
+  id?: string;
+  title?: string;
+  metadata?: {
+    comments?: Comment[];
+    open_questions_summary?: string;
+  };
+}
 
 export interface AgenticMessage {
   prdId: string;

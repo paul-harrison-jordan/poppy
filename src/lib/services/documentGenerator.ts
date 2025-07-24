@@ -1,16 +1,39 @@
 import { collectStream } from "../collectStream"
+interface QuestionAnswer {
+  question: string;
+  reasoning?: string;
+  answer: string;
+}
+
 export async function generateDocument(
   type: string,
   title: string,
   query: string,
-  answers?: Record<string, string>,
+  answers?: Record<string, string> | QuestionAnswer[],
   matchedContext?: string[]
 ) {
   // If we have answers, we're in content generation mode
   if (answers) {
     const storedContext = localStorage.getItem('personalContext')
     const teamTerms = JSON.parse(localStorage.getItem('teamTerms') || '{}')
-    const questions = Object.keys(answers)
+    
+    let questionAnswers: QuestionAnswer[];
+    let questions: string[];
+
+    // Handle both old Record format and new QuestionAnswer array format
+    if (Array.isArray(answers)) {
+      // New format - already has reasoning
+      questionAnswers = answers;
+      questions = answers.map(qa => qa.question);
+    } else {
+      // Old format - transform Record to QuestionAnswer format
+      questionAnswers = Object.entries(answers).map(([question, answer]) => ({
+        question,
+        reasoning: undefined,
+        answer
+      }));
+      questions = Object.keys(answers);
+    }
 
     // Generate content
     const contentRes = await fetch('/api/generate-content', {
@@ -24,7 +47,7 @@ export async function generateDocument(
         storedContext,
         matchedContext,
         questions,
-        questionAnswers: answers
+        questionAnswers
       })
     })
     const markdown = await collectStream(contentRes)
@@ -41,6 +64,29 @@ export async function generateDocument(
     })
     if (!docRes.ok) throw new Error('Failed to create Google Doc')
     const docData = await docRes.json()
+    
+    // Store PRD in Supabase if this is a PRD document
+    if (type === 'prd') {
+      try {
+        const prdRes = await fetch('/api/roadmap/prds', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: finalTitle,
+            driveLink: docData.link,
+            description: query.substring(0, 200) // First 200 chars as description
+          })
+        })
+        if (prdRes.ok) {
+          const prdData = await prdRes.json()
+          console.log('PRD stored in database:', prdData.id)
+        }
+      } catch (error) {
+        console.error('Failed to store PRD in database:', error)
+        // Don't throw error - document creation succeeded, storage is bonus
+      }
+    }
+    
     return { ...docData, title: finalTitle, markdown: markdown }
   }
 

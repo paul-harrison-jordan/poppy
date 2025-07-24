@@ -24,18 +24,36 @@ export function streamTextResponse(iterable: AsyncIterable<OpenAI.ChatCompletion
   });
 }
 
+export interface QuestionAnswer {
+  question: string;
+  reasoning?: string;
+  answer: string;
+}
+
 export interface GenerateContentRequest {
   type: 'prd' | 'brand-messaging';
   title: string;
   query: string;
   questions: string[];
+  questionAnswers?: QuestionAnswer[];
   storedContext?: string;
   additionalContext: string;
   teamTerms: Record<string, string>;
+  pmProfile?: any;
 }
 
 export async function generateContent(opts: GenerateContentRequest) {
-  const { type, title, query, questions, storedContext, additionalContext, teamTerms } = opts;
+  const { type, title, query, questions, questionAnswers, storedContext, additionalContext, teamTerms, pmProfile } = opts;
+  const pmProfileContext = pmProfile ? `
+
+  PM Profile Context:
+  - Product Philosophy: ${pmProfile.product_philosophy || 'Not defined'}
+  - Domain Expertise: ${pmProfile.domain_expertise?.join(', ') || 'Not defined'}
+  - Recurring Themes: ${pmProfile.recurring_themes?.join(', ') || 'Not defined'}
+  - Decision Frameworks: ${Object.keys(pmProfile.decision_frameworks || {}).join(', ') || 'Not defined'}
+  - Trade-off Preferences: ${Object.keys(pmProfile.trade_off_preferences || {}).join(', ') || 'Not defined'}
+  
+  Use this PM profile to generate questions that align with their expertise, thinking style, and decision-making approach. Tailor questions to their domain expertise and recurring themes.` : '';
   if (type === 'prd') {
     if (!storedContext) throw new Error('Stored context required for PRD generation');
     const ctx = JSON.parse(storedContext);
@@ -49,7 +67,9 @@ export async function generateContent(opts: GenerateContentRequest) {
 
 I've also included a list of key terms that my team has defined for our product. Use this as background information to help you understand the rest of the prompt. ${Object.keys(teamTerms).join(', ')}
 
-I've included instructions for how to think and write PRDs like a product manager with" ${ctx.examplesOfHowYouThink} "I've also included background on how to think like my product team" ${ctx.pillarGoalsKeyTermsBackground} "I've included an example document to demonstrate my personal philosophy on how we should approach building a product to cross sell to existing users" ${ctx.howYouThinkAboutProduct} "I've included a doc that outlines the strategic goals of the my product team for the rest of the year" ${ctx.teamStrategy} I've included example text from work that my team has already done that I want for you to use as additional context for relevant features and terms" ${additionalContext} "I've asked you to write a PRD for the following question" ${query} "I've also included a list of questions and answers about the PRD to provide additional clarity around how we should approach the PRD." ${questions.join('\n')} "When I ask you to write a doc, I want you to evaluate the Job to be Done statement I provide from each perspective (Product Manager, My product team, and Building a product that grows with its users) before beginning to write the PRD. Once done with that step, I want you to write the document with a focus on narrow scope, highly detailed breakdowns of which feature will support which part of the JTBD, and an open questions section that interrogates the JTBD from each of your perspectives (my product team, Product Manager, my philosophy) our edits should be returned in markdown format`,
+I've included instructions for how to think and write PRDs like a product manager with" ${ctx.examplesOfHowYouThink} "I've also included background on how to think like my product team" ${ctx.pillarGoalsKeyTermsBackground} "I've included an example document to demonstrate my personal philosophy on how we should approach building a product to cross sell to existing users" ${ctx.howYouThinkAboutProduct} "I've included a doc that outlines the strategic goals of the my product team for the rest of the year" ${ctx.teamStrategy} I've included example text from work that my team has already done that I want for you to use as additional context for relevant features and terms" ${additionalContext} "I've asked you to write a PRD for the following question" ${query} "I've also included a list of questions and answers about the PRD to provide additional clarity around how we should approach the PRD." ${
+    questionAnswers && Array.isArray(questionAnswers) ? questionAnswers.map(qa => `Q: ${qa.question}${qa.reasoning ? ` (${qa.reasoning})` : ''}\nA: ${qa.answer}`).join('\n\n') : questions.join('\n')
+  } "When I ask you to write a doc, I want you to evaluate the Job to be Done statement I provide from each perspective (Product Manager, My product team, and Building a product that grows with its users) before beginning to write the PRD. Once done with that step, I want you to write the document with a focus on narrow scope, highly detailed breakdowns of which feature will support which part of the JTBD, and an open questions section that interrogates the JTBD from each of your perspectives (my product team, Product Manager, my philosophy) our edits should be returned in markdown format`,
         },
       ],
     });
@@ -87,7 +107,9 @@ The document should be written in markdown format and should be clear, actionabl
 
 Title: ${title}
 Background query: ${query}
-Q&A: ${questions.join('\n')}
+Q&A: ${
+    questionAnswers && Array.isArray(questionAnswers) ? questionAnswers.map(qa => `Q: ${qa.question}${qa.reasoning ? ` (${qa.reasoning})` : ''}\nA: ${qa.answer}`).join('\n\n') : questions.join('\n')
+  }
 
 Please ensure the document is well-structured, actionable, and includes all necessary sections for a complete brand messaging strategy.`,
       },
@@ -105,10 +127,24 @@ export interface GenerateQuestionsRequest {
   storedContext: string;
   teamTerms: string;
   type?: 'prd' | 'brand-messaging';
+  pmProfile?: any;
 }
 
 export async function generateQuestions(opts: GenerateQuestionsRequest): Promise<QuestionsResponse> {
-  const { title, query, matchedContext, storedContext, teamTerms, type = 'prd' } = opts;
+  const { title, query, matchedContext, storedContext, teamTerms, type = 'prd', pmProfile } = opts;
+  
+  // Build PM profile context string
+  const pmProfileContext = pmProfile ? `
+
+PM Profile Context:
+- Product Philosophy: ${pmProfile.product_philosophy || 'Not defined'}
+- Domain Expertise: ${pmProfile.domain_expertise?.join(', ') || 'Not defined'}
+- Recurring Themes: ${pmProfile.recurring_themes?.join(', ') || 'Not defined'}
+- Decision Frameworks: ${Object.keys(pmProfile.decision_frameworks || {}).join(', ') || 'Not defined'}
+- Trade-off Preferences: ${Object.keys(pmProfile.trade_off_preferences || {}).join(', ') || 'Not defined'}
+
+Use this PM profile to generate questions that align with their expertise, thinking style, and decision-making approach. Tailor questions to their domain expertise and recurring themes.` : '';
+
   const completion = await openai.chat.completions.create({
     messages: [
       {
@@ -140,7 +176,7 @@ Example JSON response:
 }
 
 I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a product manager would ask.
-${Object.keys(terms).join(', ')}`
+${Object.keys(terms).join(', ')}${pmProfileContext}`
           : `You are a system that helps a brand messaging expert write a brand messaging document. You will be given a title and query for a new brand messaging document, as well as relevant context from previous documents that the user has shared with you.
 
 Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of brand messaging terms over time.
@@ -182,14 +218,14 @@ Example JSON response:
 }
 
 I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a brand messaging expert would ask.
-${Object.keys(terms).join(', ')}`,
+${Object.keys(terms).join(', ')}${pmProfileContext}`,
       },
       {
         role: 'user',
         content: `\n          Title: ${title}\nQuery: ${query}, \nContext: ${matchedContext}, teamTerms: ${teamTerms}, storedContext: ${storedContext}: klaviyoTerms: ${terms}`,
       },
     ],
-    model: 'o3',
+    model: 'o4-mini',
     response_format: { type: 'json_object' },
   });
 
@@ -316,12 +352,30 @@ export interface VocabularyRequest {
   matchedContext: string;
   type?: 'prd' | 'brand-messaging';
   teamTerms?: Record<string, string>;
+  pmProfile?: any;
 }
 
 export type TeamTerms = string[];
 
 export async function generateVocabulary(opts: VocabularyRequest): Promise<TeamTerms> {
-  const { title, query, matchedContext, type = 'prd' } = opts;
+  const startTime = Date.now();
+  console.log('[generateVocabulary] Starting vocabulary generation');
+  
+  const { title, query, matchedContext, type = 'prd', pmProfile } = opts;
+  
+  // Build PM profile context string
+  const pmProfileContext = pmProfile ? `
+
+PM Profile Context:
+- Product Philosophy: ${pmProfile.product_philosophy || 'Not defined'}
+- Domain Expertise: ${pmProfile.domain_expertise?.join(', ') || 'Not defined'}
+- Recurring Themes: ${pmProfile.recurring_themes?.join(', ') || 'Not defined'}
+- Existing Vocabulary: ${Object.keys(pmProfile.vocabulary_glossary || {}).join(', ') || 'None defined yet'}
+- Decision Frameworks: ${Object.keys(pmProfile.decision_frameworks || {}).join(', ') || 'Not defined'}
+
+Use this PM profile to suggest vocabulary terms that align with their expertise, thinking style, and existing knowledge base. Avoid suggesting terms they've already defined unless they're highly relevant to the current query.` : '';
+
+  console.log('[generateVocabulary] Making OpenAI API call...');
   const completion = await openai.chat.completions.create({
     messages: [
       {
@@ -337,7 +391,7 @@ You must respond with a JSON object containing a terms_to_define array of terms 
 }
 
 I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a product manager would ask.
-${Object.keys(terms).join(', ')}`
+${Object.keys(terms).join(', ')}${pmProfileContext}`
           : `You are a system that helps a brand messaging expert write a brand messaging document. You will be given a title and query for a new brand messaging document, as well as relevant context from previous documents that the user has shared with you.
 
 Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of brand messaging terms over time.
@@ -348,16 +402,18 @@ You must respond with a JSON object containing a terms_to_define array of terms 
 }
 
 I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a brand messaging expert would ask.
-${Object.keys(terms).join(', ')}`,
+${Object.keys(terms).join(', ')}${pmProfileContext}`,
       },
       {
         role: 'user',
         content: `\n          Title: ${title}\nQuery: ${query}, \nContext: ${matchedContext}`,
       },
     ],
-    model: 'o4-mini',
+    model: 'o4-mini', 
     response_format: { type: 'json_object' },
   });
+  
+  console.log(`[generateVocabulary] OpenAI API call completed in ${Date.now() - startTime}ms`);
   
   try {
     const response = JSON.parse(completion.choices[0].message.content || '[]');
@@ -379,9 +435,11 @@ ${Object.keys(terms).join(', ')}`,
     }
     // If we can't find an array in the response, return an empty array
     console.error('Invalid response format from vocabulary generation:', response);
+    console.log(`[generateVocabulary] Failed due to invalid format after ${Date.now() - startTime}ms`);
     return [];
   } catch (error) {
     console.error('Error parsing vocabulary response:', error);
+    console.log(`[generateVocabulary] Failed due to parsing error after ${Date.now() - startTime}ms`);
     return [];
   }
 }

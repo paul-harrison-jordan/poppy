@@ -4,7 +4,7 @@ import { createClient } from 'v0-sdk';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, apiKey } = body;
+    const { message, apiKey, designSummary, pmProfileUsed } = body;
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
@@ -32,6 +32,8 @@ export async function POST(request: NextRequest) {
 
     console.log('Chat created:', chat.id);
     console.log('Demo URL:', chat.demo);
+    console.log('Design summary:', designSummary);
+    console.log('PM Profile used:', pmProfileUsed);
 
     return NextResponse.json({
       success: true,
@@ -39,7 +41,9 @@ export async function POST(request: NextRequest) {
         id: chat.id,
         demo: chat.demo,
         url: chat.url
-      }
+      },
+      designSummary,
+      pmProfileUsed
     });
 
   } catch (error) {

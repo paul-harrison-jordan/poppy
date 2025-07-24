@@ -1,34 +1,80 @@
 "use client";
 import { useSession } from 'next-auth/react';
 import SignIn from '@/app/auth/signin/page';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import ChatInterface from '@/components/ChatInterface';
-import { Settings, PenLine, Grid3X3 } from 'lucide-react';
+import { Settings, Grid3X3 } from 'lucide-react';
 
 export default function Home() {
   const { data: session, status } = useSession();
+  const [isDesignMode, setIsDesignMode] = useState(false);
 
   useEffect(() => {
     const initializePinecone = async () => {
       if (session?.user) {
         try {
+          // Add a timeout to prevent hanging
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          
           const response = await fetch('/api/init-pinecone', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
+            signal: controller.signal
           });
+          
+          clearTimeout(timeoutId);
+          
           if (!response.ok) {
-            console.error('Failed to initialize Pinecone index');
+            console.warn('Failed to initialize Pinecone index, but continuing...');
           }
         } catch (error) {
-          console.error('Error initializing Pinecone index:', error);
+          if (error instanceof Error && error.name === 'AbortError') {
+            console.warn('Pinecone initialization timed out, but continuing...');
+          } else {
+            console.warn('Error initializing Pinecone index, but continuing...', error);
+          }
         }
       }
     };
-    initializePinecone();
-  }, [session]);
+    
+    // Don't block the UI, initialize in background
+    if (session?.user) {
+      initializePinecone();
+    }
+  }, [session?.user?.email]); // Only depend on email to avoid re-runs
+
+  // Listen for design mode changes
+  useEffect(() => {
+    const checkDesignMode = () => {
+      const currentMode = localStorage.getItem('currentChatMode');
+      setIsDesignMode(currentMode === 'design');
+    };
+
+    // Check on mount
+    checkDesignMode();
+
+    // Listen for storage changes
+    const handleStorageChange = () => {
+      checkDesignMode();
+    };
+
+    // Listen for custom events from ChatInterface
+    const handleModeChange = () => {
+      checkDesignMode();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('chatModeChange', handleModeChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('chatModeChange', handleModeChange);
+    };
+  }, []);
 
   if (status === 'loading') {
     return (
@@ -47,21 +93,21 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral/80 flex flex-col relative">
-      <div className="absolute top-6 right-8 flex flex-col gap-4 z-10">
-        <Link href="/my-work" className="text-poppy hover:text-poppy/80 transition-colors" aria-label="View my work">
-          <PenLine className="w-7 h-7" />
-        </Link>
-        <Link href="/features" className="text-poppy hover:text-poppy/80 transition-colors" aria-label="View all features">
-          <Grid3X3 className="w-7 h-7" />
-        </Link>
-        <Link href="/instructions" className="text-poppy hover:text-poppy/80 transition-colors" aria-label="Tune Poppy settings">
-          <Settings className="w-7 h-7" />
-        </Link>
-      </div>
+    <div className={`min-h-screen bg-neutral/80 flex flex-col relative ${isDesignMode ? 'design-mode-fullscreen' : ''}`}>
+      {/* Hide navigation links in design mode */}
+      {!isDesignMode && (
+        <div className="absolute top-6 right-8 flex flex-col gap-4 z-10">
+          <Link href="/features" className="text-poppy hover:text-poppy/80 transition-colors" aria-label="View all features">
+            <Grid3X3 className="w-7 h-7" />
+          </Link>
+          <Link href="/instructions" className="text-poppy hover:text-poppy/80 transition-colors" aria-label="Tune Poppy settings">
+            <Settings className="w-7 h-7" />
+          </Link>
+        </div>
+      )}
       
-      <div className="flex flex-1 items-center justify-center p-8 design-mode-container">
-        <div className="w-full max-w-5xl design-mode-content">
+      <div className={`flex flex-1 items-center justify-center design-mode-container ${isDesignMode ? '' : 'p-8'}`}>
+        <div className={`w-full design-mode-content ${isDesignMode ? '' : 'max-w-5xl'}`}>
           <ChatInterface />
         </div>
       </div>
