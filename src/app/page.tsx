@@ -45,7 +45,7 @@ export default function Home() {
     if (session?.user) {
       initializePinecone();
     }
-  }, [session?.user?.email]); // Only depend on email to avoid re-runs
+  }, [session?.user]); // Include the full user object
 
   // Listen for design mode changes
   useEffect(() => {

@@ -133,7 +133,7 @@ export default function ChatInterface() {
     } else if (modeParam === 'feedback') {
       setMode('feedback');
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Function to fetch PRD content and create design
   const fetchPRDAndCreateDesign = async (driveLink: string) => {

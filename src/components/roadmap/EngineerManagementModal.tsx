@@ -145,7 +145,7 @@ export default function EngineerManagementModal({
         const errorData = await response.json()
         setError(errorData.error || 'Failed to save engineer')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to save engineer')
     } finally {
       setLoading(false)

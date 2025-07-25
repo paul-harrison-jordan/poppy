@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/utils/supabase/service';
-import { GetPMProfileResponse } from '@/types/knowledge';
+import { GetPMProfileResponse, DecisionFrameworks, TradeOffPreferences } from '@/types/knowledge';
 import { pmInsightService } from '@/lib/services/pmInsightService';
 import { getAuthServerSession } from '@/lib/auth';
 
@@ -147,8 +147,8 @@ async function regeneratePMProfile(supabase: ReturnType<typeof createServiceClie
     // Generate comprehensive PM insights using OpenAI (with fallbacks)
     let pmSummary = {
       product_philosophy: '',
-      decision_frameworks: {} as Record<string, any>,
-      trade_off_preferences: {} as Record<string, any>,
+      decision_frameworks: { frameworks: [], approaches: [] } as DecisionFrameworks,
+      trade_off_preferences: { speedVsQuality: 'balanced' as const, riskTolerance: 'medium' as const, userFocus: 'balanced' as const } as TradeOffPreferences,
       recurring_themes: [] as string[]
     };
     

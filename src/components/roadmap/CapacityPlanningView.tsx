@@ -65,7 +65,7 @@ interface CapacityPlanningViewProps {
   userEmail: string
 }
 
-export default function CapacityPlanningView({ userEmail }: CapacityPlanningViewProps) {
+export default function CapacityPlanningView({}: CapacityPlanningViewProps) {
   const [capacityData, setCapacityData] = useState<EngineerCapacity[]>([])
   const [teamMetrics, setTeamMetrics] = useState<TeamMetrics | null>(null)
   const [loading, setLoading] = useState(true)
@@ -74,7 +74,7 @@ export default function CapacityPlanningView({ userEmail }: CapacityPlanningView
 
   useEffect(() => {
     fetchCapacityData()
-  }, [timeframe])
+  }, [timeframe]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchCapacityData = async () => {
     try {

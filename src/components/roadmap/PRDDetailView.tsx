@@ -89,7 +89,7 @@ export default function PRDDetailView({ prdId, userEmail, onBack }: PRDDetailVie
 
   useEffect(() => {
     fetchPRDDetail()
-  }, [prdId])
+  }, [prdId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchPRDDetail = async () => {
     try {

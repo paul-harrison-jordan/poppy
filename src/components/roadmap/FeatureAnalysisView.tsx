@@ -57,7 +57,7 @@ export default function FeatureAnalysisView({ featureId, onBack }: FeatureAnalys
 
   useEffect(() => {
     fetchFeatureDetail()
-  }, [featureId])
+  }, [featureId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchFeatureDetail = async () => {
     try {

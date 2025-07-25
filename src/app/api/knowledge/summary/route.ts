@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { getAuthServerSession } from '@/lib/auth';
+import { VocabularyInteraction } from '@/types/knowledge';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export async function GET() {
   try {
@@ -63,7 +65,7 @@ export async function GET() {
     }
 
     // Get vocabulary due for review (Note: vocabulary_interactions table doesn't exist in schema, so skip for now)
-    const vocabularyDueForReview: any[] = [];
+    const vocabularyDueForReview: VocabularyInteraction[] = [];
 
     const response = {
       summary,
@@ -111,7 +113,7 @@ export async function POST() {
   }
 }
 
-async function regenerateKnowledgeSummary(supabase: any, userEmail: string) {
+async function regenerateKnowledgeSummary(supabase: SupabaseClient, userEmail: string) {
   // Get all user sessions
   const { data: sessions } = await supabase
     .from('user_knowledge_sessions')

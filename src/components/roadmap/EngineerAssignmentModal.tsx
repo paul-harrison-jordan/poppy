@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
@@ -17,7 +17,6 @@ import {
   Clock, 
   X, 
   User,
-  Calendar,
   Percent,
   AlertCircle
 } from 'lucide-react'
@@ -81,7 +80,7 @@ export default function EngineerAssignmentModal({
       fetchEngineers()
       fetchAssignments()
     }
-  }, [isOpen, prdId])
+  }, [isOpen, prdId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchEngineers = async () => {
     try {
@@ -144,7 +143,7 @@ export default function EngineerAssignmentModal({
         const errorData = await response.json()
         setError(errorData.error || 'Failed to add assignment')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to add assignment')
     } finally {
       setLoading(false)
@@ -163,7 +162,7 @@ export default function EngineerAssignmentModal({
       } else {
         setError('Failed to remove assignment')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to remove assignment')
     }
   }

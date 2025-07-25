@@ -1,8 +1,53 @@
+// Context data interfaces for better typing
+export interface SessionContextData {
+  [key: string]: string | number | boolean | string[] | number[];
+}
+
+export interface ExtractedInsights {
+  preferences: string[];
+  patterns: string[];
+  [key: string]: string | number | boolean | string[] | number[];
+}
+
+export interface DecisionFrameworks {
+  frameworks: string[];
+  approaches: string[];
+  [key: string]: string | number | boolean | string[] | number[];
+}
+
+export interface TradeOffPreferences {
+  speedVsQuality: 'speed' | 'quality' | 'balanced';
+  riskTolerance: 'low' | 'medium' | 'high';
+  userFocus: 'internal' | 'external' | 'balanced';
+  [key: string]: string | number | boolean | string[] | number[];
+}
+
+export interface PersonalContext {
+  examplesOfHowYouThink?: string[];
+  teamStrategy?: string;
+  productVision?: string;
+  [key: string]: string | number | boolean | string[] | number[] | undefined;
+}
+
+export interface MetricContextData {
+  sessionType?: string;
+  completionRate?: number;
+  engagement?: number;
+  [key: string]: string | number | boolean | string[] | number[] | undefined;
+}
+
+export interface QuestionContextData {
+  previousAnswers?: string[];
+  relatedTopics?: string[];
+  difficultyLevel?: number;
+  [key: string]: string | number | boolean | string[] | number[] | undefined;
+}
+
 export interface UserKnowledgeSession {
   id: number;
   user_email: string;
   session_type: 'vocabulary' | 'questions' | 'brainstorm' | 'prd_generation';
-  context_data?: Record<string, any>;
+  context_data?: SessionContextData;
   duration_seconds?: number;
   completion_status: 'in_progress' | 'completed' | 'abandoned';
   created_at: string;
@@ -30,8 +75,8 @@ export interface QuestionResponse {
   question_reasoning?: string;
   user_answer: string;
   domain_category?: string;
-  context_data?: Record<string, any>;
-  extracted_insights?: Record<string, any>; // AI-extracted preferences and patterns
+  context_data?: QuestionContextData;
+  extracted_insights?: ExtractedInsights; // AI-extracted preferences and patterns
   created_at: string;
   updated_at: string;
 }
@@ -40,12 +85,12 @@ export interface PMPreferenceProfile {
   id: number;
   user_email: string;
   vocabulary_glossary: Record<string, string>; // term -> definition mapping
-  decision_frameworks: Record<string, any>; // extracted mental models
-  trade_off_preferences: Record<string, any>; // preference patterns (speed vs quality, etc)
+  decision_frameworks: DecisionFrameworks; // extracted mental models
+  trade_off_preferences: TradeOffPreferences; // preference patterns (speed vs quality, etc)
   product_philosophy?: string; // overall product approach summary
   recurring_themes: string[]; // common themes across decisions
   domain_expertise: string[]; // areas of focus/expertise
-  personal_context?: Record<string, any>; // PRD writing context (examplesOfHowYouThink, teamStrategy, etc)
+  personal_context?: PersonalContext; // PRD writing context (examplesOfHowYouThink, teamStrategy, etc)
   total_sessions: number;
   total_vocabulary_terms: number;
   total_questions_answered: number;
@@ -59,7 +104,7 @@ export interface LearningAnalytics {
   user_email: string;
   metric_type: 'session_duration' | 'completion_rate' | 'knowledge_growth' | 'engagement_score';
   metric_value: number;
-  context_data?: Record<string, any>;
+  context_data?: MetricContextData;
   date_recorded: string;
   created_at: string;
 }
@@ -67,7 +112,7 @@ export interface LearningAnalytics {
 // API request/response types
 export interface CreateSessionRequest {
   session_type: UserKnowledgeSession['session_type'];
-  context_data?: Record<string, any>;
+  context_data?: SessionContextData;
 }
 
 export interface CreateSessionResponse {
@@ -89,13 +134,13 @@ export interface RecordQuestionResponseRequest {
   question_reasoning?: string;
   user_answer: string;
   domain_category?: string;
-  context_data?: Record<string, any>;
+  context_data?: QuestionContextData;
 }
 
 export interface UpdateSessionRequest {
   duration_seconds?: number;
   completion_status?: UserKnowledgeSession['completion_status'];
-  context_data?: Record<string, any>;
+  context_data?: SessionContextData;
 }
 
 export interface GetPMProfileResponse {
@@ -138,6 +183,34 @@ export interface PMAwarePRDRequest {
   use_pm_vocabulary?: boolean;
   apply_decision_frameworks?: boolean;
   incorporate_preferences?: boolean;
+}
+
+// Vocabulary interaction tracking
+export interface VocabularyInteraction {
+  id: number;
+  session_id: number;
+  user_email: string;
+  term: string;
+  user_definition: string;
+  review_count: number;
+  last_reviewed?: string;
+  next_review_date?: string;
+  confidence_level?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Knowledge summary for analytics
+export interface KnowledgeSummary {
+  id: number;
+  user_email: string;
+  total_vocabulary_terms: number;
+  total_questions_answered: number;
+  total_sessions: number;
+  knowledge_areas: string[];
+  recent_activity_summary: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Additional types for ChatInterface compatibility

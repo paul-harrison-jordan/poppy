@@ -1,9 +1,13 @@
 import { createServiceClient } from '@/utils/supabase/service';
 import { 
   UserKnowledgeSession, 
-  VocabularyInteraction, 
   QuestionResponse, 
-  KnowledgeSummary 
+  SessionContextData,
+  QuestionContextData,
+  PMPreferenceProfile,
+  VocabularyDefinition,
+  VocabularyInteraction,
+  KnowledgeSummary
 } from '@/types/knowledge';
 
 export class KnowledgeTrackingService {
@@ -77,7 +81,7 @@ export class KnowledgeTrackingService {
     }
   }
 
-  async recordVocabularyInteraction(
+  static async recordVocabularyInteraction(
     sessionId: number,
     userEmail: string,
     term: string,
@@ -89,7 +93,8 @@ export class KnowledgeTrackingService {
       // Calculate next review date based on confidence level
       const nextReviewDate = this.calculateNextReviewDate(confidenceLevel || 1);
 
-      const { data: interaction, error } = await this.supabase
+      const supabase = this.getSupabaseClient();
+      const { data: interaction, error } = await supabase
         .from('vocabulary_interactions')
         .insert({
           session_id: sessionId,
@@ -117,7 +122,7 @@ export class KnowledgeTrackingService {
     }
   }
 
-  async recordQuestionResponse(
+  static async recordQuestionResponse(
     sessionId: number,
     userEmail: string,
     questionText: string,
@@ -126,13 +131,14 @@ export class KnowledgeTrackingService {
     domainCategory?: string,
     complexityLevel?: number,
     responseTimeSeconds?: number,
-    contextData?: Record<string, any>
+    contextData?: QuestionContextData
   ): Promise<QuestionResponse | null> {
     try {
       // Calculate answer quality score
       const answerQualityScore = this.calculateAnswerQualityScore(userAnswer, complexityLevel);
 
-      const { data: response, error } = await this.supabase
+      const supabase = this.getSupabaseClient();
+      const { data: response, error } = await supabase
         .from('question_responses')
         .insert({
           session_id: sessionId,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { getAuthServerSession } from '@/lib/auth';
+import { SessionContextData } from '@/types/knowledge';
 
 interface CompleteSessionRequest {
   sessionId: number;
@@ -16,7 +17,7 @@ interface CompleteSessionRequest {
     answer: string;
     domain_category?: string;
   }>;
-  contextData?: Record<string, any>;
+  contextData?: SessionContextData;
 }
 
 export async function POST(request: NextRequest) {

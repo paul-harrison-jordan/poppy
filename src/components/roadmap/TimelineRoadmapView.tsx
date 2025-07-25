@@ -85,7 +85,7 @@ export default function TimelineRoadmapView({ userEmail, onPRDSelect, stakeholde
 
   useEffect(() => {
     fetchPRDs()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchPRDs = async () => {
     try {

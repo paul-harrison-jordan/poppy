@@ -22,7 +22,7 @@ export async function PATCH(
     }
 
     const body: UpdateSessionRequest = await request.json();
-    const updateData: any = {};
+    const updateData: Partial<UpdateSessionRequest> = {};
 
     if (body.duration_seconds !== undefined) {
       updateData.duration_seconds = body.duration_seconds;

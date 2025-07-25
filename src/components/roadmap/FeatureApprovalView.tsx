@@ -27,6 +27,14 @@ interface FeatureApprovalViewProps {
   onBack: () => void
 }
 
+interface Comment {
+  id: number
+  content: string
+  author: string
+  created_at: string
+  type?: string
+}
+
 interface PRDDetail {
   id: number
   title?: string
@@ -103,17 +111,17 @@ const urgencyColors = {
   low: 'bg-green-50 border-green-200 text-green-800'
 }
 
-export default function FeatureApprovalView({ prdId, userEmail: _userEmail, onBack }: FeatureApprovalViewProps) {
+export default function FeatureApprovalView({ prdId, onBack }: FeatureApprovalViewProps) {
   const [prd, setPRD] = useState<PRDDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [isUpdating, setIsUpdating] = useState(false)
-  const [comments, setComments] = useState<any[]>([])
+  const [comments, setComments] = useState<Comment[]>([])
 
   useEffect(() => {
     fetchPRDDetail()
     fetchComments()
-  }, [prdId])
+  }, [prdId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchPRDDetail = async () => {
     try {

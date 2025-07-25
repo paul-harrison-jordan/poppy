@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthServerSession } from '@/lib/auth'
 import { createServiceClient } from '@/utils/supabase/service'
 
+interface RoadmapItem {
+  id: number;
+  title: string;
+  description: string;
+  status: string;
+  priority_order: number;
+  target_quarter: string;
+  estimated_effort_points: number;
+  business_value_score: number;
+  technical_complexity_score: number;
+  roadmap_notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getAuthServerSession()
@@ -74,7 +89,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function exportCSV(data: any[], userEmail: string) {
+function exportCSV(data: RoadmapItem[], userEmail: string) {
   const headers = [
     'ID', 'Title', 'Description', 'Status', 'Priority', 'Target Quarter',
     'Effort Points', 'Business Value', 'Technical Complexity', 'Notes', 'Created At'
@@ -105,7 +120,7 @@ function exportCSV(data: any[], userEmail: string) {
   })
 }
 
-function exportPDF(data: any[], userEmail: string) {
+function exportPDF(data: RoadmapItem[], userEmail: string) {
   // For now, return a JSON response with PDF generation instructions
   // In a real implementation, you'd use a library like Puppeteer or PDFKit
   // TODO: Use userEmail for filename/metadata when PDF generation is implemented
@@ -118,18 +133,18 @@ function exportPDF(data: any[], userEmail: string) {
   })
 }
 
-function exportPresentation(data: any[], userEmail: string) {
+function exportPresentation(data: RoadmapItem[], userEmail: string) {
   // Create a presentation-ready format
   const presentationData = {
     title: `Product Roadmap - ${userEmail.split('@')[0]}`,
     date: new Date().toLocaleDateString(),
     summary: {
       total_features: data.length,
-      by_status: data.reduce((acc: any, item) => {
+      by_status: data.reduce((acc: Record<string, number>, item) => {
         acc[item.status] = (acc[item.status] || 0) + 1
         return acc
       }, {}),
-      by_quarter: data.reduce((acc: any, item) => {
+      by_quarter: data.reduce((acc: Record<string, number>, item) => {
         if (item.target_quarter) {
           acc[item.target_quarter] = (acc[item.target_quarter] || 0) + 1
         }

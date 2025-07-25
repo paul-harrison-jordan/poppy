@@ -127,7 +127,7 @@ export default function FeaturesPage() {
     if (session?.user?.email) {
       fetchFeatures()
     }
-  }, [session?.user?.email])
+  }, [session?.user?.email, fetchFeatures])
 
   // Listen for PRD updates (temporary debugging - should rely on database as source of truth)
   useEffect(() => {
