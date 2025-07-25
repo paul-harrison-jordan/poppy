@@ -1,5 +1,5 @@
 import { openai } from '../openai';
-import { QuestionResponse } from '@/types/knowledge';
+import { QuestionResponse, ExtractedInsights, DecisionFrameworks, TradeOffPreferences } from '@/types/knowledge';
 
 export class PMInsightService {
   
@@ -11,7 +11,7 @@ export class PMInsightService {
     questionReasoning: string | undefined,
     userAnswer: string,
     domainCategory: string | undefined
-  ): Promise<Record<string, any>> {
+  ): Promise<ExtractedInsights> {
     try {
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
@@ -50,13 +50,13 @@ Extract insights about this PM's decision-making patterns and preferences.`,
       });
 
       const response = completion.choices[0].message.content;
-      if (!response) return {};
+      if (!response) return { preferences: [], patterns: [] };
 
       const insights = JSON.parse(response);
-      return insights;
+      return { preferences: [], patterns: [], ...insights };
     } catch (error) {
       console.error('Error extracting question insights:', error);
-      return {};
+      return { preferences: [], patterns: [] };
     }
   }
 
@@ -68,8 +68,8 @@ Extract insights about this PM's decision-making patterns and preferences.`,
     vocabularyTerms: Record<string, string>
   ): Promise<{
     product_philosophy: string;
-    decision_frameworks: Record<string, any>;
-    trade_off_preferences: Record<string, any>;
+    decision_frameworks: DecisionFrameworks;
+    trade_off_preferences: TradeOffPreferences;
     recurring_themes: string[];
   }> {
     try {
@@ -129,8 +129,8 @@ Generate a comprehensive preference profile for this product manager.`,
       console.error('Error generating PM preference summary:', error);
       return {
         product_philosophy: '',
-        decision_frameworks: {},
-        trade_off_preferences: {},
+        decision_frameworks: { frameworks: [], approaches: [] },
+        trade_off_preferences: { speedVsQuality: 'balanced', riskTolerance: 'medium', userFocus: 'balanced' },
         recurring_themes: []
       };
     }

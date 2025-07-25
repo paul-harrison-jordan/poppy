@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { openai } from '../openai';
 import { terms } from '../constants/terms';
+import { PMPreferenceProfile } from '@/types/knowledge';
 
 export { terms };
 
@@ -39,7 +40,7 @@ export interface GenerateContentRequest {
   storedContext?: string;
   additionalContext: string;
   teamTerms: Record<string, string>;
-  pmProfile?: any;
+  pmProfile?: PMPreferenceProfile;
 }
 
 export async function generateContent(opts: GenerateContentRequest) {
@@ -127,7 +128,7 @@ export interface GenerateQuestionsRequest {
   storedContext: string;
   teamTerms: string;
   type?: 'prd' | 'brand-messaging';
-  pmProfile?: any;
+  pmProfile?: PMPreferenceProfile;
 }
 
 export async function generateQuestions(opts: GenerateQuestionsRequest): Promise<QuestionsResponse> {
@@ -352,7 +353,7 @@ export interface VocabularyRequest {
   matchedContext: string;
   type?: 'prd' | 'brand-messaging';
   teamTerms?: Record<string, string>;
-  pmProfile?: any;
+  pmProfile?: PMPreferenceProfile;
 }
 
 export type TeamTerms = string[];

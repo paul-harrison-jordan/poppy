@@ -2,10 +2,10 @@ import { createServiceClient } from '@/utils/supabase/service';
 import { 
   UserKnowledgeSession, 
   QuestionResponse, 
-  SessionContextData,
   QuestionContextData,
-  PMPreferenceProfile,
+  SessionContextData,
   VocabularyDefinition,
+  PMPreferenceProfile,
   VocabularyInteraction,
   KnowledgeSummary
 } from '@/types/knowledge';
@@ -18,7 +18,7 @@ export class KnowledgeTrackingService {
   static async startSession(
     userEmail: string,
     sessionType: UserKnowledgeSession['session_type'],
-    contextData?: Record<string, any>
+    contextData?: SessionContextData
   ): Promise<UserKnowledgeSession | null> {
     try {
       const supabase = this.getSupabaseClient();
@@ -51,7 +51,7 @@ export class KnowledgeTrackingService {
     updates: {
       duration_seconds?: number;
       completion_status?: UserKnowledgeSession['completion_status'];
-      context_data?: Record<string, any>;
+      context_data?: SessionContextData;
     }
   ): Promise<UserKnowledgeSession | null> {
     try {
@@ -402,7 +402,7 @@ export class KnowledgeTrackingService {
 
       // Convert to object for easy lookup
       const vocabularyMap: Record<string, string> = {};
-      vocabularyDefinitions?.forEach((def: any) => {
+      vocabularyDefinitions?.forEach((def: VocabularyDefinition) => {
         if (def.term && def.user_definition) {
           vocabularyMap[def.term] = def.user_definition;
         }
@@ -415,7 +415,7 @@ export class KnowledgeTrackingService {
     }
   }
 
-  static async getPMProfile(userEmail: string): Promise<any> {
+  static async getPMProfile(userEmail: string): Promise<PMPreferenceProfile | null> {
     try {
       const supabase = this.getSupabaseClient();
       const { data: pmProfile, error } = await supabase
