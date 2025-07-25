@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS prds (
     id BIGSERIAL PRIMARY KEY,
     "drive-link" TEXT NOT NULL, -- Google Docs URL (primary artifact)
     "v0-link" TEXT DEFAULT '', -- Design mockup URL
+    "v0-chat-id" TEXT DEFAULT '', -- V0 chat session ID for continued editing
     "user" TEXT NOT NULL, -- User email who owns this PRD
     "title" TEXT, -- Title of the PRD
     "description" TEXT, -- Brief description/summary

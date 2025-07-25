@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, FileText, Paintbrush, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Paintbrush } from 'lucide-react';
 
 type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'agent' | 'design';
 
@@ -70,7 +70,7 @@ export default function DesignSidebar({
               <Paintbrush className="w-8 h-8 mx-auto mb-2 opacity-50" />
             </div>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Describe your UI idea or ask for design changes. I'll help you iterate on your design.
+              Describe your UI idea or ask for design changes. I&apos;ll help you iterate on your design.
             </p>
           </div>
         ) : (

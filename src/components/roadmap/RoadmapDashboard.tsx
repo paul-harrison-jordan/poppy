@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import EngineerAssignmentModal from './EngineerAssignmentModal'
 import { 
   Share2, 
   Download, 
@@ -18,7 +19,9 @@ import {
   Users,
   Filter,
   MessageSquare,
-  Link
+  Link,
+  GripVertical,
+  Edit3
 } from 'lucide-react'
 
 interface RoadmapDashboardProps {
@@ -31,6 +34,7 @@ interface PRD {
   description?: string
   'drive-link': string
   'v0-link'?: string
+  'v0-chat-id'?: string
   user: string
   shipped: boolean
   created_at: string
@@ -44,6 +48,8 @@ interface PRD {
     technical_complexity_score?: number
     roadmap_notes?: string
   }
+  assigned_engineers_count?: number
+  total_estimated_weeks?: number
   slack_channels?: Array<{
     id: number
     channel_name: string
@@ -65,6 +71,8 @@ export default function RoadmapDashboard({ userEmail }: RoadmapDashboardProps) {
   const [availableUsers, setAvailableUsers] = useState<string[]>([])
   const [selectedUser, setSelectedUser] = useState<string>(userEmail)
   const [loadingUsers, setLoadingUsers] = useState(true)
+  const [editingWeeks, setEditingWeeks] = useState<{ [key: number]: boolean }>({})
+  const [tempWeeks, setTempWeeks] = useState<{ [key: number]: string }>({})
 
   const fetchAvailableUsers = async () => {
     try {
@@ -126,15 +134,51 @@ export default function RoadmapDashboard({ userEmail }: RoadmapDashboardProps) {
     }
   }, [fetchRoadmap])
 
-  // Helper function to get weeks from estimated effort points or direct weeks
+  // Helper function to get weeks - prioritize engineer assignments over manual estimates
   const getWeeksToShip = (prd: PRD) => {
-    // First check if we have direct weeks estimation
+    // Prioritize engineer assignment total as the source of truth
+    if (prd.total_estimated_weeks && prd.total_estimated_weeks > 0) {
+      return prd.total_estimated_weeks;
+    }
+    // Fall back to manual weeks estimation
     if (prd.roadmap?.weeks_to_ship) return prd.roadmap.weeks_to_ship;
-    // Fallback to story points conversion
+    // Legacy: story points conversion (deprecated)
     if (prd.roadmap?.estimated_effort_points) {
       return Math.ceil(prd.roadmap.estimated_effort_points * 0.5);
     }
     return null;
+  }
+
+  const handleUpdateWeeks = async (prdId: number, weeks: number) => {
+    try {
+      const response = await fetch(`/api/roadmap/prd/${prdId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weeks_to_ship: weeks })
+      })
+      
+      if (response.ok) {
+        setPRDs(prev => prev.map(prd => 
+          prd.id === prdId 
+            ? { ...prd, roadmap: { ...prd.roadmap, weeks_to_ship: weeks } }
+            : prd
+        ))
+        setEditingWeeks(prev => ({ ...prev, [prdId]: false }))
+        setTempWeeks(prev => ({ ...prev, [prdId]: '' }))
+      }
+    } catch (error) {
+      console.error('Error updating weeks:', error)
+    }
+  }
+
+  const startEditingWeeks = (prdId: number, currentWeeks?: number) => {
+    setEditingWeeks(prev => ({ ...prev, [prdId]: true }))
+    setTempWeeks(prev => ({ ...prev, [prdId]: currentWeeks?.toString() || '' }))
+  }
+
+  const cancelEditingWeeks = (prdId: number) => {
+    setEditingWeeks(prev => ({ ...prev, [prdId]: false }))
+    setTempWeeks(prev => ({ ...prev, [prdId]: '' }))
   }
 
   // Helper function to determine shipping timeline with better categories
@@ -172,32 +216,220 @@ export default function RoadmapDashboard({ userEmail }: RoadmapDashboardProps) {
     window.location.href = `/roadmap/feature/${featureId}`
   }
 
-  const renderFeatureCard = (feature: PRD) => (
+  const handleDragEnd = async (result: DropResult) => {
+    if (!result.destination) return
+
+    const { source, destination, draggableId } = result
+    const featureId = parseInt(draggableId)
+    
+    // Determine source and destination timeframes
+    const sourceTimeframe = source.droppableId
+    const destTimeframe = destination.droppableId
+    
+    if (sourceTimeframe === destTimeframe) {
+      // Reordering within same timeframe - update priority order
+      const timeframeFeatures = getTimeframeFeatures(sourceTimeframe)
+      const reorderedFeatures = Array.from(timeframeFeatures)
+      const [movedFeature] = reorderedFeatures.splice(source.index, 1)
+      reorderedFeatures.splice(destination.index, 0, movedFeature)
+      
+      // Update priority orders for all features in this timeframe
+      const updates = reorderedFeatures.map((feature, index) => ({
+        id: feature.id,
+        priority_order: index + 1
+      }))
+      
+      // Update local state optimistically
+      setPRDs(prev => prev.map(prd => {
+        const update = updates.find(u => u.id === prd.id)
+        return update ? { ...prd, roadmap: { ...prd.roadmap, priority_order: update.priority_order } } : prd
+      }))
+      
+      // Save to backend
+      try {
+        await Promise.all(updates.map(update => 
+          fetch(`/api/roadmap/prd/${update.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ priority_order: update.priority_order })
+          })
+        ))
+      } catch (error) {
+        console.error('Error updating feature order:', error)
+        fetchRoadmap() // Revert on error
+      }
+    } else {
+      // Moving between timeframes - update feature timeframe
+      const feature = prds.find(prd => prd.id === featureId)
+      if (!feature) return
+      
+      const updateData: { shipped?: boolean; weeks_to_ship?: number | null; status?: string } = {}
+      
+      // Map droppable IDs to roadmap properties
+      if (destTimeframe === 'shipped') {
+        updateData.shipped = true
+        updateData.status = 'shipped'
+      } else if (destTimeframe === 'shippingSoon') {
+        updateData.shipped = false
+        updateData.weeks_to_ship = 1
+        updateData.status = 'in_progress'
+      } else if (destTimeframe === 'thisQuarter') {
+        updateData.shipped = false
+        updateData.weeks_to_ship = 6
+        updateData.status = 'planned'
+      } else if (destTimeframe === 'planned') {
+        updateData.shipped = false
+        updateData.weeks_to_ship = null
+        updateData.status = 'planned'
+      }
+      
+      // Update local state optimistically
+      setPRDs(prev => prev.map(prd => 
+        prd.id === featureId 
+          ? { 
+              ...prd, 
+              shipped: updateData.shipped ?? prd.shipped,
+              roadmap: { 
+                ...prd.roadmap, 
+                weeks_to_ship: updateData.weeks_to_ship ?? prd.roadmap?.weeks_to_ship,
+                status: updateData.status ?? prd.roadmap?.status
+              }
+            }
+          : prd
+      ))
+      
+      // Save to backend
+      try {
+        await fetch(`/api/roadmap/prd/${featureId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData)
+        })
+      } catch (error) {
+        console.error('Error updating feature timeframe:', error)
+        fetchRoadmap() // Revert on error
+      }
+    }
+  }
+  
+  const getTimeframeFeatures = (timeframe: string) => {
+    switch (timeframe) {
+      case 'shipped': return shipped
+      case 'shippingSoon': return shippingSoon
+      case 'thisQuarter': return thisQuarter
+      case 'planned': return planned
+      default: return []
+    }
+  }
+
+  const renderFeatureCard = (feature: PRD, isDragging?: boolean) => (
     <div 
-      key={feature.id} 
-      className="p-4 border border-gray-100 rounded-xl hover:shadow-lg hover:border-poppy/30 transition-all cursor-pointer bg-white/70 backdrop-blur-sm mb-3 group"
-      onClick={() => handleFeatureClick(feature.id)}
+      className={`p-4 border border-gray-100 rounded-xl hover:shadow-lg hover:border-poppy/30 transition-all cursor-pointer bg-white/70 backdrop-blur-sm mb-3 group ${
+        isDragging ? 'shadow-2xl rotate-3 scale-105' : ''
+      }`}
     >
       <div className="flex flex-col">
         <div className="flex items-start justify-between mb-3">
-          <h3 className="text-lg font-semibold text-primary leading-tight group-hover:text-poppy transition-colors">
-            {feature.title || `Feature #${feature.id}`}
-          </h3>
+          <div className="flex items-center gap-2 flex-1">
+            <GripVertical className="w-4 h-4 text-gray-400 group-hover:text-poppy transition-colors flex-shrink-0" />
+            <h3 
+              className="text-lg font-semibold text-primary leading-tight group-hover:text-poppy transition-colors flex-1"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleFeatureClick(feature.id)
+              }}
+            >
+              {feature.title || `Feature #${feature.id}`}
+            </h3>
+          </div>
           <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-poppy transition-colors flex-shrink-0 ml-2" />
         </div>
         
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          {getWeeksToShip(feature) && (
-            <Badge variant="outline" className="border-poppy/30 text-poppy text-xs bg-poppy/5">
-              <Clock className="w-3 h-3 mr-1" />
-              {getWeeksToShip(feature)}w to ship
-            </Badge>
+          {/* Weeks estimation - editable */}
+          {editingWeeks[feature.id] ? (
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                step="0.5"
+                min="0.5"
+                value={tempWeeks[feature.id] || ''}
+                onChange={(e) => setTempWeeks(prev => ({ ...prev, [feature.id]: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const weeks = parseFloat(tempWeeks[feature.id] || '0')
+                    if (weeks > 0) handleUpdateWeeks(feature.id, weeks)
+                  } else if (e.key === 'Escape') {
+                    cancelEditingWeeks(feature.id)
+                  }
+                }}
+                className="w-16 px-1 py-0.5 text-xs border border-poppy rounded focus:outline-none focus:ring-1 focus:ring-poppy"
+                autoFocus
+              />
+              <span className="text-xs text-poppy">w</span>
+              <button
+                onClick={() => {
+                  const weeks = parseFloat(tempWeeks[feature.id] || '0')
+                  if (weeks > 0) handleUpdateWeeks(feature.id, weeks)
+                }}
+                className="text-xs text-green-600 hover:text-green-800"
+              >
+                ✓
+              </button>
+              <button
+                onClick={() => cancelEditingWeeks(feature.id)}
+                className="text-xs text-red-600 hover:text-red-800"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            getWeeksToShip(feature) && (
+              <Badge 
+                variant="outline" 
+                className="border-poppy/30 text-poppy text-xs bg-poppy/5 cursor-pointer hover:bg-poppy/10 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  startEditingWeeks(feature.id, getWeeksToShip(feature) || undefined)
+                }}
+              >
+                <Clock className="w-3 h-3 mr-1" />
+                {getWeeksToShip(feature)}w to ship
+                <Edit3 className="w-3 h-3 ml-1" />
+              </Badge>
+            )
           )}
+          
+          {/* Engineer assignments */}
+          {(feature.assigned_engineers_count ?? 0) > 0 && (
+            <EngineerAssignmentModal
+              prdId={feature.id}
+              prdTitle={feature.title || `Feature #${feature.id}`}
+              onAssignmentsChange={fetchRoadmap}
+              trigger={
+                <Badge 
+                  variant="outline" 
+                  className="border-blue-300 text-blue-700 text-xs bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Users className="w-3 h-3 mr-1" />
+                  {feature.assigned_engineers_count} engineer{feature.assigned_engineers_count !== 1 ? 's' : ''}
+                </Badge>
+              }
+            />
+          )}
+          
           {feature['v0-link'] && (
-            <Badge className="bg-sprout/20 text-sprout border-sprout/30 text-xs">
-              <Palette className="w-3 h-3 mr-1" />
-              Design
-            </Badge>
+            <a 
+              href={`/?mode=design&feature_id=${feature.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-block"
+            >
+              <Badge className="bg-sprout/20 text-sprout border-sprout/30 text-xs cursor-pointer hover:bg-sprout/30 transition-colors">
+                <Palette className="w-3 h-3 mr-1" />
+                Design
+              </Badge>
+            </a>
           )}
           {feature.slack_channels?.some(ch => ch.is_primary) && (
             <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
@@ -217,23 +449,43 @@ export default function RoadmapDashboard({ userEmail }: RoadmapDashboardProps) {
           {feature.description || 'Click to view details and add feedback'}
         </p>
         
-        <div className="flex items-center gap-3 text-xs text-gray-500">
-          <div className="flex items-center gap-1">
-            <FileText className="w-3 h-3" />
-            <span>PRD</span>
-          </div>
-          {feature.roadmap?.target_quarter && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 text-xs text-gray-500">
             <div className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              <span>{feature.roadmap.target_quarter}</span>
+              <FileText className="w-3 h-3" />
+              <span>PRD</span>
             </div>
+            {feature.roadmap?.target_quarter && (
+              <div className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                <span>{feature.roadmap.target_quarter}</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Add assignment button if no engineers assigned */}
+          {(!feature.assigned_engineers_count || feature.assigned_engineers_count === 0) && (
+            <EngineerAssignmentModal
+              prdId={feature.id}
+              prdTitle={feature.title || `Feature #${feature.id}`}
+              onAssignmentsChange={fetchRoadmap}
+              trigger={
+                <button 
+                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Users className="w-3 h-3" />
+                  Assign Engineers
+                </button>
+              }
+            />
           )}
         </div>
       </div>
     </div>
   )
 
-  const renderTimelineColumn = (title: string, description: string, features: PRD[], icon: React.ReactNode, bgColor: string, borderColor: string) => (
+  const renderTimelineColumn = (title: string, description: string, features: PRD[], icon: React.ReactNode, bgColor: string, borderColor: string, droppableId: string) => (
     <div className="flex-1 min-w-0">
       <Card className="bg-white/80 backdrop-blur-sm border-gray-100 shadow-lg h-full hover:shadow-xl transition-shadow">
         <CardHeader className="pb-4">
@@ -249,19 +501,42 @@ export default function RoadmapDashboard({ userEmail }: RoadmapDashboardProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-0 max-h-[600px] overflow-y-auto custom-scrollbar">
-            {features.length > 0 ? (
-              features.map(renderFeatureCard)
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <div className={`p-3 ${bgColor} rounded-full w-12 h-12 mx-auto mb-3 flex items-center justify-center border ${borderColor}`}>
-                  {icon}
-                </div>
-                <p className="text-sm text-gray-600">No features in this timeframe</p>
-                <p className="text-xs text-gray-400 mt-1">Features will appear here when ready</p>
+          <Droppable droppableId={droppableId}>
+            {(provided, snapshot) => (
+              <div 
+                {...provided.droppableProps}
+                ref={provided.innerRef}
+                className={`space-y-0 max-h-[600px] overflow-y-auto custom-scrollbar min-h-[200px] transition-colors ${
+                  snapshot.isDraggingOver ? 'bg-poppy/5 rounded-lg' : ''
+                }`}
+              >
+                {features.length > 0 ? (
+                  features.map((feature, index) => (
+                    <Draggable key={feature.id} draggableId={feature.id.toString()} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                        >
+                          {renderFeatureCard(feature, snapshot.isDragging)}
+                        </div>
+                      )}
+                    </Draggable>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className={`p-3 ${bgColor} rounded-full w-12 h-12 mx-auto mb-3 flex items-center justify-center border ${borderColor}`}>
+                      {icon}
+                    </div>
+                    <p className="text-sm text-gray-600">No features in this timeframe</p>
+                    <p className="text-xs text-gray-400 mt-1">Drag features here to update timeline</p>
+                  </div>
+                )}
+                {provided.placeholder}
               </div>
             )}
-          </div>
+          </Droppable>
         </CardContent>
       </Card>
     </div>
@@ -405,55 +680,67 @@ export default function RoadmapDashboard({ userEmail }: RoadmapDashboardProps) {
         </div>
         
         <div className="flex items-center gap-3">
-          <Button onClick={handleShare} className="bg-poppy hover:bg-poppy/90 text-white border-0 shadow-md hover:shadow-lg transition-all">
-            <Share2 className="w-4 h-4 mr-2" />
-            Share with Stakeholders
-          </Button>
-          <Button onClick={handleExport} variant="outline" className="border-gray-300 hover:bg-neutral/50 text-primary hover:border-poppy/30">
-            <Download className="w-4 h-4 mr-2" />
-            Export for Reports
-          </Button>
+          <button
+            onClick={handleShare}
+            className="px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 bg-poppy/10 text-poppy font-semibold border border-poppy/20 hover:bg-poppy/20 hover:scale-102"
+          >
+            <Share2 className="w-4 h-4" />
+            <span>Share Roadmap</span>
+          </button>
+          <button
+            onClick={handleExport}
+            className="px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 text-gray-700 hover:bg-gray-50 hover:text-poppy border border-transparent hover:border-gray-200 hover:scale-102"
+          >
+            <Download className="w-4 h-4" />
+            <span>Export</span>
+          </button>
         </div>
       </div>
 
       {/* Timeline Columns - PM Focused */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
-        {renderTimelineColumn(
-          "Shipped",
-          "Features delivered to users",
-          shipped,
-          <CheckCircle className="w-5 h-5 text-green-600" />,
-          "bg-green-50",
-          "border-green-200"
-        )}
-        
-        {renderTimelineColumn(
-          "Shipping Soon", 
-          "Ready within 2 weeks",
-          shippingSoon,
-          <Clock className="w-5 h-5 text-orange-600" />,
-          "bg-orange-50",
-          "border-orange-200"
-        )}
-        
-        {renderTimelineColumn(
-          "This Quarter",
-          "Expected in next 2 months", 
-          thisQuarter,
-          <Calendar className="w-5 h-5 text-blue-600" />,
-          "bg-blue-50",
-          "border-blue-200"
-        )}
-        
-        {renderTimelineColumn(
-          "Planned",
-          "Future roadmap items", 
-          planned,
-          <FileText className="w-5 h-5 text-purple-600" />,
-          "bg-purple-50",
-          "border-purple-200"
-        )}
-      </div>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
+          {renderTimelineColumn(
+            "Shipped",
+            "Features delivered to users",
+            shipped,
+            <CheckCircle className="w-5 h-5 text-green-600" />,
+            "bg-green-50",
+            "border-green-200",
+            "shipped"
+          )}
+          
+          {renderTimelineColumn(
+            "Shipping Soon", 
+            "Ready within 2 weeks",
+            shippingSoon,
+            <Clock className="w-5 h-5 text-orange-600" />,
+            "bg-orange-50",
+            "border-orange-200",
+            "shippingSoon"
+          )}
+          
+          {renderTimelineColumn(
+            "This Quarter",
+            "Expected in next 2 months", 
+            thisQuarter,
+            <Calendar className="w-5 h-5 text-blue-600" />,
+            "bg-blue-50",
+            "border-blue-200",
+            "thisQuarter"
+          )}
+          
+          {renderTimelineColumn(
+            "Planned",
+            "Future roadmap items", 
+            planned,
+            <FileText className="w-5 h-5 text-purple-600" />,
+            "bg-purple-50",
+            "border-purple-200",
+            "planned"
+          )}
+        </div>
+      </DragDropContext>
 
       {/* Empty State */}
       {prds.length === 0 && (
@@ -463,10 +750,10 @@ export default function RoadmapDashboard({ userEmail }: RoadmapDashboardProps) {
           </div>
           <h3 className="text-xl font-semibold text-primary mb-2">No features in roadmap</h3>
           <p className="text-gray-500 mb-4">Create your first feature to start tracking shipping timelines.</p>
-          <Button className="bg-poppy hover:bg-poppy/90 text-white shadow-lg hover:shadow-xl transition-all">
-            <Sparkles className="w-4 h-4 mr-2" />
-            Create First Feature
-          </Button>
+          <button className="px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 bg-poppy/10 text-poppy font-semibold border border-poppy/20 hover:bg-poppy/20 hover:scale-102">
+            <Sparkles className="w-4 h-4" />
+            <span>Create First Feature</span>
+          </button>
         </div>
       )}
     </div>

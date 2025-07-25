@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Question, TeamTerm } from '@/types/knowledge';
+import { Question } from '@/types/knowledge';
 
 interface QuestionAnswer {
   question: string;

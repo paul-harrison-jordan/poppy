@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter, usePathname } from 'next/navigation'
 import ChatInterface from './ChatInterface'
@@ -9,8 +9,7 @@ import { useSession } from 'next-auth/react'
 import { 
   MessageSquare, 
   Map, 
-  PenLine, 
-  Grid3X3, 
+  Grid3X3,
   Settings
 } from 'lucide-react'
 

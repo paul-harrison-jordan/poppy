@@ -1,5 +1,5 @@
 import { openai } from '../openai';
-import { QuestionResponse, PMPreferenceProfile } from '@/types/knowledge';
+import { QuestionResponse } from '@/types/knowledge';
 
 export class PMInsightService {
   

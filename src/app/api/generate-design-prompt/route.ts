@@ -32,40 +32,28 @@ export async function POST(request: Request) {
 
     // Generate design summary focused on value proposition
     const completion = await openai.chat.completions.create({
-      model: 'o4-mini',
+      model: 'gpt-4o-mini',
       response_format: { type: 'json_object' },
       messages: [
         {
           role: 'system',
-          content: `You are an expert UX designer and PM who creates design prompts for user testing.
+          content: `Extract key design requirements from a PRD to create a focused design prompt.
 
-Your goal is to analyze a PRD and create a design prompt that:
-1. Highlights the core value proposition of the feature
-2. Shows key user workflows and interactions
-3. Makes the feature's benefits immediately clear to users in testing
-4. Focuses on usability and value demonstration over visual polish
+Focus on:
+1. Core value proposition 
+2. Primary user workflow
+3. Key UI requirements
 
-${pmProfile ? `
-PM Profile Context:
-- Product Philosophy: ${pmProfile.product_philosophy || 'Not specified'}
-- Decision Frameworks: ${JSON.stringify(pmProfile.decision_frameworks || {})}
-- Trade-off Preferences: ${JSON.stringify(pmProfile.trade_off_preferences || {})}
-- Domain Expertise: ${(pmProfile.domain_expertise || []).join(', ')}
-- Vocabulary: ${Object.keys(pmProfile.vocabulary_glossary || {}).join(', ')}
-
-Use this PM's specific terminology and align with their decision-making style.
-` : ''}
+${pmProfile?.domain_expertise ? `Domain context: ${pmProfile.domain_expertise.join(', ')}` : ''}
 
 Return JSON with:
-- "design_summary": 2-3 sentence summary of what to design and why
-- "value_props": Array of 3-5 key value propositions this design should demonstrate
-- "user_workflows": Array of 2-3 critical user workflows to show
-- "testing_focus": What specific aspects should be emphasized for user testing
-- "design_prompt": Complete prompt for v0 design generation`,
+- "design_summary": 1-2 sentence summary
+- "primary_workflow": Single most important user workflow
+- "design_prompt": Concise prompt for v0 (max 200 words)`,
         },
         {
           role: 'user',
-          content: `Analyze this PRD and create a design prompt focused on demonstrating feature value for user testing:
+          content: `Extract design requirements from this PRD:
 
 ${prdText}`,
         },
@@ -81,18 +69,44 @@ ${prdText}`,
     
     console.log('Design prompt generated:', {
       designSummary: designData.design_summary?.substring(0, 100) + '...',
-      valuePropsCount: designData.value_props?.length || 0,
-      workflowsCount: designData.user_workflows?.length || 0
+      hasWorkflow: !!designData.primary_workflow
+    });
+
+    // Now call v0 to create the design with the generated prompt
+    console.log('Calling v0 to create design with prompt:', designData.design_prompt?.substring(0, 100) + '...');
+    
+    const v0Response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/v0-chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: designData.design_prompt
+      }),
+    });
+
+    if (!v0Response.ok) {
+      const errorData = await v0Response.json();
+      throw new Error(errorData.error || 'Failed to create v0 design');
+    }
+
+    const v0Result = await v0Response.json();
+    
+    console.log('V0 design created:', {
+      chatId: v0Result.chatId,
+      demoUrl: v0Result.demoUrl ? 'Present' : 'Not available'
     });
 
     return NextResponse.json({
       success: true,
       designSummary: designData.design_summary,
-      valueProps: designData.value_props,
-      userWorkflows: designData.user_workflows,
-      testingFocus: designData.testing_focus,
+      primaryWorkflow: designData.primary_workflow,
       designPrompt: designData.design_prompt,
-      pmProfileUsed: !!pmProfile
+      pmProfileUsed: !!pmProfile,
+      // v0 response data
+      chatId: v0Result.chatId,
+      chatUrl: v0Result.chatUrl,
+      demoUrl: v0Result.demoUrl
     });
 
   } catch (error) {

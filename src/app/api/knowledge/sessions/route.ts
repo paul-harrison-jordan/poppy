@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/utils/supabase/service';
-import { CreateSessionRequest, CreateSessionResponse, UserKnowledgeSession } from '@/types/knowledge';
+import { CreateSessionRequest, CreateSessionResponse } from '@/types/knowledge';
 import { getAuthServerSession } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {

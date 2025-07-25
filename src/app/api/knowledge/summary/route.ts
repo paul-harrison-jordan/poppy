@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/utils/supabase/service';
-import { GetKnowledgeSummaryResponse, KnowledgeSummary } from '@/types/knowledge';
 import { getAuthServerSession } from '@/lib/auth';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getAuthServerSession();
     if (!session?.user?.email) {
@@ -13,11 +12,13 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceClient();
 
     // Get or create knowledge summary
-    let { data: summary, error: summaryError } = await supabase
+    const { data: summaryData, error: summaryError } = await supabase
       .from('knowledge_summaries')
       .select('*')
       .eq('user_email', session.user.email)
       .single();
+
+    let summary = summaryData;
 
     if (summaryError && summaryError.code === 'PGRST116') {
       // No summary exists, create one
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
     // Get vocabulary due for review (Note: vocabulary_interactions table doesn't exist in schema, so skip for now)
     const vocabularyDueForReview: any[] = [];
 
-    const response: GetKnowledgeSummaryResponse = {
+    const response = {
       summary,
       recent_sessions: recentSessions || [],
       vocabulary_due_for_review: vocabularyDueForReview
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const session = await getAuthServerSession();
     if (!session?.user?.email) {

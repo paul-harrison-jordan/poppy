@@ -7,7 +7,6 @@ import { signOut } from 'next-auth/react'
 import { 
   MessageSquare, 
   Map, 
-  PenLine, 
   Grid3X3, 
   Settings,
   RefreshCw,

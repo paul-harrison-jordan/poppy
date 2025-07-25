@@ -105,10 +105,9 @@ export default function GlobalLayout({ children }: { children: React.ReactNode }
       
       if (mode === 'design' && !isSidebarCollapsed) {
         setIsSidebarCollapsed(true)
-      } else if (mode !== 'design' && isDesignMode && isSidebarCollapsed) {
-        // Optional: Auto-expand when leaving design mode (only if we collapsed it)
-        // Uncomment if you want this behavior:
-        // setIsSidebarCollapsed(false)
+      } else if (mode !== 'design' && isSidebarCollapsed) {
+        // Auto-expand when leaving design mode with smooth transition
+        setTimeout(() => setIsSidebarCollapsed(false), 100)
       }
     }
 

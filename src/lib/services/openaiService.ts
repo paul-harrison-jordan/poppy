@@ -65,7 +65,7 @@ export async function generateContent(opts: GenerateContentRequest) {
           role: 'user',
           content:`I have  included a list of key terms that you may need to use to generate your response. Use this as background information to help you understand the rest of the prompt. ${Object.keys(terms).join(', ')}
 
-I've also included a list of key terms that my team has defined for our product. Use this as background information to help you understand the rest of the prompt. ${Object.keys(teamTerms).join(', ')}
+I've also included a list of key terms that my team has defined for our product. Use this as background information to help you understand the rest of the prompt. ${Object.keys(teamTerms).join(', ')}${pmProfileContext}
 
 I've included instructions for how to think and write PRDs like a product manager with" ${ctx.examplesOfHowYouThink} "I've also included background on how to think like my product team" ${ctx.pillarGoalsKeyTermsBackground} "I've included an example document to demonstrate my personal philosophy on how we should approach building a product to cross sell to existing users" ${ctx.howYouThinkAboutProduct} "I've included a doc that outlines the strategic goals of the my product team for the rest of the year" ${ctx.teamStrategy} I've included example text from work that my team has already done that I want for you to use as additional context for relevant features and terms" ${additionalContext} "I've asked you to write a PRD for the following question" ${query} "I've also included a list of questions and answers about the PRD to provide additional clarity around how we should approach the PRD." ${
     questionAnswers && Array.isArray(questionAnswers) ? questionAnswers.map(qa => `Q: ${qa.question}${qa.reasoning ? ` (${qa.reasoning})` : ''}\nA: ${qa.answer}`).join('\n\n') : questions.join('\n')
@@ -78,7 +78,7 @@ I've included instructions for how to think and write PRDs like a product manage
 
   // Brand messaging document generation
   const stream = await openai.chat.completions.create({
-    model: 'o3',
+    model: 'gpt-4o',
     stream: true,
     messages: [
       {
@@ -225,7 +225,7 @@ ${Object.keys(terms).join(', ')}${pmProfileContext}`,
         content: `\n          Title: ${title}\nQuery: ${query}, \nContext: ${matchedContext}, teamTerms: ${teamTerms}, storedContext: ${storedContext}: klaviyoTerms: ${terms}`,
       },
     ],
-    model: 'o4-mini',
+    model: 'gpt-4o-mini',
     response_format: { type: 'json_object' },
   });
 
@@ -306,7 +306,7 @@ your summary must be returned in JSON format as follows:
     ];
     
     const completion = await openai.chat.completions.create({
-      model: 'o3',
+      model: 'gpt-4o',
       messages: chatMessages,
       response_format: { type: 'json_object' },
     });
@@ -338,7 +338,7 @@ Your responses should be concise and to the point, and must be no more than 200 
       ...messages.map(m => ({ role: m.role, content: m.content })),
     ];
     const stream = await openai.chat.completions.create({
-      model: 'o3',
+      model: 'gpt-4o',
       messages: chatMessages,
       stream: true,
     });
@@ -409,7 +409,7 @@ ${Object.keys(terms).join(', ')}${pmProfileContext}`,
         content: `\n          Title: ${title}\nQuery: ${query}, \nContext: ${matchedContext}`,
       },
     ],
-    model: 'o4-mini', 
+    model: 'gpt-4o-mini', 
     response_format: { type: 'json_object' },
   });
   

@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     // This is a temporary admin endpoint to disable RLS for debugging
     // In production, this should be removed or protected with admin auth

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
-import { Sparkles, FileText, Paintbrush, Bot } from 'lucide-react';
+import { Sparkles, FileText, Paintbrush, Bot, MessageSquare } from 'lucide-react';
 
-type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'agent' | 'design';
+type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'agent' | 'design' | 'feedback';
 type DraftStep = 'initial' | 'vocabulary' | 'questions' | 'content';
 
 interface ChatInputProps {
@@ -65,47 +65,95 @@ export default function ChatInput({
       return "What's on your mind?";
     } else if (mode === 'design') {
       return "Describe design changes...";
+    } else if (mode === 'feedback') {
+      return "Describe a feature or pain point...";
     }
     return "Message Poppy...";
   };
+
+  // Calculate progress for draft mode
+  const getDraftProgress = () => {
+    if (mode !== 'draft') return { percent: 0, step: '', show: false };
+    
+    switch (draftStep) {
+      case 'initial':
+        return { percent: 0, step: 'Starting', show: true };
+      case 'vocabulary':
+        const vocabProgress = teamTerms.length > 0 ? ((currentTermIndex + 1) / teamTerms.length) * 30 : 0;
+        return { percent: vocabProgress, step: `Defining terms (${currentTermIndex + 1}/${teamTerms.length})`, show: true };
+      case 'questions':
+        const questionProgress = questions.length > 0 ? 30 + ((currentQuestionIndex + 1) / questions.length) * 60 : 30;
+        return { percent: questionProgress, step: `Questions (${currentQuestionIndex + 1}/${questions.length})`, show: true };
+      case 'content':
+        return { percent: 95, step: 'Generating PRD...', show: true };
+      default:
+        return { percent: 0, step: '', show: false };
+    }
+  };
+
+  const progress = getDraftProgress();
 
   const renderModeButtons = () => (
     <>
       <button
         type="button"
         onClick={() => onModeChange('brainstorm')}
-        className={`px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1.5 ${
+        className={`px-3 py-2 text-sm rounded-lg transition-all flex flex-col items-center gap-1 group ${
           mode === 'brainstorm' 
-            ? 'bg-poppy text-white' 
-            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+            ? 'bg-gradient-to-br from-poppy to-poppy/80 text-white shadow-md' 
+            : 'text-gray-600 hover:text-poppy hover:bg-poppy/5 border border-gray-200 hover:border-poppy/30'
         }`}
       >
-        <Sparkles className="w-3 h-3" />
-        Brainstorm
+        <Sparkles className={`w-4 h-4 ${mode === 'brainstorm' ? '' : 'group-hover:scale-110 transition-transform'}`} />
+        <div className="text-center">
+          <div className="font-medium">Brainstorm</div>
+          <div className="text-xs opacity-75">Explore ideas</div>
+        </div>
       </button>
       <button
         type="button"
         onClick={() => onModeChange('draft')}
-        className={`px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1.5 ${
+        className={`px-3 py-2 text-sm rounded-lg transition-all flex flex-col items-center gap-1 group ${
           mode === 'draft' 
-            ? 'bg-poppy text-white' 
-            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+            ? 'bg-gradient-to-br from-poppy to-poppy/80 text-white shadow-md' 
+            : 'text-gray-600 hover:text-poppy hover:bg-poppy/5 border border-gray-200 hover:border-poppy/30'
         }`}
       >
-        <FileText className="w-3 h-3" />
-        Draft PRD
+        <FileText className={`w-4 h-4 ${mode === 'draft' ? '' : 'group-hover:scale-110 transition-transform'}`} />
+        <div className="text-center">
+          <div className="font-medium">Draft PRD</div>
+          <div className="text-xs opacity-75">Structure ideas</div>
+        </div>
       </button>
       <button
         type="button"
         onClick={() => onModeChange('design')}
-        className={`px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1.5 ${
+        className={`px-3 py-2 text-sm rounded-lg transition-all flex flex-col items-center gap-1 group ${
           mode === ('design' as ChatMode) 
-            ? 'bg-poppy text-white' 
-            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+            ? 'bg-gradient-to-br from-poppy to-poppy/80 text-white shadow-md' 
+            : 'text-gray-600 hover:text-poppy hover:bg-poppy/5 border border-gray-200 hover:border-poppy/30'
         }`}
       >
-        <Paintbrush className="w-3 h-3" />
-        Design
+        <Paintbrush className={`w-4 h-4 ${mode === 'design' ? '' : 'group-hover:scale-110 transition-transform'}`} />
+        <div className="text-center">
+          <div className="font-medium">Design</div>
+          <div className="text-xs opacity-75">Create UI</div>
+        </div>
+      </button>
+      <button
+        type="button"
+        onClick={() => onModeChange('feedback')}
+        className={`px-3 py-2 text-sm rounded-lg transition-all flex flex-col items-center gap-1 group ${
+          mode === 'feedback' 
+            ? 'bg-gradient-to-br from-poppy to-poppy/80 text-white shadow-md' 
+            : 'text-gray-600 hover:text-poppy hover:bg-poppy/5 border border-gray-200 hover:border-poppy/30'
+        }`}
+      >
+        <MessageSquare className={`w-4 h-4 ${mode === 'feedback' ? '' : 'group-hover:scale-110 transition-transform'}`} />
+        <div className="text-center">
+          <div className="font-medium">Feedback</div>
+          <div className="text-xs opacity-75">Search customers</div>
+        </div>
       </button>
       {/* Agentic (Bot) button: show if agentic messages exist or in agent mode */}
       {(agenticMessages.length > 0 || mode === 'agent') && onOpenAgentMode && (
@@ -171,20 +219,31 @@ export default function ChatInput({
         
         {/* Mode selector - horizontal tabs */}
         <div className="flex items-center justify-between">
-          <div className="flex gap-1">
+          <div className="grid grid-cols-4 gap-2 flex-1 max-w-lg">
             {renderModeButtons()}
           </div>
           
-          {/* Context indicators */}
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            {mode === 'draft' && draftStep !== 'initial' && (
-              <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded-md">
-                {draftStep === 'vocabulary' && `Define ${(currentTermIndex || 0) + 1}/${teamTerms?.length || 0}`}
-                {draftStep === 'questions' && `Q${(currentQuestionIndex || 0) + 1}/${questions?.length || 0}`}
-                {draftStep === 'content' && 'Generating...'}
-              </span>
-            )}
-          </div>
+          {/* Progress indicator for draft mode */}
+          {progress.show && (
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="text-xs text-gray-600 font-medium truncate">
+                  {progress.step}
+                </div>
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-poppy rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${progress.percent}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500 font-mono">
+                  {Math.round(progress.percent)}%
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </form>
 

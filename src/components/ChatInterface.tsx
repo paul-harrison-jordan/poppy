@@ -5,7 +5,6 @@ import { collectStream } from "@/lib/collectStream"
 import { Paintbrush } from "lucide-react"
 import PoppyProactiveMessage from './poppy/PoppyProactiveMessage';
 import { usePRDStore } from '@/store/prdStore';
-import { createClient } from '@/utils/supabase/client';
 import { useKnowledgeSession } from '@/hooks/useKnowledgeSession';
 import { usePRDFlow } from '@/hooks/usePRDFlow';
 import DesignSidebar from './DesignSidebar';
@@ -24,17 +23,16 @@ export interface ChatMessage {
   className?: string;
 }
 
-type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'agent' | 'design';
+type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'agent' | 'design' | 'feedback';
 
 
 
 export default function ChatInterface() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<ChatMode>('brainstorm');
-  const [sidebarWidth, setSidebarWidth] = useState(256); // Default width
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [pendingSummary, setPendingSummary] = useState<string | null>(null);
   const agenticMessages = usePRDStore((state) => state.agenticMessages);
@@ -44,10 +42,55 @@ export default function ChatInterface() {
   const [demoUrl, setDemoUrl] = useState<string | null>(null);
   const [isCreatingDesign, setIsCreatingDesign] = useState(false);
   const [v0ChatId, setV0ChatId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(256);
 
   // Use custom hooks
   const knowledgeSession = useKnowledgeSession();
   const prdFlow = usePRDFlow();
+
+  // Initialize component after session and hooks are ready
+  useEffect(() => {
+    if (status !== 'loading' && knowledgeSession && prdFlow) {
+      // Restore mode from localStorage
+      const savedMode = localStorage.getItem('currentChatMode') as ChatMode;
+      if (savedMode && ['chat', 'draft', 'brainstorm', 'agent', 'design', 'feedback'].includes(savedMode)) {
+        setMode(savedMode);
+      }
+      
+      setIsInitialized(true);
+    }
+  }, [status, knowledgeSession, prdFlow]);
+
+  // Track design mode changes
+  useEffect(() => {
+    const checkDesignMode = () => {
+      const currentMode = localStorage.getItem('currentChatMode');
+      const designMode = currentMode === 'design';
+      
+      
+      // In design mode, no sidebar. Otherwise, check if sidebar is collapsed
+      if (designMode) {
+        setSidebarWidth(0);
+      } else {
+        const collapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        setSidebarWidth(collapsed ? 64 : 256);
+      }
+    };
+
+    checkDesignMode();
+
+    const handleModeChange = () => checkDesignMode();
+    const handleStorageChange = () => checkDesignMode();
+
+    window.addEventListener('chatModeChange', handleModeChange);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('chatModeChange', handleModeChange);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
 
   const DOCUMENT_TYPES = {
@@ -71,45 +114,114 @@ export default function ChatInterface() {
       localStorage.removeItem('prdSummary');
     }
 
-    // Check URL parameters for design mode and PRD link
+    // Check URL parameters for design mode
     const urlParams = new URLSearchParams(window.location.search);
     const modeParam = urlParams.get('mode');
     const prdParam = urlParams.get('prd');
+    const featureIdParam = urlParams.get('feature_id');
     
-    if (modeParam === 'design' && prdParam) {
+    if (modeParam === 'design') {
       setMode('design');
-      // Fetch PRD content and trigger design creation
-      fetchPRDAndCreateDesign(prdParam);
-    }
-  }, []);
-
-  // Listen for sidebar width changes
-  useEffect(() => {
-    const updateSidebarWidth = () => {
-      const sidebar = document.querySelector('nav[class*="w-"]');
-      if (sidebar) {
-        setSidebarWidth(sidebar.getBoundingClientRect().width);
+      
+      if (featureIdParam) {
+        // Load existing design by feature ID
+        loadExistingDesign(featureIdParam);
+      } else if (prdParam) {
+        // Fetch PRD content and trigger design creation for new design
+        fetchPRDAndCreateDesign(prdParam);
       }
-    };
-
-    // Initial width calculation
-    updateSidebarWidth();
-
-    // Listen for window resize and sidebar changes
-    window.addEventListener('resize', updateSidebarWidth);
-    
-    // Create observer to watch for sidebar changes
-    const observer = new MutationObserver(updateSidebarWidth);
-    const sidebar = document.querySelector('nav[class*="w-"]');
-    if (sidebar) {
-      observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+    } else if (modeParam === 'feedback') {
+      setMode('feedback');
     }
-
-    return () => {
-      window.removeEventListener('resize', updateSidebarWidth);
-      observer.disconnect();
-    };
   }, []);
+
+  // Function to fetch PRD content and create design
+  const fetchPRDAndCreateDesign = async (driveLink: string) => {
+    try {
+      // Extract document ID from Google Drive link
+      const docIdMatch = driveLink.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (!docIdMatch) {
+        console.error('Invalid Google Drive link');
+        return;
+      }
+      
+      const docId = docIdMatch[1];
+      
+      // Fetch document content
+      const response = await fetch('/api/get-google-doc-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docId }),
+      });
+
+      if (response.ok) {
+        const { content } = await response.json();
+        if (content) {
+          // Use the document content to create design, pass driveLink for PRD updating
+          await handleCreateDesign(content, driveLink);
+        } else {
+          console.error('No content found in document');
+        }
+      } else {
+        console.error('Failed to fetch document content');
+      }
+    } catch (error) {
+      console.error('Error fetching PRD and creating design:', error);
+    }
+  };
+
+  // Function to load existing design by feature ID
+  const loadExistingDesign = async (featureId: string) => {
+    try {
+      console.log('Loading existing design for feature:', featureId);
+      
+      const response = await fetch(`/api/features/${featureId}/design`);
+      
+      if (response.ok) {
+        const { feature } = await response.json();
+        
+        if (feature.demoUrl && feature.chatId) {
+          console.log('Loading existing design:', {
+            chatId: feature.chatId,
+            demoUrl: feature.demoUrl,
+            title: feature.title
+          });
+          
+          // Set up design mode with existing data
+          setDemoUrl(feature.demoUrl);
+          setV0ChatId(feature.chatId);
+          
+          // Update localStorage and dispatch event
+          localStorage.setItem('currentChatMode', 'design');
+          window.dispatchEvent(new CustomEvent('chatModeChange', { detail: { mode: 'design' } }));
+          
+          // Add a message indicating we're in edit mode
+          setMessages([{
+            role: 'assistant',
+            content: `Design for "${feature.title || 'Feature'}" loaded in edit mode. You can now make changes to the existing design by describing what you'd like to modify.`
+          }]);
+        } else {
+          console.error('Feature has no design data');
+          setMessages([{
+            role: 'assistant',
+            content: 'This feature does not have a design yet. Please create a design first from the feature details page.'
+          }]);
+        }
+      } else {
+        console.error('Failed to load feature design data');
+        setMessages([{
+          role: 'assistant',
+          content: 'Failed to load the design. Please try again or check if the feature exists.'
+        }]);
+      }
+    } catch (error) {
+      console.error('Error loading existing design:', error);
+      setMessages([{
+        role: 'assistant',
+        content: 'An error occurred while loading the design. Please try again.'
+      }]);
+    }
+  };
 
   // Add useEffect for auto-scrolling
   useEffect(() => {
@@ -173,78 +285,25 @@ export default function ChatInterface() {
     window.dispatchEvent(new CustomEvent('chatModeChange', { detail: { mode } }));
   }, [mode]);
 
-  // Function to fetch PRD content and create design
-  const fetchPRDAndCreateDesign = async (driveLink: string) => {
-    try {
-      // Extract document ID from Google Drive link
-      const docIdMatch = driveLink.match(/\/d\/([a-zA-Z0-9-_]+)/);
-      if (!docIdMatch) {
-        console.error('Invalid Google Drive link');
-        return;
-      }
-      
-      const docId = docIdMatch[1];
-      
-      // Fetch document content
-      const response = await fetch('/api/get-google-doc-content', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ docId }),
-      });
-
-      if (response.ok) {
-        const { content } = await response.json();
-        if (content) {
-          // Use the document content to create design
-          await handleCreateDesign(content);
-        } else {
-          console.error('No content found in document');
-        }
-      } else {
-        console.error('Failed to fetch document content');
-      }
-    } catch (error) {
-      console.error('Error fetching PRD and creating design:', error);
-    }
-  };
-
-  const handleCreateDesign = async (prdContent: string) => {
+  const handleCreateDesign = async (prdContent: string, driveLink?: string) => {
     try {
       setIsCreatingDesign(true);
       console.log('Creating design with PRD content');
 
-      // Add engaging loading message
+      // Add simple loading message
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: (
-          <div className="flex flex-col items-center gap-3 py-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 border-4 border-poppy border-t-transparent rounded-full animate-spin" />
-              <span className="text-lg font-medium text-gray-700">Creating your design...</span>
-            </div>
-            <div className="text-sm text-gray-500 animate-pulse">
-              ✨ Analyzing your PRD and generating UI components
-            </div>
+          <div className="flex items-center gap-3 py-4">
+            <div className="w-6 h-6 border-2 border-poppy border-t-transparent rounded-full animate-spin" />
+            <span className="text-gray-700">Creating your design...</span>
           </div>
         )
       }]);
 
-      // Get the user's V0 API key from localStorage
-      const v0ApiKey = localStorage.getItem('v0_api_key');
-      if (!v0ApiKey) {
-        // Remove loading message and show error
-        setMessages(prev => prev.filter(msg => 
-          !(typeof msg.content === 'object' && React.isValidElement(msg.content))
-        ));
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: "Please configure your V0 API key in Settings before using Design Mode."
-        }]);
-        return;
-      }
 
-      // First generate the design prompt
-      const designPromptResponse = await fetch('/api/generate-design-prompt', {
+      // Call generate-design-prompt which now handles the v0 call
+      const response = await fetch('/api/generate-design-prompt', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -254,54 +313,60 @@ export default function ChatInterface() {
         }),
       });
 
-      if (!designPromptResponse.ok) {
-        throw new Error('Failed to generate design prompt');
+      if (!response.ok) {
+        throw new Error('Failed to generate design');
       }
 
-      const designPromptData = await designPromptResponse.json();
-
-      // Then create V0 chat with the generated design prompt
-      const response = await fetch('/api/create-v0-chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: designPromptData.designPrompt,
-          apiKey: v0ApiKey,
-          designSummary: designPromptData.designSummary,
-          pmProfileUsed: designPromptData.pmProfileUsed
-        }),
-      });
-
-      console.log('API response status:', response.status);
       const result = await response.json();
-      console.log('Design creation result:', result);
+
 
       // Remove loading message
       setMessages(prev => prev.filter(msg => 
         !(typeof msg.content === 'object' && React.isValidElement(msg.content))
       ));
 
-      if (result.success) {
-        console.log('Design created successfully:', result.chat.id);
-        console.log('Demo URL:', result.chat.demo);
-        console.log('Setting demoUrl state to:', result.chat.demo);
-        console.log('Current mode before switch:', mode);
+      if (result.success && result.demoUrl) {
+        console.log('Design created successfully with iframe URL:', result.demoUrl);
         
-        // SENIOR ENGINEER FIX: Direct state update with immediate mode transition
-        const newDemoUrl = result.chat.demo || null;
-        const newChatId = result.chat.id || null;
-        
-        setDemoUrl(newDemoUrl);
-        setV0ChatId(newChatId);
+        // Switch to design mode and set the iframe URL
+        setDemoUrl(result.demoUrl);
+        setV0ChatId(result.chatId);
         setMode('design');
         
-        // Update localStorage and dispatch event for sidebar collapse
+        // Update localStorage and dispatch event
         localStorage.setItem('currentChatMode', 'design');
         window.dispatchEvent(new CustomEvent('chatModeChange', { detail: { mode: 'design' } }));
         
-        // Set the design mode message directly with the known URL
+        // Update PRD with design link and chat ID if driveLink is provided
+        if (driveLink && result.chatId) {
+          try {
+            console.log('Updating PRD with design link and chat ID:', {
+              driveLink,
+              demoUrl: result.demoUrl,
+              chatId: result.chatId
+            });
+            
+            const updateResponse = await fetch('/api/update-prd-v0-link', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                driveLink: driveLink,
+                v0Link: result.demoUrl,
+                chatId: result.chatId
+              }),
+            });
+            
+            if (updateResponse.ok) {
+              console.log('PRD successfully updated with design link and chat ID');
+            } else {
+              console.error('Failed to update PRD with design link');
+            }
+          } catch (error) {
+            console.error('Error updating PRD with design link:', error);
+          }
+        }
+        
+        // Add success message
         setMessages([{
           role: 'assistant',
           content: (
@@ -319,40 +384,6 @@ export default function ChatInterface() {
           )
         }]);
         
-        console.log('Switched to design mode with URL:', newDemoUrl, 'and chatId:', newChatId);
-        
-        // Update Supabase with v0 demo link
-        if (session?.user?.email && result.chat.demo) {
-          try {
-            const savedDocs = JSON.parse(localStorage.getItem("savedPRD") || "[]");
-            const latestPrd = savedDocs[savedDocs.length - 1]; // Get the most recent PRD
-            
-            if (latestPrd?.url) {
-              const response = await fetch('/api/update-prd-v0-link', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  driveLink: latestPrd.url,
-                  v0Link: result.chat.demo
-                }),
-              });
-
-              if (response.ok) {
-                console.log('Updated PRD with v0 demo link in database:', result.chat.demo);
-              } else {
-                console.error('Error updating v0 link in database');
-              }
-            }
-          } catch (error) {
-            console.error('Error updating v0 link in database:', error);
-          }
-        }
-        
-        // Force a re-render by logging after state updates
-        setTimeout(() => {
-          console.log('After state updates - demoUrl should be:', newDemoUrl);
-          console.log('After state updates - mode should be: design');
-        }, 100);
       } else {
         console.error('Design creation failed:', result);
         setMessages(prev => [...prev, {
@@ -389,7 +420,7 @@ export default function ChatInterface() {
               <span className="font-medium">Connection error</span>
             </div>
             <p className="text-gray-600 text-center">
-              Unable to connect to the design service. Please check your internet connection and try again.
+              {error instanceof Error ? error.message : "Unable to connect to the design service. Please check your internet connection and try again."}
             </p>
           </div>
         )
@@ -465,25 +496,108 @@ export default function ChatInterface() {
   };
 
   const handleModeChange = (newMode: ChatMode) => {
-    setMode(newMode);
-    prdFlow.resetFlow();
-    
-    // Update localStorage and dispatch event for consistent state tracking
-    localStorage.setItem('currentChatMode', newMode);
-    window.dispatchEvent(new CustomEvent('chatModeChange', { detail: { mode: newMode } }));
-    
-    if (newMode === 'draft') {
-      // Create a new knowledge session for PRD generation
-      knowledgeSession.createKnowledgeSession('prd_generation', newMode);
-    }
-    
-    // Don't add default messages - let the input be the focus
-    setMessages([]);
+    // Batch state updates for smooth transitions
+    const performModeChange = () => {
+      setMode(newMode);
+      prdFlow.resetFlow();
+      setMessages([]);
+      
+      // Update localStorage and dispatch event
+      localStorage.setItem('currentChatMode', newMode);
+      window.dispatchEvent(new CustomEvent('chatModeChange', { detail: { mode: newMode } }));
+      
+      if (newMode === 'draft') {
+        knowledgeSession.createKnowledgeSession('prd_generation', newMode);
+      }
+    };
+
+    // Use requestAnimationFrame for smooth visual transitions
+    requestAnimationFrame(performModeChange);
   };
 
   const handleSafeModeChange = (newMode: ChatMode) => {
     // For now, directly change mode - can add confirmation logic later if needed
     handleModeChange(newMode);
+  };
+
+  const handleGetEmailFromChat = async (customerMatch: Record<string, unknown>, index: number) => {
+    try {
+      // Get Google Sheets ID from localStorage
+      const CUSTOMER_SHEET_ID = localStorage.getItem('customer_sheet_id');
+      
+      if (!CUSTOMER_SHEET_ID) {
+        alert('Please configure your Google Sheets ID in Settings first. Go to Instructions/Settings page and add your customer sheet ID.');
+        return;
+      }
+
+      console.log('Customer match data:', customerMatch);
+      console.log('Row number:', customerMatch.row_number);
+      
+      // Use row_number if available, otherwise fallback to index + 2 (assuming header row)
+      const rowNumber = customerMatch.row_number && customerMatch.row_number > 0 
+        ? customerMatch.row_number 
+        : index + 2;
+      
+      const response = await fetch('/api/get-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentId: CUSTOMER_SHEET_ID,
+          rowNumber: rowNumber
+        })
+      });
+
+      if (response.ok) {
+        const { email } = await response.json();
+        
+        // Generate and open email draft
+        await generateEmailFromChat(customerMatch, email);
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to fetch email:', errorData);
+        alert('Failed to fetch customer email. Please check your Google Sheets configuration.');
+      }
+    } catch (error) {
+      console.error('Error fetching email:', error);
+      alert('An error occurred while fetching customer email.');
+    }
+  };
+
+  const generateEmailFromChat = async (customerMatch: Record<string, unknown>, email: string) => {
+    try {
+      const emailSubject = `Following up on your feedback`;
+      const emailBody = `Hi there,
+
+I hope this email finds you well! I'm reaching out because I noticed you provided some valuable feedback in our recent survey (NPS: ${customerMatch.nps_score_raw}).
+
+You mentioned: "${customerMatch.nps_verbatim}"
+
+Your feedback has been incredibly helpful in shaping our product roadmap, and I wanted to personally follow up with you.
+
+I'd love to:
+1. Share more details about improvements we're making based on your feedback
+2. Get your thoughts on our approach
+3. Potentially include you in early testing when new features are ready
+
+Would you be interested in a brief 15-minute call to discuss this further? I'm happy to work around your schedule.
+
+Thanks for being such a valuable customer and for taking the time to share your feedback with us.
+
+Best regards,
+[Your Name]
+
+P.S. If you have any other thoughts or suggestions, I'm always happy to hear them!`;
+
+      // Create Gmail compose URL
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+      
+      // Open Gmail in new tab
+      window.open(gmailUrl, '_blank');
+      
+    } catch (error) {
+      console.error('Error generating email:', error);
+      alert('An error occurred while generating the email.');
+    }
   };
 
   const handleDraftMode = async (input: string) => {
@@ -727,53 +841,42 @@ export default function ChatInterface() {
 
       if (mode === ('design' as ChatMode)) {
         // Design mode: send message to v0 chat for iteration OR create new design
-        if (!v0ChatId) {
-          // No active session - create a new design
-          console.log('Creating new design from design mode input:', input);
+        console.log('Design mode - chatId:', v0ChatId, 'input:', input.substring(0, 50) + '...');
+        
+        // Add simple loading message
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: (
+            <div className="flex items-center gap-3 py-4">
+              <div className="w-6 h-6 border-2 border-poppy border-t-transparent rounded-full animate-spin" />
+              <span className="text-gray-700">{v0ChatId ? 'Updating design...' : 'Creating design...'}</span>
+            </div>
+          )
+        }]);
           
-          // Add engaging loading message for new design creation
-              setMessages(prev => [...prev, {
-                role: 'assistant',
-            content: (
-              <div className="flex flex-col items-center gap-3 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 border-4 border-poppy border-t-transparent rounded-full animate-spin" />
-                  <span className="text-lg font-medium text-gray-700">Bringing your idea to life...</span>
-                </div>
-                <div className="text-sm text-gray-500 animate-pulse">
-                  🎨 Crafting UI components based on your description
-                </div>
-              </div>
-            )
-          }]);
           
-          // Get the user's V0 API key from localStorage
-          const v0ApiKey = localStorage.getItem('v0_api_key');
-          if (!v0ApiKey) {
-            // Remove loading message
-            setMessages(prev => prev.filter(msg => 
-              !(typeof msg.content === 'object' && React.isValidElement(msg.content))
-            ));
-            setMessages(prev => [...prev, {
-              role: 'assistant',
-              content: "Please configure your V0 API key in Settings before using Design Mode. Click the Settings icon in the top right corner."
-            }]);
-            setLoading(false);
-            return;
-          }
+        // Call v0 API for design creation or update
+        try {
+          const v0ApiKey = localStorage.getItem('v0_api_key'); // Optional client-side API key
           
-          const response = await fetch('/api/create-v0-chat', {
+          const v0Response = await fetch('/api/v0-chat', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-                  body: JSON.stringify({
-              message: input, // Use the user's input directly as the design prompt
+            body: JSON.stringify({
+              message: input,
+              chatId: v0ChatId, // Pass existing chatId for updates, null for new designs
               apiKey: v0ApiKey
             }),
           });
 
-          const result = await response.json();
+          if (!v0Response.ok) {
+            const errorData = await v0Response.json();
+            throw new Error(errorData.error || 'Failed to process design request');
+          }
+
+          const result = await v0Response.json();
           
           // Remove loading message and thinking message
           setMessages(prev => prev.filter(msg => 
@@ -781,14 +884,14 @@ export default function ChatInterface() {
             !(typeof msg.content === 'object' && React.isValidElement(msg.content))
           ));
 
-          if (result.success) {
-            // Set up the new design session
-            const newDemoUrl = result.chat.demo || null;
-            const newChatId = result.chat.id || null;
+          if (result.success && result.demoUrl) {
+            console.log('Design processed successfully:', result.chatId, result.demoUrl);
             
-            setDemoUrl(newDemoUrl);
-            setV0ChatId(newChatId);
+            // Update the iframe URL and chat ID
+            setDemoUrl(result.demoUrl);
+            setV0ChatId(result.chatId);
             
+            // Add success message
             setMessages(prev => [...prev, {
               role: 'assistant',
               content: (
@@ -797,7 +900,7 @@ export default function ChatInterface() {
                     <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
                       <span className="text-sm">✓</span>
                     </div>
-                    <span className="font-medium">Design created!</span>
+                    <span className="font-medium">{result.isNewChat ? 'Design created!' : 'Design updated!'}</span>
                   </div>
                   <p className="text-gray-600 text-center">
                     Your design is live above. Keep iterating by describing changes you&apos;d like to make.
@@ -806,7 +909,7 @@ export default function ChatInterface() {
               )
             }]);
             
-            console.log('New design created with URL:', newDemoUrl, 'and chatId:', newChatId);
+            console.log('New design created with URL:', result.demoUrl, 'and chatId:', result.chatId);
           } else {
             setMessages(prev => [...prev, {
               role: 'assistant',
@@ -825,97 +928,29 @@ export default function ChatInterface() {
               )
             }]);
           }
-        } else {
-          // Existing session - update the design
-          // Add engaging loading message for design updates
-          setMessages(prev => [...prev, {
-            role: 'assistant',
-            content: (
-              <div className="flex flex-col items-center gap-3 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-lg font-medium text-gray-700">Updating your design...</span>
-                </div>
-                <div className="text-sm text-gray-500 animate-pulse">
-                  🔄 Applying your changes and regenerating components
-                </div>
-              </div>
-            )
-          }]);
-          
-          // Get the user's V0 API key from localStorage
-          const v0ApiKey = localStorage.getItem('v0_api_key');
-          if (!v0ApiKey) {
-            // Remove loading message
-            setMessages(prev => prev.filter(msg => 
-              !(typeof msg.content === 'object' && React.isValidElement(msg.content))
-            ));
-            setMessages(prev => [...prev, {
-              role: 'assistant',
-              content: "Your V0 API key is missing. Please reconfigure it in Settings."
-            }]);
-            setLoading(false);
-            return;
-          }
-          
-          const response = await fetch('/api/update-v0-chat', {
-                    method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              chatId: v0ChatId,
-              message: input,
-              apiKey: v0ApiKey
-            }),
-          });
-
-          const result = await response.json();
-          
+        } catch (error) {
+          console.error('Error in design mode:', error);
           // Remove loading message and thinking message
           setMessages(prev => prev.filter(msg => 
             msg.content !== "Thinking..." && 
             !(typeof msg.content === 'object' && React.isValidElement(msg.content))
           ));
-
-          if (result.success) {
-            // Update the demo URL with the new iteration
-            setDemoUrl(result.chat.demo || null);
-            
-            setMessages(prev => [...prev, {
-              role: 'assistant',
-              content: (
-                <div className="flex flex-col items-center gap-3 py-4">
-                  <div className="flex items-center gap-2 text-blue-600">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-sm">✓</span>
-                    </div>
-                    <span className="font-medium">Design updated!</span>
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: (
+              <div className="flex flex-col items-center gap-3 py-4">
+                <div className="flex items-center gap-2 text-red-600">
+                  <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
+                    <span className="text-sm">✗</span>
                   </div>
-                  <p className="text-gray-600 text-center">
-                    Your changes have been applied. The updated design is now showing above.
-                  </p>
+                  <span className="font-medium">Error</span>
                 </div>
-              )
-            }]);
-                        } else {
-            setMessages(prev => [...prev, {
-              role: 'assistant',
-              content: (
-                <div className="flex flex-col items-center gap-3 py-4">
-                  <div className="flex items-center gap-2 text-red-600">
-                    <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
-                      <span className="text-sm">✗</span>
-                    </div>
-                    <span className="font-medium">Update failed</span>
-                  </div>
-                  <p className="text-gray-600 text-center">
-                    {result.error || "Unable to update the design. Please try again or check your API key."}
-                  </p>
-                </div>
-              )
-            }]);
-          }
+                <p className="text-gray-600 text-center">
+                  {error instanceof Error ? error.message : "Something went wrong. Please try again."}
+                </p>
+              </div>
+            )
+          }]);
         }
       } else if (mode === 'draft') {
         await handleDraftMode(input);
@@ -964,6 +999,105 @@ export default function ChatInterface() {
         setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
 
         setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
+      } else if (mode === 'feedback') {
+        // Feedback mode: directly search for customer feedback matches
+        console.log('Feedback mode - searching for matches:', input.substring(0, 50) + '...');
+        
+        // Remove thinking message and show searching message
+        setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: "Searching for relevant customer feedback..."
+        }]);
+
+        try {
+          // Call the match-customers-to-prd API directly with the user's feedback input
+          const response = await fetch('/api/match-customers-to-prd', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prdSummary: input // Use the user input directly as the search query
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to search for customer feedback');
+          }
+
+          const result = await response.json();
+          
+          // Remove searching message
+          setMessages(prev => prev.filter(msg => msg.content !== "Searching for relevant customer feedback..."));
+
+          if (result.matches && result.matches.length > 0) {
+            // Create interactive customer cards with email CTAs
+            const customerCards = (
+              <div className="space-y-4">
+                <div className="text-lg font-semibold text-gray-800 mb-4">
+                  Found {result.matchCount} customers with relevant feedback:
+                </div>
+                {result.matches.slice(0, 5).map((match: Record<string, unknown>, index: number) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">
+                          Customer {match.klaviyo_account_id}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            NPS: {match.nps_score_raw}
+                          </span>
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {match.gmv}
+                          </span>
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            {Math.round(match.match_score * 100)}% match
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(match.survey_end_date).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <p className="text-gray-700 text-sm mb-3 leading-relaxed">
+                      &ldquo;{match.nps_verbatim}&rdquo;
+                    </p>
+                    <button
+                      onClick={() => handleGetEmailFromChat(match, index)}
+                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-poppy rounded-lg hover:bg-poppy/90 transition-colors"
+                    >
+                      <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Get Email &amp; Contact
+                    </button>
+                  </div>
+                ))}
+                <div className="text-sm text-gray-500 italic text-center mt-4">
+                  💡 Tip: Click &ldquo;Get Email &amp; Contact&rdquo; to automatically open Gmail with a personalized message to each customer.
+                </div>
+              </div>
+            );
+
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: customerCards
+            }]);
+          } else {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: "No relevant customer feedback found for your search. Try rephrasing your query or using different keywords related to customer pain points or feature requests."
+            }]);
+          }
+        } catch (error) {
+          console.error('Error in feedback search:', error);
+          // Remove searching message
+          setMessages(prev => prev.filter(msg => msg.content !== "Searching for relevant customer feedback..."));
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: "Sorry, I encountered an error while searching for customer feedback. Please try again."
+          }]);
+        }
       } else {
         // Regular chat mode
         const response = await fetch("/api/brainstorm", {
@@ -1028,8 +1162,22 @@ export default function ChatInterface() {
     }
   };
 
+  // Show loading state while initializing
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-poppy border-t-transparent rounded-full animate-spin" />
+          <span className="text-gray-600">Initializing Poppy...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={`relative ${mode === 'design' ? 'h-screen' : ''}`}>
+    <div className={`relative transition-all duration-700 ease-in-out ${
+      mode === 'design' ? 'h-screen' : ''
+    }`}>
       {mode === 'agent' ? (
         // Agent mode UI
         <div className="p-4">
@@ -1045,11 +1193,9 @@ export default function ChatInterface() {
           ))}
         </div>
       ) : mode === ('design' as ChatMode) ? (
-      // Design mode: Split-screen layout with sidebar hidden
-      <div 
-        className="flex h-screen w-full bg-neutral/80" 
-      >
-        {/* Left panel - chat interface flush with left edge */}
+      // Design mode: Split-screen layout with smooth visual transition
+      <div className="flex h-screen w-full bg-neutral/80 transition-all duration-500 ease-in-out">
+        {/* Left panel - chat interface */}
         <div className="w-96 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col shadow-lg">
           <DesignSidebar
             messages={messages}
@@ -1062,21 +1208,21 @@ export default function ChatInterface() {
           />
         </div>
 
-        {/* Right area - full iframe taking remaining space */}
+        {/* Right area - design canvas */}
         <div className="flex-1 bg-white">
           {demoUrl ? (
             <iframe 
               src={demoUrl}
               width="100%" 
               height="100%"
-              className="border-0 block"
+              className="border-0 block transition-opacity duration-500"
               title="v0 Design Demo"
               style={{ display: 'block' }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100">
               <div className="text-center max-w-lg px-8">
-                <div className="w-32 h-32 bg-gradient-to-br from-orange-100 via-yellow-100 to-orange-200 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
+                <div className="w-32 h-32 bg-gradient-to-br from-orange-100 via-yellow-100 to-orange-200 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg transform transition-transform duration-700 hover:scale-110">
                   <Paintbrush className="w-16 h-16 text-poppy" />
                 </div>
                 <h3 className="text-3xl font-bold text-primary mb-4">Design Canvas Ready</h3>
@@ -1097,63 +1243,82 @@ export default function ChatInterface() {
         </div>
       </div>
     ) : (
-      // Chat mode: fixed position layout with scrolling messages and fade effect
-      <div className="flex flex-col h-screen max-w-6xl mx-auto relative">
-        {/* Messages area - fixed position with overflow scroll */}
-        <div className="flex-1 overflow-y-auto pb-40 relative">
-          {messages.length > 0 ? (
-            <div className="px-6 py-4">
-              <ChatMessageList
-                messages={messages}
-                loading={loading}
-                messagesEndRef={messagesEndRef}
-              />
-            </div>
-          ) : (
-            /* Empty state with contextual guidance */
-            <div className="h-full flex items-center justify-center px-6">
-              <div className="text-center text-gray-500 max-w-md">
-                <div className="text-lg font-medium mb-2 text-gray-700">
-                  {mode === 'draft' && 'Ready to draft your PRD'}
-                  {mode === 'brainstorm' && 'Let\'s brainstorm ideas'}
-                  {mode === 'chat' && 'Chat with Poppy'}
-                  {mode === 'design' && 'Design Mode'}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {mode === 'draft' && 'Share your product idea, JTBD, and context to get started'}
-                  {mode === 'brainstorm' && 'Describe your initial thoughts or questions'}
-                  {mode === 'chat' && 'Ask me anything about product management'}
-                  {mode === 'design' && 'Create or iterate on designs'}
+      // Centered overlay chat interface
+      <div className="flex flex-col h-screen relative">
+        {/* Messages area - centered container with consistent width */}
+        <div className="flex-1 overflow-y-auto pb-48 relative">
+          <div className="flex justify-center px-6">
+            <div className="w-full max-w-4xl">
+            {messages.length > 0 ? (
+              <div className="py-4">
+                <ChatMessageList
+                  messages={messages}
+                  loading={loading}
+                  messagesEndRef={messagesEndRef}
+                />
+              </div>
+            ) : (
+              /* Empty state with contextual guidance */
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center text-gray-500 max-w-md">
+                  <div className="text-lg font-medium mb-2 text-gray-700">
+                    {mode === 'draft' && 'Ready to draft your PRD'}
+                    {mode === 'brainstorm' && 'Let\'s brainstorm ideas'}
+                    {mode === 'chat' && 'Chat with Poppy'}
+                    {mode === 'design' && 'Design Mode'}
+                    {mode === 'feedback' && 'Search Customer Feedback'}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {mode === 'draft' && 'Share your product idea, JTBD, and context to get started'}
+                    {mode === 'brainstorm' && 'Describe your initial thoughts or questions'}
+                    {mode === 'chat' && 'Ask me anything about product management'}
+                    {mode === 'design' && 'Create or iterate on designs'}
+                    {mode === 'feedback' && 'Describe a feature idea or pain point to find relevant customer feedback'}
+                  </div>
                 </div>
               </div>
+            )}
             </div>
-          )}
+          </div>
           
           {/* Fade overlay at top */}
           <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white via-white/80 to-transparent pointer-events-none z-10" />
+          
+          {/* Fade overlay at bottom to prevent content from showing behind input */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white via-white/90 to-transparent pointer-events-none z-10" />
         </div>
 
-        {/* Input at bottom - fixed position */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-lg z-20">
-          <div className="max-w-6xl mx-auto p-6">
-            <ChatInput
-              input={input}
-              loading={loading}
-              mode={mode}
-              draftStep={prdFlow.draftStep}
-              currentQuestionIndex={prdFlow.currentQuestionIndex}
-              questions={prdFlow.questions}
-              currentTermIndex={prdFlow.currentTermIndex}
-              teamTerms={prdFlow.teamTerms}
-              showStartPrdButton={showStartPrdButton}
-              agenticMessages={agenticMessages}
-              showBounce={showBounce}
-              onInputChange={setInput}
-              onSubmit={sendMessage}
-              onModeChange={handleSafeModeChange}
-              onSummarizeAndSave={handleSummarizeAndSave}
-              onOpenAgentMode={openAgentMode}
-            />
+        {/* Input at bottom - normal positioning */}
+        <div 
+          className="fixed bottom-6 z-20"
+          style={{
+            left: `${sidebarWidth}px`,
+            right: '0px',
+            paddingLeft: '24px',
+            paddingRight: '24px',
+          }}
+        >
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6">
+              <ChatInput
+                input={input}
+                loading={loading}
+                mode={mode}
+                draftStep={prdFlow.draftStep}
+                currentQuestionIndex={prdFlow.currentQuestionIndex}
+                questions={prdFlow.questions}
+                currentTermIndex={prdFlow.currentTermIndex}
+                teamTerms={prdFlow.teamTerms}
+                showStartPrdButton={showStartPrdButton}
+                agenticMessages={agenticMessages}
+                showBounce={showBounce}
+                onInputChange={setInput}
+                onSubmit={sendMessage}
+                onModeChange={handleSafeModeChange}
+                onSummarizeAndSave={handleSummarizeAndSave}
+                onOpenAgentMode={openAgentMode}
+              />
+            </div>
           </div>
         </div>
       </div>

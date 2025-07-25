@@ -108,11 +108,13 @@ function exportCSV(data: any[], userEmail: string) {
 function exportPDF(data: any[], userEmail: string) {
   // For now, return a JSON response with PDF generation instructions
   // In a real implementation, you'd use a library like Puppeteer or PDFKit
+  // TODO: Use userEmail for filename/metadata when PDF generation is implemented
   return NextResponse.json({
     message: 'PDF export coming soon',
     format: 'pdf',
     data_preview: data.slice(0, 3),
-    instructions: 'Use a PDF generation service or library to convert this data to PDF format'
+    instructions: 'Use a PDF generation service or library to convert this data to PDF format',
+    planned_filename: `roadmap-${userEmail.split('@')[0]}-${new Date().toISOString().split('T')[0]}.pdf`
   })
 }
 

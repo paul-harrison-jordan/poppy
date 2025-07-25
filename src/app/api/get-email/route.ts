@@ -1,16 +1,21 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import { withAuth } from '@/lib/api';
-import { Session } from 'next-auth';
 
-export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
+export async function POST(request: NextRequest) {
   try {
-    const { documentId, rowNumber, columnIndex } = await request.json();
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { documentId, rowNumber } = await request.json();
     
-    if (!documentId || !rowNumber || columnIndex === undefined) {
+    if (!documentId || !rowNumber) {
       return NextResponse.json({ 
-        error: 'Document ID, row number, and column index are required' 
+        error: 'Document ID and row number are required' 
       }, { status: 400 });
     }
 
@@ -35,26 +40,66 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
       includeGridData: false,
     });
 
-    // Get the second sheet's data (for email)
-    const firstSheet = sheetsData.sheets?.[1];
-    if (!firstSheet) {
-      return NextResponse.json({ error: 'No sheets found' }, { status: 404 });
+    // Find the "Relationship NPS Responses" sheet
+    const npsSheet = sheetsData.sheets?.find(sheet => 
+      sheet.properties?.title === 'Relationship NPS Responses'
+    );
+    
+    if (!npsSheet) {
+      return NextResponse.json({ error: 'Relationship NPS Responses sheet not found' }, { status: 404 });
     }
 
-    const sheetTitle = firstSheet.properties?.title || 'Sheet1';
-    const range = `${sheetTitle}!A${rowNumber}:ZZ${rowNumber}`;
+    const sheetTitle = npsSheet.properties?.title || 'Relationship NPS Responses';
+    
+    console.log('Looking for sheet:', sheetTitle);
+    
+    // First, get the header row to find the RECIPIENT_EMAIL column
+    const headerRange = `${sheetTitle}!1:1`;
+    console.log('Header range:', headerRange);
+    
+    const { data: headerData } = await sheets.spreadsheets.values.get({
+      spreadsheetId: documentId,
+      range: headerRange,
+    });
 
+    const headers = headerData.values?.[0];
+    console.log('Headers found:', headers);
+    
+    if (!headers) {
+      return NextResponse.json({ error: 'No header row found' }, { status: 404 });
+    }
+
+    // Find the RECIPIENT_EMAIL column index
+    const emailColumnIndex = headers.findIndex(header => 
+      header && header.toString().toUpperCase() === 'RECIPIENT_EMAIL'
+    );
+    
+    console.log('RECIPIENT_EMAIL column index:', emailColumnIndex);
+    console.log('Looking for RECIPIENT_EMAIL in headers:', headers.map((h, i) => `${i}: ${h}`));
+    
+    // If RECIPIENT_EMAIL not found, try column B (index 1) as fallback
+    const columnToUse = emailColumnIndex !== -1 ? emailColumnIndex : 1;
+    console.log('Using column index:', columnToUse);
+
+    // Get the specific row data
+    const dataRange = `${sheetTitle}!${rowNumber}:${rowNumber}`;
+    console.log('Data range:', dataRange);
+    
     const { data: valuesData } = await sheets.spreadsheets.values.get({
       spreadsheetId: documentId,
-      range: range,
+      range: dataRange,
     });
 
     const rowData = valuesData.values?.[0];
-    if (!rowData || !rowData[columnIndex]) {
-      return NextResponse.json({ error: 'No data found at specified location' }, { status: 404 });
+    console.log('Row data found:', rowData);
+    
+    if (!rowData || !rowData[columnToUse]) {
+      console.log('No data at column', columnToUse);
+      return NextResponse.json({ error: `No email found for this customer at column ${columnToUse}` }, { status: 404 });
     }
 
-    const email = rowData[columnIndex];
+    const email = rowData[columnToUse];
+    console.log('Email found:', email);
 
     // Check third sheet for recent outreach
     const thirdSheet = sheetsData.sheets?.[2];
@@ -95,4 +140,4 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
       { status: 500 }
     );
   }
-}); 
+}

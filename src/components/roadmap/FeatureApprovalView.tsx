@@ -10,7 +10,6 @@ import {
   ExternalLink, 
   CheckCircle, 
   XCircle, 
-  Clock, 
   AlertTriangle,
   MessageSquare,
   FileText,
@@ -18,12 +17,7 @@ import {
   Users,
   Star,
   Target,
-  TrendingUp,
-  Calendar,
   Link as LinkIcon,
-  Download,
-  Share2,
-  Edit3,
   BarChart3
 } from 'lucide-react'
 
@@ -109,7 +103,7 @@ const urgencyColors = {
   low: 'bg-green-50 border-green-200 text-green-800'
 }
 
-export default function FeatureApprovalView({ prdId, userEmail, onBack }: FeatureApprovalViewProps) {
+export default function FeatureApprovalView({ prdId, userEmail: _userEmail, onBack }: FeatureApprovalViewProps) {
   const [prd, setPRD] = useState<PRDDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getAuthServerSession } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Test authentication
     const session = await getAuthServerSession();
@@ -55,10 +55,13 @@ export async function GET(request: NextRequest) {
 
     // Test creating a knowledge session with proper RLS bypass
     // First, let's test if RLS is the issue by temporarily using a simple INSERT
+    let knowledgeSession = null;
+    let sessionError = null;
+    
     try {
       console.log('Testing direct insert without RLS expectations...');
       
-      const { data: knowledgeSession, error: sessionError } = await supabase
+      const result = await supabase
         .from('user_knowledge_sessions')
         .insert({
           user_email: session.user.email,
@@ -67,6 +70,9 @@ export async function GET(request: NextRequest) {
         })
         .select()
         .single();
+
+      knowledgeSession = result.data;
+      sessionError = result.error;
 
       console.log('Knowledge session test:', { data: knowledgeSession, error: sessionError });
       

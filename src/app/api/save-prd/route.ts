@@ -45,6 +45,72 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('PRD saved to database successfully:', data);
+    
+    // Trigger automatic customer matching for the new PRD
+    if (data && data[0]) {
+      try {
+        // Get PRD content from Google Drive to match customers
+        const docId = url.match(/\/d\/([a-zA-Z0-9-_]+)/)?.[1];
+        if (docId) {
+          // Fetch document content
+          const docResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/get-google-doc-content`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Cookie': request.headers.get('cookie') || '' // Forward auth cookies
+            },
+            body: JSON.stringify({ docId }),
+          });
+
+          if (docResponse.ok) {
+            const { content } = await docResponse.json();
+            if (content) {
+              // Start background customer matching - summarize then match
+              console.log('Starting automatic customer matching for PRD:', data[0].id);
+              
+              // First summarize, then match (background process)
+              fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/summarize-prd`, {
+                method: 'POST',
+                headers: { 
+                  'Content-Type': 'application/json',
+                  'Cookie': request.headers.get('cookie') || ''
+                },
+                body: JSON.stringify({
+                  prdContent: content,
+                  title: title || 'Untitled PRD'
+                }),
+              }).then(async (summaryResponse) => {
+                if (summaryResponse.ok) {
+                  const { summary } = await summaryResponse.json();
+                  
+                  // Now match customers with the summary
+                  return fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/match-customers-to-prd`, {
+                    method: 'POST',
+                    headers: { 
+                      'Content-Type': 'application/json',
+                      'Cookie': request.headers.get('cookie') || ''
+                    },
+                    body: JSON.stringify({ prdSummary: summary }),
+                  });
+                }
+              }).then(async (matchResponse) => {
+                if (matchResponse?.ok) {
+                  const matchData = await matchResponse.json();
+                  console.log(`Background customer matching completed: ${matchData.matchCount} matches found`);
+                }
+              }).catch(error => {
+                console.error('Background customer matching failed:', error);
+                // Don't fail the PRD creation if matching fails
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error during automatic customer matching:', error);
+        // Don't fail the PRD creation if matching fails
+      }
+    }
+
     return NextResponse.json({ success: true, data: data[0] });
 
   } catch (error) {

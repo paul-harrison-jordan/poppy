@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
 import { ExternalLink, FileText, Palette, User, CheckCircle, Clock, Filter, Share2, Download, Search, Calendar } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import Link from 'next/link'
+import PMDashboard from '@/components/PMDashboard'
+import SuggestedCustomers from '@/components/SuggestedCustomers'
 
 interface Feature {
   id: number;
@@ -15,6 +16,7 @@ interface Feature {
   description?: string;
   'drive-link': string;
   'v0-link': string;
+  'v0-chat-id'?: string;
   user: string;
   shipped: boolean;
   created_at?: string;
@@ -228,70 +230,28 @@ export default function FeaturesPage() {
             
             {/* Action Buttons */}
             <div className="flex justify-center gap-3">
-              <Button onClick={handleShare} className="bg-poppy hover:bg-poppy/90 text-white">
-                <Share2 className="w-4 h-4 mr-2" />
-                Share Portfolio
-              </Button>
-              <Button onClick={handleExport} variant="outline" className="border-gray-300 hover:border-poppy/30">
-                <Download className="w-4 h-4 mr-2" />
-                Export List
-              </Button>
+              <button
+                onClick={handleShare}
+                className="px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 bg-poppy/10 text-poppy font-semibold border border-poppy/20 hover:bg-poppy/20 hover:scale-102"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Share Portfolio</span>
+              </button>
+              <button
+                onClick={handleExport}
+                className="px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 text-gray-700 hover:bg-gray-50 hover:text-poppy border border-transparent hover:border-gray-200 hover:scale-102"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export List</span>
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Accomplishment Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-          <div className="bg-green-50/80 border border-green-200 p-6 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-green-900">{shippedFeatures.length}</p>
-                <p className="text-green-800 font-medium">Shipped</p>
-                <p className="text-xs text-green-600">Live to users</p>
-              </div>
-              <CheckCircle className="w-8 h-8 text-green-600" />
-            </div>
-          </div>
-          
-          <div className="bg-orange-50/80 border border-orange-200 p-6 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-orange-900">{inProgressFeatures.length}</p>
-                <p className="text-orange-800 font-medium">In Progress</p>
-                <p className="text-xs text-orange-600">Active work</p>
-              </div>
-              <Clock className="w-8 h-8 text-orange-600" />
-            </div>
-          </div>
-          
-          <div className="bg-blue-50/80 border border-blue-200 p-6 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-blue-900">
-                  {filteredFeatures.filter(f => f.roadmap?.target_quarter).length}
-                </p>
-                <p className="text-blue-800 font-medium">Planned</p>
-                <p className="text-xs text-blue-600">With roadmap</p>
-              </div>
-              <Calendar className="w-8 h-8 text-blue-600" />
-            </div>
-          </div>
-          
-          <div className="bg-purple-50/80 border border-purple-200 p-6 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-purple-900">
-                  {Math.round(filteredFeatures.reduce((acc, f) => acc + (f.roadmap?.business_value_score || 0), 0) / filteredFeatures.length) || 0}
-                </p>
-                <p className="text-purple-800 font-medium">Avg Impact</p>
-                <p className="text-xs text-purple-600">Business value</p>
-              </div>
-              <User className="w-8 h-8 text-purple-600" />
-            </div>
-          </div>
-        </div>
+        {/* PM Dashboard */}
+        <PMDashboard features={filteredFeatures} />
 
         {/* Current Work */}
         {inProgressFeatures.length > 0 && (
@@ -339,7 +299,7 @@ export default function FeaturesPage() {
             <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-600 mb-2">No features in your portfolio yet</h3>
             <p className="text-gray-500 mb-4">Start building your PM portfolio by creating your first PRD.</p>
-            <Link href="/" className="inline-flex items-center px-4 py-2 bg-poppy text-white rounded-lg hover:bg-poppy/90 transition-colors">
+            <Link href="/" className="inline-flex items-center px-6 py-3 rounded-xl transition-all duration-200 bg-poppy/10 text-poppy font-semibold border border-poppy/20 hover:bg-poppy/20 hover:scale-102">
               Create First Feature
             </Link>
           </div>
@@ -428,20 +388,22 @@ function FeatureCard({ feature }: { feature: Feature }) {
 
         {(feature['v0-link']) && (
           <Link 
-            href={feature['v0-link']} 
-            target="_blank" 
-            rel="noopener noreferrer"
+            href={`/?mode=design&feature_id=${feature.id}`}
             className="flex items-center justify-center p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group text-sm"
           >
             <Palette className="w-4 h-4 text-primary mr-2" />
             <span className="text-primary">Design</span>
-            <ExternalLink className="w-3 h-3 text-gray-400 group-hover:text-poppy transition-colors ml-1" />
           </Link>
         )}
       </div>
 
-      {/* View Details Button */}
+      {/* Suggested Customers Section */}
       <div className="pt-4 border-t border-gray-100">
+        <SuggestedCustomers featureId={feature.id} className="mb-4" />
+      </div>
+
+      {/* View Details Button */}
+      <div>
         <Link 
           href={`/roadmap/feature/${feature.id}`}
           className="block w-full text-center py-2 px-4 bg-poppy/10 text-poppy hover:bg-poppy hover:text-white rounded-lg transition-colors font-medium text-sm"

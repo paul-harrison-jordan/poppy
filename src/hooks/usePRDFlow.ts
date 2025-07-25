@@ -5,12 +5,6 @@ import { generateDocument } from '@/lib/services/documentGenerator';
 
 type DraftStep = 'initial' | 'vocabulary' | 'questions' | 'content';
 
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string | React.ReactNode;
-  className?: string;
-}
-
 export function usePRDFlow() {
   const [draftStep, setDraftStep] = useState<DraftStep>('initial');
   const [originalQuery, setOriginalQuery] = useState<string>('');

@@ -128,16 +128,45 @@
   animation: bounce-slow 0.8s cubic-bezier(0.8,0,1,1) 0s 3;
 }
 
+/* Mode Transition Styles */
+.mode-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mode-transition-enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.mode-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.mode-transition-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mode-transition-exit-active {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.2s ease-in, transform 0.2s ease-in;
+}
+
 /* Design Mode Full Screen Styles */
 .design-mode-fullscreen {
   height: 100vh !important;
   overflow: hidden !important;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .design-mode-fullscreen .design-mode-container {
   padding: 0 !important;
   height: 100vh !important;
   align-items: stretch !important;
+  transition: inherit;
 }
 
 .design-mode-fullscreen .design-mode-content {
@@ -145,4 +174,65 @@
   width: 100vw !important;
   height: 100vh !important;
   overflow: hidden !important;
+  transition: inherit;
+}
+
+/* Smooth sidebar transitions */
+.sidebar-transition {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Loading spinner improvement */
+.design-loading-spinner {
+  animation: spin 1s linear infinite;
+  border-color: #FF5757;
+  border-top-color: transparent;
+}
+
+/* Chat Input Morphing Transition */
+.chat-morph-transition {
+  transition: all 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform, width, height, border-radius, box-shadow;
+}
+
+.chat-morph-transition:hover {
+  transform: translateY(-1px);
+}
+
+/* Enhanced transition smoothness */
+.transition-width {
+  transition-property: width;
+}
+
+.transition-height {
+  transition-property: height;
+}
+
+.transform-gpu {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Feature shipping journey indicators */
+.journey-indicator {
+  position: relative;
+}
+
+.journey-indicator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -10px;
+  width: 4px;
+  height: 4px;
+  background: #FF5757;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  opacity: 0.6;
+}
+
+.journey-indicator.active::before {
+  opacity: 1;
+  box-shadow: 0 0 8px rgba(255, 87, 87, 0.4);
 }

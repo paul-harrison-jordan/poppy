@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { driveLink, v0Link } = await request.json();
+    const { driveLink, v0Link, chatId } = await request.json();
     
     if (!driveLink || !v0Link) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -19,9 +19,15 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
 
+    // Update both v0-link and v0-chat-id if chatId is provided
+    const updateData: { 'v0-link': string; 'v0-chat-id'?: string } = { 'v0-link': v0Link };
+    if (chatId) {
+      updateData['v0-chat-id'] = chatId;
+    }
+
     const { error } = await supabase
       .from('prds')
-      .update({ 'v0-link': v0Link })
+      .update(updateData)
       .eq('drive-link', driveLink)
       .eq('user', session.user.email);
     
