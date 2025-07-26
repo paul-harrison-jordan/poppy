@@ -91,7 +91,7 @@ export class KnowledgeTrackingService {
   ): Promise<VocabularyInteraction | null> {
     try {
       // Calculate next review date based on confidence level
-      const nextReviewDate = this.calculateNextReviewDate(confidenceLevel || 1);
+      const nextReviewDate = this.calculateNextReviewDate(confidenceLevel || 1, 1.0);
 
       const supabase = this.getSupabaseClient();
       const { data: interaction, error } = await supabase
@@ -167,10 +167,11 @@ export class KnowledgeTrackingService {
     }
   }
 
-  async getVocabularyDueForReview(userEmail: string, limit: number = 20): Promise<VocabularyInteraction[]> {
+  static async getVocabularyDueForReview(userEmail: string, limit: number = 20): Promise<VocabularyInteraction[]> {
     try {
       const now = new Date().toISOString();
-      const { data: vocabulary, error } = await this.supabase
+      const supabase = KnowledgeTrackingService.getSupabaseClient();
+      const { data: vocabulary, error } = await supabase
         .from('vocabulary_interactions')
         .select('*')
         .eq('user_email', userEmail)
@@ -190,7 +191,7 @@ export class KnowledgeTrackingService {
     }
   }
 
-  async updateVocabularyReview(
+  static async updateVocabularyReview(
     interactionId: number,
     userEmail: string,
     confidenceLevel: number,
@@ -198,7 +199,8 @@ export class KnowledgeTrackingService {
   ): Promise<VocabularyInteraction | null> {
     try {
       // Get current interaction
-      const { data: currentInteraction, error: fetchError } = await this.supabase
+      const supabase = this.getSupabaseClient();
+      const { data: currentInteraction, error: fetchError } = await supabase
         .from('vocabulary_interactions')
         .select('*')
         .eq('id', interactionId)
@@ -218,7 +220,7 @@ export class KnowledgeTrackingService {
       );
       const nextReviewDate = this.calculateNextReviewDate(confidenceLevel, newScore);
 
-      const { data: updatedInteraction, error } = await this.supabase
+      const { data: updatedInteraction, error } = await supabase
         .from('vocabulary_interactions')
         .update({
           confidence_level: confidenceLevel,
@@ -344,7 +346,7 @@ export class KnowledgeTrackingService {
     }
   }
 
-  private calculateNextReviewDate(confidenceLevel: number, spacedRepetitionScore: number = 1.0): Date {
+  private static calculateNextReviewDate(confidenceLevel: number, spacedRepetitionScore: number = 1.0): Date {
     const baseIntervals = [1, 3, 7, 14, 30]; // days
     const confidenceMultiplier = Math.max(0.5, confidenceLevel / 5); // 0.1 to 1.0
     const scoreMultiplier = Math.max(0.5, spacedRepetitionScore); // minimum 0.5x
@@ -357,7 +359,7 @@ export class KnowledgeTrackingService {
     return nextDate;
   }
 
-  private updateSpacedRepetitionScore(
+  private static updateSpacedRepetitionScore(
     currentScore: number,
     confidenceLevel: number,
     isCorrect?: boolean
@@ -369,7 +371,7 @@ export class KnowledgeTrackingService {
     return Math.round(newScore * 100) / 100; // Round to 2 decimal places
   }
 
-  private calculateAnswerQualityScore(answer: string, complexityLevel?: number): number {
+  private static calculateAnswerQualityScore(answer: string, complexityLevel?: number): number {
     const baseScore = Math.min(
       (answer.trim().length / 200) * 0.4 + // Length factor (max 0.4)
       (answer.split(' ').length / 50) * 0.3 + // Word count factor (max 0.3)
@@ -402,7 +404,7 @@ export class KnowledgeTrackingService {
 
       // Convert to object for easy lookup
       const vocabularyMap: Record<string, string> = {};
-      vocabularyDefinitions?.forEach((def: VocabularyDefinition) => {
+      vocabularyDefinitions?.forEach((def) => {
         if (def.term && def.user_definition) {
           vocabularyMap[def.term] = def.user_definition;
         }

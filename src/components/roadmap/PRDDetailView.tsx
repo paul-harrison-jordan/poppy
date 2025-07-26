@@ -62,15 +62,18 @@ interface PRDDetail {
     urgency_level: string
     business_impact?: string
     feedback_date?: string
+    is_public: boolean
   }>
   stakeholder_signoffs?: Array<{
     id: number
+    stakeholder_email: string
     stakeholder_name: string
     stakeholder_role?: string
     signoff_type: string
     status: string
     signoff_notes?: string
     due_date?: string
+    requested_by: string
   }>
 }
 

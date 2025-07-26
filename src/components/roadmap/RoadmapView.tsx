@@ -16,7 +16,7 @@ interface PRD {
   created_at: string
   roadmap?: {
     priority_order: number
-    status: string
+    status?: string
     target_quarter?: string
     estimated_effort_points?: number
     business_value_score?: number

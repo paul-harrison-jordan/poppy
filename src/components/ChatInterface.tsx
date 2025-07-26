@@ -1041,26 +1041,26 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <h4 className="font-semibold text-gray-900">
-                          Customer {match.klaviyo_account_id}
+                          Customer {String(match.klaviyo_account_id)}
                         </h4>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            NPS: {match.nps_score_raw}
+                            NPS: {String(match.nps_score_raw)}
                           </span>
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            {match.gmv}
+                            {String(match.gmv)}
                           </span>
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                            {Math.round(match.match_score * 100)}% match
+                            {Math.round(Number(match.match_score) * 100)}% match
                           </span>
                         </div>
                       </div>
                       <div className="text-xs text-gray-500">
-                        {new Date(match.survey_end_date).toLocaleDateString()}
+                        {new Date(String(match.survey_end_date)).toLocaleDateString()}
                       </div>
                     </div>
                     <p className="text-gray-700 text-sm mb-3 leading-relaxed">
-                      &ldquo;{match.nps_verbatim}&rdquo;
+                      &ldquo;{String(match.nps_verbatim)}&rdquo;
                     </p>
                     <button
                       onClick={() => handleGetEmailFromChat(match, index)}

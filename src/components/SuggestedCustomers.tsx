@@ -35,10 +35,6 @@ export default function SuggestedCustomers({ featureId, className = '' }: Sugges
   const [expanded, setExpanded] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    fetchSuggestedCustomers()
-  }, [featureId, fetchSuggestedCustomers])
-
   const fetchSuggestedCustomers = useCallback(async () => {
     try {
       const response = await fetch(`/api/roadmap/prd/${featureId}/feedback`)
@@ -60,6 +56,10 @@ export default function SuggestedCustomers({ featureId, className = '' }: Sugges
       setLoading(false)
     }
   }, [featureId])
+
+  useEffect(() => {
+    fetchSuggestedCustomers()
+  }, [featureId, fetchSuggestedCustomers])
 
   const extractGMV = (impact?: string) => {
     if (!impact) return null
