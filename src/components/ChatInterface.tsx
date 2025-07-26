@@ -534,7 +534,7 @@ export default function ChatInterface() {
       console.log('Row number:', customerMatch.row_number);
       
       // Use row_number if available, otherwise fallback to index + 2 (assuming header row)
-      const rowNumber = customerMatch.row_number && customerMatch.row_number > 0 
+      const rowNumber = customerMatch.row_number && typeof customerMatch.row_number === 'number' && customerMatch.row_number > 0 
         ? customerMatch.row_number 
         : index + 2;
       

@@ -26,6 +26,7 @@ interface Feature {
     weeks_to_ship?: number;
     business_value_score?: number;
     roadmap_notes?: string;
+    estimated_effort_points?: number;
   }
   slack_channels?: Array<{
     id: number;
@@ -59,7 +60,7 @@ export default function FeaturesPage() {
         setFeatures(data)
         
         // Extract unique users
-        const users = [...new Set(data.map((f: Feature) => f.user))].sort()
+        const users = [...new Set(data.map((f: Feature) => String(f.user)).filter((user: string) => user && user !== 'undefined'))].sort() as string[]
         setAvailableUsers(users)
         
         // Default to current user

@@ -86,7 +86,8 @@ export async function GET(request: NextRequest) {
       overallocatedEngineers: capacityData.filter(e => e.metrics.isOverallocated).length,
       averageUtilization: capacityData.length > 0 
         ? capacityData.reduce((sum, e) => sum + e.metrics.utilizationPercentage, 0) / capacityData.length 
-        : 0
+        : 0,
+      teamUtilizationPercentage: 0  // Will be calculated below
     }
 
     teamMetrics.teamUtilizationPercentage = teamMetrics.totalCapacityWeeks > 0
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
         active_features_count: assignments.length,
         completed_features_count: 0, // Would need additional logic to determine this
         snapshot_data: {
-          assignments: assignments.map(a => ({
+          assignments: assignments.map((a: { prd_id: number; prd?: { title: string }; estimated_weeks: number; percentage_allocation: number; role_on_feature?: string }) => ({
             prd_id: a.prd_id,
             prd_title: a.prd?.title,
             estimated_weeks: a.estimated_weeks,

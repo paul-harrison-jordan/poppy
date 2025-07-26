@@ -116,7 +116,7 @@ export async function DELETE(
         prd_id: assignment.prd_id,
         user_email: session.user.email,
         activity_type: 'assignment_removed',
-        description: `Removed assignment for ${assignment.engineer?.engineer_name}`,
+        description: `Removed assignment for ${assignment.engineer?.[0]?.engineer_name || 'engineer'}`,
         performed_by: session.user.email
       })
 

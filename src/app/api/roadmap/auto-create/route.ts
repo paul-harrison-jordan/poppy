@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     // Verify PRD exists and belongs to user
     const { data: prd, error: prdError } = await supabase
       .from('prds')
-      .select('id, "user"')
+      .select('id, "user", status, business_value_score, roadmap_notes')
       .eq('id', prd_id)
       .eq('user', session.user.email)
       .single()

@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     if (vocabularyAnswers && vocabularyAnswers.length > 0) {
       const vocabInserts = vocabularyAnswers.map(vocab => ({
         session_id: sessionId,
-        user_email: session.user.email,
+        user_email: session.user!.email,
         term: vocab.term,
         user_definition: vocab.definition,
         domain_tags: vocab.domain_tags || [],
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     if (questionAnswers && questionAnswers.length > 0) {
       const questionInserts = questionAnswers.map(qa => ({
         session_id: sessionId,
-        user_email: session.user.email,
+        user_email: session.user!.email,
         question_text: qa.question,
         question_reasoning: qa.reasoning,
         user_answer: qa.answer,

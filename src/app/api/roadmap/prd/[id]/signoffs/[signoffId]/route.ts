@@ -4,7 +4,7 @@ import { createServiceClient } from '@/utils/supabase/service'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; signoffId: string } }
+  { params }: { params: Promise<{ id: string; signoffId: string }> }
 ) {
   try {
     const session = await getAuthServerSession()
@@ -12,8 +12,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const prdId = parseInt(params.id)
-    const signoffId = parseInt(params.signoffId)
+    const resolvedParams = await params
+    const prdId = parseInt(resolvedParams.id)
+    const signoffId = parseInt(resolvedParams.signoffId)
     const supabase = createServiceClient()
     
     const { error } = await supabase
@@ -48,7 +49,7 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; signoffId: string } }
+  { params }: { params: Promise<{ id: string; signoffId: string }> }
 ) {
   try {
     const session = await getAuthServerSession()
@@ -56,8 +57,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const prdId = parseInt(params.id)
-    const signoffId = parseInt(params.signoffId)
+    const resolvedParams = await params
+    const prdId = parseInt(resolvedParams.id)
+    const signoffId = parseInt(resolvedParams.signoffId)
     const body = await request.json()
     const supabase = createServiceClient()
     
