@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, memo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter, usePathname } from 'next/navigation'
 import ChatInterface from './ChatInterface'
@@ -10,7 +10,8 @@ import {
   MessageSquare, 
   Map, 
   Grid3X3,
-  Settings
+  Settings,
+  Sparkles
 } from 'lucide-react'
 
 type AppMode = 'chat' | 'roadmap' | 'features' | 'settings'
@@ -19,7 +20,7 @@ interface UnifiedLayoutProps {
   initialMode?: AppMode
 }
 
-export default function UnifiedLayout({ initialMode = 'chat' }: UnifiedLayoutProps) {
+function UnifiedLayout({ initialMode = 'chat' }: UnifiedLayoutProps) {
   const { data: session } = useSession()
   const router = useRouter()
   const pathname = usePathname()
@@ -39,7 +40,7 @@ export default function UnifiedLayout({ initialMode = 'chat' }: UnifiedLayoutPro
     }
   }, [pathname])
 
-  const handleModeChange = async (newMode: AppMode) => {
+  const handleModeChange = useCallback(async (newMode: AppMode) => {
     if (newMode === currentMode) return
     
     setIsTransitioning(true)
@@ -58,7 +59,7 @@ export default function UnifiedLayout({ initialMode = 'chat' }: UnifiedLayoutPro
       setCurrentMode(newMode)
       setIsTransitioning(false)
     }, 150)
-  }
+  }, [currentMode, router])
 
   const navigationItems = [
     {
@@ -123,17 +124,25 @@ export default function UnifiedLayout({ initialMode = 'chat' }: UnifiedLayoutPro
   }
 
   return (
-    <div className="min-h-screen bg-neutral/80 flex">
-      {/* Left Sidebar Navigation */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-lg">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="text-2xl">🌺</div>
-            <h1 className="text-xl font-bold text-gray-800">Poppy</h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 flex">
+      {/* Left Sidebar Navigation - Enhanced bento-style */}
+      <div className="w-72 bg-white/80 backdrop-blur-xl border-r border-gray-200/50 flex flex-col shadow-2xl shadow-gray-900/5">
+        <div className="p-8 border-b border-gray-200/50">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="relative">
+              <div className="text-3xl">🌺</div>
+              <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-poppy/60" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                Poppy
+              </h1>
+              <p className="text-xs text-gray-500 font-medium">AI Product Manager</p>
+            </div>
           </div>
         </div>
         
-        <nav className="flex-1 px-6 py-6 space-y-2">
+        <nav className="flex-1 px-8 py-8 space-y-3">
           {navigationItems.map((item) => {
             const Icon = item.icon
             const isActive = currentMode === item.mode
@@ -143,49 +152,87 @@ export default function UnifiedLayout({ initialMode = 'chat' }: UnifiedLayoutPro
                 key={item.mode}
                 onClick={() => handleModeChange(item.mode)}
                 className={`
-                  w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3
+                  w-full text-left p-5 rounded-2xl transition-all duration-300 flex items-center gap-4
+                  backdrop-blur-sm relative overflow-hidden group
                   ${isActive 
-                    ? 'bg-poppy/10 text-poppy font-semibold border border-poppy/20' 
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-poppy border border-transparent hover:border-gray-200'
+                    ? 'bg-gradient-to-r from-poppy/10 to-poppy/5 text-poppy font-semibold border border-poppy/20 shadow-lg shadow-poppy/10' 
+                    : 'text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-white hover:text-poppy border border-transparent hover:border-gray-200/50 hover:shadow-md'
                   }
                 `}
-                whileHover={{ scale: 1.02 }}
+                whileHover={{ 
+                  scale: 1.02,
+                  y: -2,
+                  transition: { type: "spring", stiffness: 400, damping: 25 }
+                }}
                 whileTap={{ scale: 0.98 }}
               >
-                <Icon className="w-5 h-5" />
-                <div>
-                  <div className="font-medium">{item.label}</div>
-                  <div className="text-xs opacity-60">{item.description}</div>
+                {/* Hover gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                
+                <div className={`p-2 rounded-xl transition-all duration-300 ${
+                  isActive ? 'bg-poppy/20' : 'bg-gray-100 group-hover:bg-poppy/10'
+                }`}>
+                  <Icon className="w-5 h-5" />
                 </div>
+                <div className="relative z-10">
+                  <div className="font-semibold text-sm">{item.label}</div>
+                  <div className="text-xs opacity-70 mt-0.5">{item.description}</div>
+                </div>
+
+                {/* Active indicator */}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute right-4 w-2 h-2 bg-poppy rounded-full"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
+                )}
               </motion.button>
             )
           })}
         </nav>
+
+        {/* Bottom section with user info or status */}
+        <div className="p-8 border-t border-gray-200/50">
+          <div className="flex items-center gap-3 text-sm text-gray-600">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span>All systems ready</span>
+          </div>
+        </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
+      {/* Main Content Area - Enhanced with bento-style spacing */}
+      <div className="flex-1 flex flex-col relative overflow-hidden">
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-blue-50/20 to-transparent pointer-events-none" />
+        
         <AnimatePresence mode="wait">
           <motion.div
             key={currentMode}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24, scale: 0.96 }}
             animate={{ 
-              opacity: isTransitioning ? 0.7 : 1, 
+              opacity: isTransitioning ? 0.8 : 1, 
               y: 0,
               scale: isTransitioning ? 0.98 : 1
             }}
-            exit={{ opacity: 0, y: -20 }}
+            exit={{ opacity: 0, y: -24, scale: 0.96 }}
             transition={{ 
-              duration: 0.3, 
-              ease: "easeInOut",
-              scale: { duration: 0.2 }
+              duration: 0.4, 
+              ease: [0.4, 0, 0.2, 1],
+              scale: { duration: 0.3 }
             }}
-            className="flex-1 flex flex-col"
+            className="flex-1 flex flex-col relative z-10 p-8"
           >
-            {renderContent()}
+            <div className="flex-1 bg-white/50 backdrop-blur-sm rounded-3xl border border-gray-200/50 shadow-xl shadow-gray-900/5 overflow-hidden">
+              {renderContent()}
+            </div>
           </motion.div>
         </AnimatePresence>
       </div>
     </div>
   )
-} 
+}
+
+// Memoize the component for better performance
+export default memo(UnifiedLayout) 

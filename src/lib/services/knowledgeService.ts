@@ -4,7 +4,6 @@ import {
   QuestionResponse, 
   QuestionContextData,
   SessionContextData,
-  VocabularyDefinition,
   PMPreferenceProfile,
   VocabularyInteraction,
   KnowledgeSummary

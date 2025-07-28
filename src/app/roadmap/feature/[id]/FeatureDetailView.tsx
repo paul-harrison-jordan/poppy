@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+
 import { 
   ArrowLeft,
   ExternalLink,
@@ -23,65 +23,22 @@ import {
   Save,
   X,
   CheckCircle2,
-  Circle,
+
   Search,
   Mail
 } from 'lucide-react'
 import Link from 'next/link'
 import SlackChannelsTab from '@/components/roadmap/SlackChannelsTab'
 import JiraTicketsTab from '@/components/roadmap/JiraTicketsTab'
+import EngineerAssignmentModal from '@/components/roadmap/EngineerAssignmentModal'
+import { usePRDDetail, getWeeksToShip } from '@/hooks/useRoadmapData'
 
 interface FeatureDetailProps {
   featureId: number
   currentUserEmail: string
 }
 
-interface FeatureDetail {
-  id: number
-  title?: string
-  description?: string
-  'drive-link': string
-  'v0-link'?: string
-  user: string
-  created_at: string
-  total_estimated_weeks?: number
-  roadmap?: {
-    priority_order?: number
-    status?: string
-    target_quarter?: string
-    estimated_effort_points?: number
-    weeks_to_ship?: number
-    business_value_score?: number
-    technical_complexity_score?: number
-    roadmap_notes?: string
-    milestone_running_locally?: boolean
-    milestone_feature_flag?: boolean
-    milestone_ga?: boolean
-  }
-  customer_feedback?: Array<{
-    id: number
-    customer_name: string
-    feedback_text: string
-    feedback_type: string
-    created_at: string
-  }>
-  slack_channels?: Array<{
-    id: number
-    channel_name: string
-    channel_url?: string
-    channel_purpose?: string
-    is_primary: boolean
-  }>
-  jira_tickets?: Array<{
-    id: number
-    ticket_key: string
-    ticket_url: string
-    ticket_type?: string
-    ticket_title?: string
-    ticket_status?: string
-    is_primary_epic: boolean
-  }>
-}
+
 
 interface CustomerFeedback {
   id?: number
@@ -117,8 +74,6 @@ const feedbackTypeColors = {
 }
 
 export default function FeatureDetailView({ featureId, currentUserEmail }: FeatureDetailProps) {
-  const [feature, setFeature] = useState<FeatureDetail | null>(null)
-  const [loading, setLoading] = useState(true)
   const [showAddFeedback, setShowAddFeedback] = useState(false)
   const [creatingDesign, setCreatingDesign] = useState(false)
   const [editingWeeks, setEditingWeeks] = useState(false)
@@ -132,30 +87,14 @@ export default function FeatureDetailView({ featureId, currentUserEmail }: Featu
     feedback_type: 'request'
   })
 
-  useEffect(() => {
-    fetchFeatureDetail()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [featureId])
+  // Use shared hook for fetching PRD detail
+  const { prd: feature, loading, refetch: fetchFeatureDetail } = usePRDDetail(featureId)
 
   useEffect(() => {
     if (feature?.roadmap?.weeks_to_ship) {
       setWeeksValue(feature.roadmap.weeks_to_ship.toString())
     }
   }, [feature?.roadmap?.weeks_to_ship])
-
-  const fetchFeatureDetail = async () => {
-    try {
-      const response = await fetch(`/api/roadmap/prd/${featureId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setFeature(data)
-      }
-    } catch (error) {
-      console.error('Error fetching feature detail:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleAddFeedback = async () => {
     if (!newFeedback.customer_name.trim() || !newFeedback.feedback_text.trim()) return
@@ -189,7 +128,6 @@ export default function FeatureDetailView({ featureId, currentUserEmail }: Featu
 
       if (response.ok) {
         const result = await response.json()
-        console.log('Customer search completed:', result)
         
         // Add the matches to the customer matches state
         if (result.matches && result.matches.length > 0) {
@@ -370,20 +308,6 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
     }
   }
 
-  // Helper to get weeks - prioritize engineer assignments as source of truth
-  const getWeeksToShip = () => {
-    // Prioritize total estimated weeks from engineer assignments
-    if (feature?.total_estimated_weeks && feature.total_estimated_weeks > 0) {
-      return feature.total_estimated_weeks
-    }
-    // Fall back to manual weeks estimation
-    if (feature?.roadmap?.weeks_to_ship) return feature.roadmap.weeks_to_ship
-    // Legacy: story points conversion (deprecated)
-    if (feature?.roadmap?.estimated_effort_points) {
-      return Math.ceil(feature.roadmap.estimated_effort_points * 0.5)
-    }
-    return null
-  }
 
   const handleUpdateWeeks = async () => {
     const weeks = parseInt(weeksValue)
@@ -410,41 +334,6 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
     setEditingWeeks(false)
   }
 
-  const handleMilestoneToggle = async (milestone: 'running_locally' | 'feature_flag' | 'ga', checked: boolean) => {
-    try {
-      const response = await fetch(`/api/roadmap/prd/${featureId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [`milestone_${milestone}`]: checked })
-      })
-      
-      if (response.ok) {
-        await fetchFeatureDetail()
-        
-        // Auto-update status based on milestones
-        if (checked) {
-          let newStatus = 'in_progress'
-          if (milestone === 'ga') {
-            newStatus = 'shipped'
-          } else if (milestone === 'feature_flag') {
-            newStatus = 'in_review'
-          }
-          
-          // Update status if different
-          if (feature?.roadmap?.status !== newStatus) {
-            await fetch(`/api/roadmap/prd/${featureId}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ status: newStatus })
-            })
-            await fetchFeatureDetail()
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error updating milestone:', error)
-    }
-  }
 
   // Check if current user can edit this feature
   const canEdit = feature?.user === currentUserEmail
@@ -483,40 +372,37 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
 
   return (
     <div className="min-h-screen bg-neutral/80">
-      {/* Enhanced Poppy Navigation Header */}
+      {/* Compact Navigation Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto px-6 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              {/* Poppy Logo & Breadcrumb */}
-              <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                <div className="text-2xl">🌺</div>
-                <h1 className="text-xl font-bold text-gray-800">Poppy</h1>
+            <div className="flex items-center gap-4">
+              <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <div className="text-xl">🌺</div>
+                <h1 className="text-lg font-bold text-gray-800">Poppy</h1>
               </Link>
-              
-              <div className="flex items-center gap-2 text-gray-500">
+              <div className="flex items-center gap-1 text-sm text-gray-500">
                 <span>/</span>
                 <Link href="/roadmap" className="text-poppy hover:text-poppy/80 transition-colors font-medium">
                   Roadmap
                 </Link>
                 <span>/</span>
-                <span className="text-gray-700 font-medium">Feature Details</span>
+                <span className="text-gray-700 font-medium">Feature</span>
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
                 onClick={handleShare}
-                className="px-4 py-2 rounded-xl transition-all duration-200 flex items-center gap-2 text-gray-700 hover:bg-gray-50 hover:text-poppy border border-transparent hover:border-gray-200"
+                className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 text-gray-700 hover:bg-gray-50 hover:text-poppy"
               >
                 <Share2 className="w-4 h-4" />
                 <span>Share</span>
               </button>
-              
               <Link href="/roadmap">
-                <button className="px-4 py-2 rounded-xl transition-all duration-200 flex items-center gap-2 bg-poppy/10 text-poppy font-medium border border-poppy/20 hover:bg-poppy/20">
+                <button className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 bg-poppy/10 text-poppy font-medium border border-poppy/20 hover:bg-poppy/20">
                   <ArrowLeft className="w-4 h-4" />
-                  <span>Back to Roadmap</span>
+                  <span>Back</span>
                 </button>
               </Link>
             </div>
@@ -524,535 +410,483 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-6">
         
-        {/* Feature Title & Basic Info */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-poppy mb-4 tracking-tight">
-            {feature.title || `Feature #${feature.id}`}
-          </h1>
-          
-          <div className="flex items-center gap-3 mb-4">
-            <Badge className={statusColors[feature.roadmap?.status as keyof typeof statusColors] || statusColors.planned}>
-              {feature.roadmap?.status || 'Planned'}
-            </Badge>
+        {/* Compact Feature Header */}
+        <div className="mb-6">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex-1 min-w-0 mr-4">
+              <h1 className="text-2xl font-bold text-poppy mb-2 tracking-tight">
+                {feature.title || `Feature #${feature.id}`}
+              </h1>
+              {feature.description && (
+                <p className="text-sm text-primary/80 leading-relaxed line-clamp-2">
+                  {feature.description}
+                </p>
+              )}
+            </div>
             
-            {canEdit && editingWeeks ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  value={weeksValue}
-                  onChange={(e) => setWeeksValue(e.target.value)}
-                  className="w-20 h-8 text-sm"
-                  placeholder="0"
-                  min="0"
-                />
-                <button 
-                  onClick={handleUpdateWeeks}
-                  className="h-8 px-2 rounded-lg bg-poppy/10 text-poppy border border-poppy/20 hover:bg-poppy/20 transition-all"
-                >
-                  <Save className="w-3 h-3" />
-                </button>
-                <button 
-                  onClick={handleCancelEdit}
-                  className="h-8 px-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Badge 
-                  variant="outline" 
-                  className={`border-poppy/30 text-poppy bg-poppy/5 ${canEdit ? 'cursor-pointer' : ''}`} 
-                  onClick={canEdit ? () => setEditingWeeks(true) : undefined}
-                >
-                  <Clock className="w-3 h-3 mr-1" />
-                  {getWeeksToShip() || 'Set'} weeks to ship
-                </Badge>
-                {canEdit && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Badge className={statusColors[feature.roadmap?.status as keyof typeof statusColors] || statusColors.planned}>
+                {feature.roadmap?.status || 'Planned'}
+              </Badge>
+              
+              {canEdit && editingWeeks ? (
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    value={weeksValue}
+                    onChange={(e) => setWeeksValue(e.target.value)}
+                    className="w-16 h-7 text-xs"
+                    placeholder="0"
+                    min="0"
+                  />
                   <button 
-                    onClick={() => setEditingWeeks(true)}
-                    className="h-6 w-6 p-0 rounded hover:bg-gray-100 transition-colors"
+                    onClick={handleUpdateWeeks}
+                    className="h-7 px-2 rounded bg-poppy/10 text-poppy border border-poppy/20 hover:bg-poppy/20"
                   >
-                    <Edit className="w-3 h-3 text-gray-500" />
+                    <Save className="w-3 h-3" />
                   </button>
-                )}
-              </div>
-            )}
-            
-            <div className="flex items-center gap-2 text-sm text-primary/60">
-              <Users className="w-4 h-4" />
-              <span>Owned by {feature.user.split('@')[0]}</span>
-              {canEdit && (
-                <Badge variant="outline" className="text-xs bg-green-50 border-green-200 text-green-700">
-                  You can edit
-                </Badge>
+                  <button 
+                    onClick={handleCancelEdit}
+                    className="h-7 px-2 rounded border border-gray-200 text-gray-600 hover:bg-gray-50"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs border-poppy/30 text-poppy bg-poppy/5 ${canEdit ? 'cursor-pointer' : ''}`} 
+                    onClick={canEdit ? () => setEditingWeeks(true) : undefined}
+                  >
+                    <Clock className="w-3 h-3 mr-1" />
+                    {feature ? getWeeksToShip(feature) || 'Set' : 'Set'}w
+                  </Badge>
+                  {canEdit && (
+                    <button 
+                      onClick={() => setEditingWeeks(true)}
+                      className="h-6 w-6 p-0 rounded hover:bg-gray-100"
+                    >
+                      <Edit className="w-3 h-3 text-gray-500" />
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
           
-          {feature.description && (
-            <p className="text-xl text-primary/80 leading-relaxed font-medium">
-              {feature.description}
-            </p>
-          )}
+          <div className="flex items-center gap-2 text-xs text-primary/60">
+            <Users className="w-3 h-3" />
+            <span>Owned by {feature.user.split('@')[0]}</span>
+            {canEdit && (
+              <Badge variant="outline" className="text-xs bg-green-50 border-green-200 text-green-700">
+                You can edit
+              </Badge>
+            )}
+          </div>
         </div>
 
-        {/* Development Milestones - Only for editors */}
-        {canEdit && (
-          <Card className="bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-xl text-primary">
-                <div className="p-2 bg-green-50 rounded-lg border border-green-200">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                </div>
-                Development Milestones
-              </CardTitle>
-              <p className="text-gray-600 text-sm">Track progress and automatically update feature status</p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div 
-                  className="flex items-center gap-3 p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => handleMilestoneToggle('running_locally', !feature?.roadmap?.milestone_running_locally)}
-                >
-                  {feature?.roadmap?.milestone_running_locally ? (
-                    <CheckCircle2 className="w-6 h-6 text-green-600" />
-                  ) : (
-                    <Circle className="w-6 h-6 text-gray-400" />
-                  )}
-                  <div>
-                    <h3 className="font-semibold text-primary">Running Locally</h3>
-                    <p className="text-sm text-gray-600">Feature works in dev environment</p>
-                  </div>
-                </div>
-
-                <div 
-                  className="flex items-center gap-3 p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => handleMilestoneToggle('feature_flag', !feature?.roadmap?.milestone_feature_flag)}
-                >
-                  {feature?.roadmap?.milestone_feature_flag ? (
-                    <CheckCircle2 className="w-6 h-6 text-green-600" />
-                  ) : (
-                    <Circle className="w-6 h-6 text-gray-400" />
-                  )}
-                  <div>
-                    <h3 className="font-semibold text-primary">Behind Feature Flag</h3>
-                    <p className="text-sm text-gray-600">Ready for limited testing</p>
-                  </div>
-                </div>
-
-                <div 
-                  className="flex items-center gap-3 p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => handleMilestoneToggle('ga', !feature?.roadmap?.milestone_ga)}
-                >
-                  {feature?.roadmap?.milestone_ga ? (
-                    <CheckCircle2 className="w-6 h-6 text-green-600" />
-                  ) : (
-                    <Circle className="w-6 h-6 text-gray-400" />
-                  )}
-                  <div>
-                    <h3 className="font-semibold text-primary">Generally Available</h3>
-                    <p className="text-sm text-gray-600">Shipped to all users</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Single Page Layout - No Tabs */}
-        <div className="space-y-8">{/* Removed tabs wrapper */}
-
-          {/* PRD & Design Resources Section */}
-          <Card className="bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-xl text-primary">
-                <div className="p-2 bg-poppy/10 rounded-lg border border-poppy/20">
-                  <FileText className="w-5 h-5 text-poppy" />
-                </div>
-                PRD & Design Resources
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* PRD Link */}
-              <a
-                href={feature['drive-link']}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center p-4 border border-gray-200 rounded-xl hover:shadow-md hover:border-poppy/30 transition-all group bg-white/70 backdrop-blur-sm"
-              >
-                <div className="p-2 bg-blue-50 rounded-lg mr-3 border border-blue-200">
-                  <FileText className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-primary group-hover:text-poppy transition-colors">
-                    View PRD Document
+        {/* Dashboard Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Left Column - Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Development Status - Compact for editors */}
+            {canEdit && (
+              <Card className="p-4 bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                    Development Status
                   </h3>
-                  <p className="text-sm text-gray-600">
-                    Full requirements and specifications - share with engineering
+                </div>
+                <div className="p-3 border rounded-lg bg-gray-50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`w-3 h-3 rounded-full ${
+                      feature?.roadmap?.status === 'shipped' ? 'bg-green-500' :
+                      feature?.roadmap?.status === 'in_progress' ? 'bg-blue-500' :
+                      feature?.roadmap?.status === 'in_review' ? 'bg-purple-500' :
+                      'bg-gray-400'
+                    }`}></div>
+                    <span className="text-sm font-medium text-primary capitalize">
+                      {feature?.roadmap?.status?.replace('_', ' ') || 'Planned'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    {feature?.roadmap?.status === 'shipped' ? 'Feature is live for all users' :
+                     feature?.roadmap?.status === 'in_review' ? 'Feature is being tested' :
+                     feature?.roadmap?.status === 'in_progress' ? 'Development in progress' :
+                     'Planning phase'}
                   </p>
                 </div>
-                <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-poppy transition-colors" />
-              </a>
+              </Card>
+            )}
 
-              {/* Design Access or Creation */}
-              {feature['v0-link'] ? (
+            {/* PRD & Design Resources - Compact */}
+            <Card className="p-4 bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  Resources
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
                 <a
-                  href={feature['v0-link']}
+                  href={feature['drive-link']}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center p-4 border border-gray-200 rounded-xl hover:shadow-md hover:border-sprout/30 transition-all group bg-white/70 backdrop-blur-sm"
+                  className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:shadow-md hover:border-blue-300 transition-all group bg-white/70"
                 >
-                  <div className="p-2 bg-sprout/10 rounded-lg mr-3 border border-sprout/30">
-                    <Palette className="w-6 h-6 text-sprout" />
+                  <div className="p-2 bg-blue-50 rounded border border-blue-200">
+                    <FileText className="w-4 h-4 text-blue-600" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-primary group-hover:text-sprout transition-colors">
-                      View Design Mockups
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      Interactive prototypes - share with designers and engineering
-                    </p>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-sm text-primary group-hover:text-blue-600">PRD Document</h4>
+                    <p className="text-xs text-gray-600 truncate">Requirements and specifications</p>
                   </div>
-                  <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-sprout transition-colors" />
+                  <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-blue-600" />
                 </a>
-              ) : (
-                <button
-                  onClick={handleCreateDesign}
-                  disabled={creatingDesign}
-                  className="w-full flex items-center p-4 border border-poppy/30 rounded-xl hover:shadow-md hover:bg-poppy/5 transition-all group bg-poppy/5 disabled:opacity-50"
-                >
-                  {creatingDesign ? (
-                    <div className="w-8 h-8 mr-3 animate-spin rounded-full border-2 border-poppy border-t-transparent" />
-                  ) : (
-                    <div className="p-2 bg-poppy/10 rounded-lg mr-3 border border-poppy/30">
-                      <Sparkles className="w-6 h-6 text-poppy" />
+
+                {feature['v0-link'] ? (
+                  <a
+                    href={feature['v0-link']}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:shadow-md hover:border-green-300 transition-all group bg-white/70"
+                  >
+                    <div className="p-2 bg-green-50 rounded border border-green-200">
+                      <Palette className="w-4 h-4 text-green-600" />
                     </div>
-                  )}
-                  <div className="flex-1 text-left">
-                    <h3 className="font-semibold text-primary group-hover:text-poppy transition-colors">
-                      {creatingDesign ? 'Creating Design...' : 'Create Design Mockups'}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm text-primary group-hover:text-green-600">Design Mockups</h4>
+                      <p className="text-xs text-gray-600 truncate">Interactive prototypes</p>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-green-600" />
+                  </a>
+                ) : (
+                  <button
+                    onClick={handleCreateDesign}
+                    disabled={creatingDesign}
+                    className="flex items-center gap-3 p-3 border border-poppy/30 rounded-lg hover:shadow-md hover:bg-poppy/5 transition-all group bg-poppy/5 disabled:opacity-50"
+                  >
+                    {creatingDesign ? (
+                      <div className="w-6 h-6 animate-spin rounded-full border-2 border-poppy border-t-transparent" />
+                    ) : (
+                      <div className="p-2 bg-poppy/10 rounded border border-poppy/30">
+                        <Sparkles className="w-4 h-4 text-poppy" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0 text-left">
+                      <h4 className="font-medium text-sm text-primary group-hover:text-poppy">
+                        {creatingDesign ? 'Creating...' : 'Create Design'}
+                      </h4>
+                      <p className="text-xs text-gray-600 truncate">
+                        {creatingDesign ? 'Generating designs' : 'AI-generated from PRD'}
+                      </p>
+                    </div>
+                  </button>
+                )}
+              </div>
+            </Card>
+
+            {/* Engineering Management - Only for owners */}
+            {canEdit && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Engineer Assignment */}
+                <Card className="p-4 bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
+                  <div className="mb-3">
+                    <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+                      <Users className="w-4 h-4 text-green-600" />
+                      Engineering Team
                     </h3>
-                    <p className="text-sm text-gray-600">
-                      {creatingDesign ? 'Generating designs from PRD' : 'AI-generated designs from your PRD'}
-                    </p>
                   </div>
-                </button>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Slack Channels Section - Only for owners */}
-          {canEdit && (
-            <Card className="bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
-              <CardContent className="pt-6">
-                <SlackChannelsTab 
-                  prd={feature} 
-                  userEmail={feature.user} 
-                  onUpdate={fetchFeatureDetail}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Jira Tickets Section - Only for owners */}
-          {canEdit && (
-            <Card className="bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
-              <CardContent className="pt-6">
-                <JiraTicketsTab 
-                  prd={feature} 
-                  userEmail={feature.user} 
-                  onUpdate={fetchFeatureDetail}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Customer Feedback Section */}
-          <Card className="bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
-            <CardHeader className="pb-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-xl text-primary">
-                    <div className="p-2 bg-blue-50 rounded-lg border border-blue-200">
-                      <MessageSquare className="w-5 h-5 text-blue-600" />
+                  <div className="space-y-3">
+                    <EngineerAssignmentModal
+                      prdId={feature.id}
+                      prdTitle={feature.title || `Feature #${feature.id}`}
+                      onAssignmentsChange={fetchFeatureDetail}
+                      trigger={
+                        <button className="w-full flex items-center gap-2 p-3 border border-green-200 rounded-lg hover:shadow-md hover:bg-green-50 transition-all bg-green-50/50">
+                          <Users className="w-4 h-4 text-green-600" />
+                          <span className="text-sm font-medium text-green-800">Manage Engineers</span>
+                        </button>
+                      }
+                    />
+                    
+                    {/* Weeks Estimation */}
+                    <div className="p-3 border border-gray-200 rounded-lg bg-gray-50/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">Estimated Duration</span>
+                        {editingWeeks ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              step="0.5"
+                              min="0.5"
+                              value={weeksValue}
+                              onChange={(e) => setWeeksValue(e.target.value)}
+                              className="w-16 px-2 py-1 text-sm border border-poppy rounded focus:outline-none focus:ring-1 focus:ring-poppy"
+                              placeholder="0"
+                            />
+                            <span className="text-sm text-gray-600">weeks</span>
+                            <button
+                              onClick={handleUpdateWeeks}
+                              className="p-1 text-green-600 hover:text-green-800"
+                            >
+                              <Save className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              className="p-1 text-gray-600 hover:text-gray-800"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setEditingWeeks(true)}
+                            className="flex items-center gap-1 text-sm text-poppy hover:text-poppy/80"
+                          >
+                            <Clock className="w-4 h-4" />
+                            <span>{feature ? getWeeksToShip(feature) || 'Set' : 'Set'} weeks</span>
+                            <Edit className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    Customer Feedback
-                  </CardTitle>
-                  <div className="flex gap-2">
+                  </div>
+                </Card>
+
+                {/* Engineering Tools */}
+                <Card className="p-4 bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
+                  <div className="mb-3">
+                    <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-blue-600" />
+                      Tools & Communication
+                    </h3>
+                  </div>
+                  <div className="space-y-3">
+                    {/* Slack Channels */}
+                    <div className="max-h-24 overflow-y-auto">
+                      <SlackChannelsTab 
+                        prd={feature} 
+                        userEmail={feature.user} 
+                        onUpdate={fetchFeatureDetail}
+                      />
+                    </div>
+                    
+                    {/* Jira Tickets */}
+                    <div className="max-h-24 overflow-y-auto">
+                      <JiraTicketsTab 
+                        prd={feature} 
+                        userEmail={feature.user} 
+                        onUpdate={fetchFeatureDetail}
+                      />
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column - Feedback & Comments */}
+          <div className="space-y-6">
+            
+            {/* Customer Feedback Section - Compact */}
+            <Card className="p-4 bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-blue-600" />
+                  Customer Feedback
+                </h3>
+              </div>
+              
+              <div className="space-y-3 mb-4">
+                <div className="flex gap-2">
                   <button
                     onClick={handleSearchCustomers}
                     disabled={searchingCustomers}
-                    className="px-4 py-2 rounded-xl transition-all duration-200 flex items-center gap-2 bg-blue-50 text-blue-600 font-medium border border-blue-200 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-3 py-2 rounded-lg text-xs flex items-center justify-center gap-1 bg-blue-50 text-blue-600 font-medium border border-blue-200 hover:bg-blue-100 disabled:opacity-50"
                   >
-                    <Search className={`w-4 h-4 ${searchingCustomers ? 'animate-spin' : ''}`} />
-                    <span>{searchingCustomers ? 'Searching...' : 'Find Customers'}</span>
+                    <Search className={`w-3 h-3 ${searchingCustomers ? 'animate-spin' : ''}`} />
+                    <span>{searchingCustomers ? 'Searching...' : 'Find'}</span>
                   </button>
                   <button
                     onClick={() => setShowAddFeedback(true)}
-                    className="px-4 py-2 rounded-xl transition-all duration-200 flex items-center gap-2 bg-poppy/10 text-poppy font-medium border border-poppy/20 hover:bg-poppy/20"
+                    className="flex-1 px-3 py-2 rounded-lg text-xs flex items-center justify-center gap-1 bg-poppy/10 text-poppy font-medium border border-poppy/20 hover:bg-poppy/20"
                   >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Feedback</span>
+                    <Plus className="w-3 h-3" />
+                    <span>Add</span>
                   </button>
+                </div>
+              </div>
+
+              {showAddFeedback && (
+                <div className="mb-4 p-3 border border-poppy/20 rounded-lg bg-poppy/5">
+                  <div className="space-y-3">
+                    <div>
+                      <Input
+                        value={newFeedback.customer_name}
+                        onChange={(e) => setNewFeedback({...newFeedback, customer_name: e.target.value})}
+                        placeholder="Customer name"
+                        className="text-xs"
+                      />
+                    </div>
+                    <div>
+                      <select
+                        value={newFeedback.feedback_type}
+                        onChange={(e) => setNewFeedback({...newFeedback, feedback_type: e.target.value as CustomerFeedback['feedback_type']})}
+                        className="w-full p-2 border border-gray-300 rounded text-xs"
+                      >
+                        <option value="request">Request</option>
+                        <option value="complaint">Complaint</option>
+                        <option value="compliment">Compliment</option>
+                        <option value="suggestion">Suggestion</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Textarea
+                        value={newFeedback.feedback_text}
+                        onChange={(e) => setNewFeedback({...newFeedback, feedback_text: e.target.value})}
+                        placeholder="What did the customer say?"
+                        rows={2}
+                        className="text-xs"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleAddFeedback} size="sm" className="bg-poppy hover:bg-poppy/90 text-white text-xs">
+                        Add
+                      </Button>
+                      <Button 
+                        onClick={() => setShowAddFeedback(false)} 
+                        variant="outline" 
+                        size="sm"
+                        className="text-xs"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600">
-                  AI can suggest customers with relevant feedback history for this feature
-                </p>
-              </div>
-            </CardHeader>
-              <CardContent>
-                {showAddFeedback && (
-                  <div className="mb-6 p-4 border border-poppy/20 rounded-xl bg-poppy/5">
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="customer_name" className="text-primary font-medium">Customer Name</Label>
-                        <Input
-                          id="customer_name"
-                          value={newFeedback.customer_name}
-                          onChange={(e) => setNewFeedback({...newFeedback, customer_name: e.target.value})}
-                          placeholder="Customer or company name"
-                          className="focus-poppy"
-                        />
+              )}
+
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {/* AI-matched customer feedback */}
+                {customerMatches.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                      <Search className="w-3 h-3 text-blue-600" />
+                      AI Matches ({customerMatches.length})
+                    </h4>
+                    {customerMatches.map((match, index) => (
+                      <div key={`match-${index}`} className="p-3 rounded-lg border border-blue-200 bg-blue-50/50">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-medium text-primary truncate">
+                                Customer {match.klaviyo_account_id}
+                              </span>
+                              <Badge variant="outline" className="text-xs border-gray-300 bg-white">
+                                NPS: {match.nps_score_raw}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-primary/80 leading-relaxed line-clamp-2">{match.nps_verbatim}</p>
+                          </div>
+                          <button
+                            onClick={() => handleGetEmail(match, index)}
+                            disabled={loadingEmail === match.klaviyo_account_id}
+                            className="ml-2 px-2 py-1 rounded text-xs bg-poppy/10 text-poppy border border-poppy/20 hover:bg-poppy/20 disabled:opacity-50"
+                          >
+                            {loadingEmail === match.klaviyo_account_id ? (
+                              <div className="w-3 h-3 animate-spin rounded-full border border-poppy border-t-transparent" />
+                            ) : (
+                              <Mail className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
                       </div>
-                      
-                      <div>
-                        <Label htmlFor="feedback_type" className="text-primary font-medium">Feedback Type</Label>
-                        <select
-                          id="feedback_type"
-                          value={newFeedback.feedback_type}
-                          onChange={(e) => setNewFeedback({...newFeedback, feedback_type: e.target.value as CustomerFeedback['feedback_type']})}
-                          className="w-full p-2 border border-gray-300 rounded-md focus-poppy"
-                        >
-                          <option value="request">Feature Request</option>
-                          <option value="complaint">Complaint</option>
-                          <option value="compliment">Compliment</option>
-                          <option value="suggestion">Suggestion</option>
-                        </select>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="feedback_text" className="text-primary font-medium">Feedback</Label>
-                        <Textarea
-                          id="feedback_text"
-                          value={newFeedback.feedback_text}
-                          onChange={(e) => setNewFeedback({...newFeedback, feedback_text: e.target.value})}
-                          placeholder="What did the customer say?"
-                          rows={3}
-                          className="focus-poppy"
-                        />
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button onClick={handleAddFeedback} size="sm" className="bg-poppy hover:bg-poppy/90 text-white">
-                          Add Feedback
-                        </Button>
-                        <Button 
-                          onClick={() => setShowAddFeedback(false)} 
-                          variant="outline" 
-                          size="sm"
-                          className="border-gray-300 hover:border-poppy/30"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 )}
 
-                <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
-                  {/* AI-matched customer feedback */}
-                  {customerMatches.length > 0 && (
-                    <div className="space-y-3 mb-6">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="p-1 bg-blue-50 rounded border border-blue-200">
-                          <Search className="w-4 h-4 text-blue-600" />
+                {/* Manual customer feedback */}
+                {feature.customer_feedback && feature.customer_feedback.length > 0 && (
+                  <div className="space-y-2">
+                    {customerMatches.length > 0 && (
+                      <h4 className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                        <MessageSquare className="w-3 h-3 text-gray-600" />
+                        Manual Feedback
+                      </h4>
+                    )}
+                    {feature.customer_feedback.map((feedback) => (
+                      <div key={feedback.id} className={`p-3 rounded-lg border ${feedbackTypeColors[feedback.feedback_type as keyof typeof feedbackTypeColors]}`}>
+                        <div className="flex items-start justify-between mb-1">
+                          <span className="text-xs font-medium text-primary">{feedback.customer_name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {feedback.feedback_type}
+                          </Badge>
                         </div>
-                        <h3 className="font-semibold text-primary">AI-Matched Customer Feedback ({customerMatches.length})</h3>
+                        <p className="text-xs text-primary/80 line-clamp-2">{feedback.feedback_text}</p>
+                        <span className="text-xs text-gray-500 mt-1 block">
+                          {new Date(feedback.created_at).toLocaleDateString()}
+                        </span>
                       </div>
-                      {customerMatches.map((match, index) => (
-                        <div 
-                          key={`match-${index}`}
-                          className="p-4 rounded-lg border border-blue-200 bg-blue-50/50 backdrop-blur-sm"
-                        >
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                              <div>
-                                <h4 className="font-semibold text-primary text-sm">
-                                  Customer {match.klaviyo_account_id}
-                                  {match.email && (
-                                    <span className="ml-2 text-xs text-gray-600">({match.email})</span>
-                                  )}
-                                </h4>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <Badge variant="outline" className="text-xs border-gray-300 bg-white">
-                                    NPS: {match.nps_score_raw}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs border-green-300 bg-green-50 text-green-700">
-                                    {match.gmv}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs border-blue-300 bg-blue-50 text-blue-700">
-                                    Match: {Math.round(match.match_score * 100)}%
-                                  </Badge>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleGetEmail(match, index)}
-                                disabled={loadingEmail === match.klaviyo_account_id}
-                                className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 bg-poppy/10 text-poppy border border-poppy/20 hover:bg-poppy/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {loadingEmail === match.klaviyo_account_id ? (
-                                  <>
-                                    <div className="w-3 h-3 animate-spin rounded-full border border-poppy border-t-transparent" />
-                                    <span>Loading...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Mail className="w-3 h-3" />
-                                    <span>{match.email ? 'Email' : 'Get Email'}</span>
-                                  </>
-                                )}
-                              </button>
-                              <span className="text-xs text-gray-500">
-                                {new Date(match.survey_end_date).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-primary/80 text-sm leading-relaxed">{match.nps_verbatim}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                    ))}
+                  </div>
+                )}
 
-                  {/* Manual customer feedback */}
-                  {feature.customer_feedback && feature.customer_feedback.length > 0 && (
-                    <div className="space-y-3">
-                      {customerMatches.length > 0 && (
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="p-1 bg-gray-50 rounded border border-gray-200">
-                            <MessageSquare className="w-4 h-4 text-gray-600" />
-                          </div>
-                          <h3 className="font-semibold text-primary">Manual Customer Feedback</h3>
-                        </div>
-                      )}
-                      {feature.customer_feedback.map((feedback) => (
-                        <div 
-                          key={feedback.id} 
-                          className={`p-3 rounded-lg border ${feedbackTypeColors[feedback.feedback_type as keyof typeof feedbackTypeColors]} backdrop-blur-sm`}
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <h4 className="font-semibold text-primary text-sm">{feedback.customer_name}</h4>
-                              <Badge variant="outline" className="text-xs border-gray-300">
-                                {feedback.feedback_type}
-                              </Badge>
-                            </div>
-                            <span className="text-xs text-gray-500">
-                              {new Date(feedback.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <p className="text-primary/80 text-sm">{feedback.feedback_text}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Empty state */}
-                  {(!feature.customer_feedback || feature.customer_feedback.length === 0) && customerMatches.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <div className="p-3 bg-gray-50 rounded-full w-12 h-12 mx-auto mb-3 flex items-center justify-center border border-gray-200">
-                        <MessageSquare className="w-6 h-6 text-gray-400" />
-                      </div>
-                      <p className="text-sm text-gray-600">No customer feedback yet</p>
-                      <p className="text-xs text-gray-400 mt-1">Click &quot;Find Customers&quot; to search for relevant customers or &quot;Add Feedback&quot; to record manual input</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
+                {/* Empty state */}
+                {(!feature.customer_feedback || feature.customer_feedback.length === 0) && customerMatches.length === 0 && (
+                  <div className="text-center py-6 text-gray-500">
+                    <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs text-gray-600">No feedback yet</p>
+                    <p className="text-xs text-gray-400">Use buttons above to add</p>
+                  </div>
+                )}
+              </div>
             </Card>
 
-          {/* Team Comments Section */}
-          <Card className="bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-xl text-primary">
-                  <div className="p-2 bg-poppy/10 rounded-lg border border-poppy/20">
-                    <MessageSquare className="w-5 h-5 text-poppy" />
-                  </div>
+            {/* Team Comments - Compact */}
+            <Card className="p-4 bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-poppy" />
                   Team Comments
-                </CardTitle>
-                <button
-                  className="px-4 py-2 rounded-xl transition-all duration-200 flex items-center gap-2 bg-poppy/10 text-poppy font-medium border border-poppy/20 hover:bg-poppy/20"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Comment</span>
+                </h3>
+                <button className="px-2 py-1 rounded text-xs bg-poppy/10 text-poppy font-medium border border-poppy/20 hover:bg-poppy/20">
+                  <Plus className="w-3 h-3" />
                 </button>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Comment Input */}
-                <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
+              
+              <div className="space-y-3">
+                <div className="p-3 border border-gray-200 rounded-lg bg-gray-50">
                   <Textarea
-                    placeholder="Add a comment for your team..."
-                    rows={3}
-                    className="border-gray-300 bg-white focus:ring-2 focus:ring-poppy focus:border-poppy"
+                    placeholder="Add a comment..."
+                    rows={2}
+                    className="text-xs border-gray-300 bg-white"
                   />
-                  <div className="mt-3 flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Comments are visible to your team members</span>
-                    <button className="px-4 py-2 rounded-xl transition-all duration-200 flex items-center gap-2 bg-poppy/10 text-poppy font-medium border border-poppy/20 hover:bg-poppy/20">
-                      Post Comment
+                  <div className="mt-2 flex justify-end">
+                    <button className="px-3 py-1 rounded text-xs bg-poppy/10 text-poppy font-medium border border-poppy/20 hover:bg-poppy/20">
+                      Post
                     </button>
                   </div>
                 </div>
                 
-                {/* Sample Comments */}
-                <div className="space-y-3">
-                  <div className="p-4 bg-white border border-gray-200 rounded-xl">
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 bg-poppy/10 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-poppy">JD</span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-sm text-gray-800">John Doe</span>
-                          <span className="text-xs text-gray-500">2 hours ago</span>
-                        </div>
-                        <p className="text-sm text-gray-700">Engineering estimates 2 weeks for this feature. The backend API changes are minimal.</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 bg-white border border-gray-200 rounded-xl">
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 bg-sprout/10 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-sprout">SM</span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-sm text-gray-800">Sarah Miller</span>
-                          <span className="text-xs text-gray-500">Yesterday</span>
-                        </div>
-                        <p className="text-sm text-gray-700">Design mockups look great! This aligns well with our Q2 user experience goals.</p>
-                      </div>
-                    </div>
-                  </div>
-                  
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {/* TODO: Implement real team comments system */}
                   <div className="text-center py-6 text-gray-500">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm">Start the conversation by adding the first comment</p>
+                    <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs text-gray-600">No comments yet</p>
+                    <p className="text-xs text-gray-400">Start the conversation</p>
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-        </div> {/* End of single page layout */}
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -236,3 +236,86 @@
   opacity: 1;
   box-shadow: 0 0 8px rgba(255, 87, 87, 0.4);
 }
+
+/* Modern micro-interactions */
+.micro-bounce {
+  animation: micro-bounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes micro-bounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Kinetic micro-interactions for buttons */
+.kinetic-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kinetic-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+
+.kinetic-button:hover::before {
+  width: 120%;
+  height: 120%;
+}
+
+/* Improved focus states */
+.focus-ring:focus-visible {
+  outline: 2px solid #FF5757;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Smooth gradient backgrounds */
+.gradient-mesh {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-size: 400% 400%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Glass morphism utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Improved dark mode - only for homepage */
+.homepage.dark-mode {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --poppy: 0 84% 65%; /* Softer red for dark mode */
+}
+
+.homepage.dark-mode body {
+  background: linear-gradient(135deg, hsl(222.2, 84%, 4.9%) 0%, hsl(222.2, 84%, 6%) 100%);
+}

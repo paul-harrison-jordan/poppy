@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { collectStream } from "@/lib/collectStream"
 import { Paintbrush } from "lucide-react"
@@ -7,9 +7,11 @@ import PoppyProactiveMessage from './poppy/PoppyProactiveMessage';
 import { usePRDStore } from '@/store/prdStore';
 import { useKnowledgeSession } from '@/hooks/useKnowledgeSession';
 import { usePRDFlow } from '@/hooks/usePRDFlow';
-import DesignSidebar from './DesignSidebar';
 import ChatMessageList from './ChatMessageList';
 import ChatInput from './ChatInput';
+
+// Lazy load heavy components
+const DesignSidebar = lazy(() => import('./DesignSidebar'));
 
 declare global {
   interface Window {
@@ -1197,15 +1199,21 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
       <div className="flex h-screen w-full bg-neutral/80 transition-all duration-500 ease-in-out">
         {/* Left panel - chat interface */}
         <div className="w-96 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col shadow-lg">
-          <DesignSidebar
-            messages={messages}
-            input={input}
-            loading={loading}
-            v0ChatId={v0ChatId}
-            onInputChange={setInput}
-            onSubmit={sendMessage}
-            onModeChange={handleSafeModeChange}
-          />
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-full">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-poppy"></div>
+            </div>
+          }>
+            <DesignSidebar
+              messages={messages}
+              input={input}
+              loading={loading}
+              v0ChatId={v0ChatId}
+              onInputChange={setInput}
+              onSubmit={sendMessage}
+              onModeChange={handleSafeModeChange}
+            />
+          </Suspense>
         </div>
 
         {/* Right area - design canvas */}
