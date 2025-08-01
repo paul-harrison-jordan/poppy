@@ -5,7 +5,7 @@ import { createServiceClient } from '@/utils/supabase/service'
 // PUT /api/teams/[id]/members/[memberId] - Update a team member
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; memberId: string } }
+  { params }: { params: Promise<{ id: string; memberId: string }> }
 ) {
   try {
     const session = await getAuthServerSession()
@@ -13,8 +13,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const teamId = parseInt(params.id)
-    const memberId = parseInt(params.memberId)
+    const resolvedParams = await params
+    const teamId = parseInt(resolvedParams.id)
+    const memberId = parseInt(resolvedParams.memberId)
     
     if (isNaN(teamId) || isNaN(memberId)) {
       return NextResponse.json({ error: 'Invalid team or member ID' }, { status: 400 })
@@ -99,7 +100,7 @@ export async function PUT(
 // DELETE /api/teams/[id]/members/[memberId] - Remove a member from a team
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; memberId: string } }
+  { params }: { params: Promise<{ id: string; memberId: string }> }
 ) {
   try {
     const session = await getAuthServerSession()
@@ -107,8 +108,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const teamId = parseInt(params.id)
-    const memberId = parseInt(params.memberId)
+    const resolvedParams = await params
+    const teamId = parseInt(resolvedParams.id)
+    const memberId = parseInt(resolvedParams.memberId)
     
     if (isNaN(teamId) || isNaN(memberId)) {
       return NextResponse.json({ error: 'Invalid team or member ID' }, { status: 400 })
@@ -142,7 +144,7 @@ export async function DELETE(
     }
 
     return NextResponse.json({ 
-      message: `${member.engineer?.engineer_name} removed from team successfully` 
+      message: `${(member.engineer as unknown as { engineer_name: string })?.engineer_name || 'Member'} removed from team successfully` 
     })
 
   } catch (error) {

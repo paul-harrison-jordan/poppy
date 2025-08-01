@@ -30,12 +30,6 @@ export default function TeamSettingsModal({ isOpen, onClose, teamId, onTeamUpdat
     default_utilization_target: 0.80
   })
 
-  useEffect(() => {
-    if (isOpen && teamId) {
-      fetchTeamDetails()
-    }
-  }, [isOpen, teamId, fetchTeamDetails])
-
   const fetchTeamDetails = useCallback(async () => {
     try {
       const response = await fetch(`/api/teams/${teamId}`)
@@ -53,6 +47,12 @@ export default function TeamSettingsModal({ isOpen, onClose, teamId, onTeamUpdat
       console.error('Error fetching team details:', error)
     }
   }, [teamId])
+
+  useEffect(() => {
+    if (isOpen && teamId) {
+      fetchTeamDetails()
+    }
+  }, [isOpen, teamId, fetchTeamDetails])
 
   if (!isOpen) return null
 

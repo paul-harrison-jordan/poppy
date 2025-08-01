@@ -5,7 +5,7 @@ import { createServiceClient } from '@/utils/supabase/service'
 // GET /api/teams/[id] - Get a specific team with its members
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getAuthServerSession()
@@ -13,7 +13,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const teamId = parseInt(params.id)
+    const resolvedParams = await params
+    const teamId = parseInt(resolvedParams.id)
     if (isNaN(teamId)) {
       return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 })
     }
@@ -54,7 +55,7 @@ export async function GET(
 // PUT /api/teams/[id] - Update a team
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getAuthServerSession()
@@ -62,7 +63,8 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const teamId = parseInt(params.id)
+    const resolvedParams = await params
+    const teamId = parseInt(resolvedParams.id)
     if (isNaN(teamId)) {
       return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 })
     }
@@ -125,7 +127,7 @@ export async function PUT(
 // DELETE /api/teams/[id] - Delete a team
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getAuthServerSession()
@@ -133,7 +135,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const teamId = parseInt(params.id)
+    const resolvedParams = await params
+    const teamId = parseInt(resolvedParams.id)
     if (isNaN(teamId)) {
       return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 })
     }

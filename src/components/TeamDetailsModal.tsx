@@ -46,12 +46,6 @@ export default function TeamDetailsModal({ isOpen, onClose, teamId, onTeamUpdate
   const [loading, setLoading] = useState(true)
   const [team, setTeam] = useState<Team | null>(null)
 
-  useEffect(() => {
-    if (isOpen && teamId) {
-      fetchTeamDetails()
-    }
-  }, [isOpen, teamId, fetchTeamDetails])
-
   const fetchTeamDetails = useCallback(async () => {
     setLoading(true)
     try {
@@ -68,6 +62,12 @@ export default function TeamDetailsModal({ isOpen, onClose, teamId, onTeamUpdate
       setLoading(false)
     }
   }, [teamId])
+
+  useEffect(() => {
+    if (isOpen && teamId) {
+      fetchTeamDetails()
+    }
+  }, [isOpen, teamId, fetchTeamDetails])
 
   const handleRemoveMember = async (memberId: number, memberName: string) => {
     if (!confirm(`Are you sure you want to remove ${memberName} from the team?`)) {

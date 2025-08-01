@@ -26,6 +26,9 @@ interface Engineer {
   engineer_email: string
   title: string
   skill_tags: string[]
+  capacity_hours_per_week?: number
+  utilization_target?: number
+  notes?: string
 }
 
 interface TeamMember {

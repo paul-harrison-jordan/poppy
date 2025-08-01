@@ -153,8 +153,8 @@ function calculatePerformanceScore(performanceMetrics: PerformanceMetric[], esti
   
   // Look at recent performance (last 5 projects)
   const recentMetrics = performanceMetrics
-    .filter(m => m.completed_at)
-    .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())
+    .filter(m => m.completed_at != null)
+    .sort((a, b) => new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime())
     .slice(0, 5)
   
   if (recentMetrics.length === 0) return 0.5

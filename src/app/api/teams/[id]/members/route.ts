@@ -5,7 +5,7 @@ import { createServiceClient } from '@/utils/supabase/service'
 // GET /api/teams/[id]/members - Get all members for a specific team
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getAuthServerSession()
@@ -13,7 +13,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const teamId = parseInt(params.id)
+    const resolvedParams = await params
+    const teamId = parseInt(resolvedParams.id)
     if (isNaN(teamId)) {
       return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 })
     }
@@ -60,7 +61,7 @@ export async function GET(
 // POST /api/teams/[id]/members - Add a member to a team
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getAuthServerSession()
@@ -68,7 +69,8 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const teamId = parseInt(params.id)
+    const resolvedParams = await params
+    const teamId = parseInt(resolvedParams.id)
     if (isNaN(teamId)) {
       return NextResponse.json({ error: 'Invalid team ID' }, { status: 400 })
     }

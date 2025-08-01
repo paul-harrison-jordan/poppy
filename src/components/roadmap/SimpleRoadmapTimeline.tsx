@@ -35,8 +35,7 @@ interface SimpleRoadmapTimelineProps {
 
 export default function SimpleRoadmapTimeline({ userEmail }: SimpleRoadmapTimelineProps) {
   const [prdPhases, setPrdPhases] = useState<{ [key: number]: Phase[] }>({})
-  const [isDragging] = useState(false)
-  void isDragging // Acknowledge state but don't use it yet
+  const [isDragging, setIsDragging] = useState(false)
   
   // Use shared hook for fetching PRDs
   const { prds, loading, refetch } = useRoadmapPRDs(userEmail)
