@@ -138,15 +138,8 @@ export default function FeatureApprovalView({ prdId, onBack }: FeatureApprovalVi
   }
 
   const fetchComments = async () => {
-    try {
-      const response = await fetch(`/api/features/${prdId}/comments`)
-      if (response.ok) {
-        const data = await response.json()
-        setComments(data)
-      }
-    } catch (error) {
-      console.error('Error fetching comments:', error)
-    }
+    // Comments functionality has been removed - users should use Google Docs for comments
+    setComments([])
   }
 
   const handleStatusChange = async (newStatus: string) => {
@@ -516,9 +509,9 @@ export default function FeatureApprovalView({ prdId, onBack }: FeatureApprovalVi
                   variant="outline" 
                   className="w-full"
                 >
-                  <a href={`/features/${prd.id}`} target="_blank">
+                  <a href={prd['drive-link']} target="_blank" rel="noopener noreferrer">
                     <FileText className="w-4 h-4 mr-2" />
-                    View in Detail Page
+                    View PRD Document
                   </a>
                 </Button>
               </CardContent>
@@ -773,8 +766,8 @@ export default function FeatureApprovalView({ prdId, onBack }: FeatureApprovalVi
             <h3 className="text-lg font-semibold text-gray-600">Comments integration coming soon</h3>
             <p className="text-gray-500">Feature-level comments and discussions will appear here</p>
             <Button asChild variant="outline" className="mt-4">
-              <a href={`/features/${prd.id}`} target="_blank">
-                View in Feature Detail Page
+              <a href={prd['drive-link']} target="_blank" rel="noopener noreferrer">
+                View PRD Document
               </a>
             </Button>
           </div>

@@ -70,7 +70,10 @@ export async function GET(
         risks: prd.risks ?? legacyRoadmapData?.risks ?? [],
         success_metrics: prd.success_metrics ?? legacyRoadmapData?.success_metrics ?? [],
         roadmap_notes: prd.roadmap_notes ?? legacyRoadmapData?.roadmap_notes,
-        last_updated_by: prd.last_updated_by ?? legacyRoadmapData?.last_updated_by
+        last_updated_by: prd.last_updated_by ?? legacyRoadmapData?.last_updated_by,
+        release_date: prd.release_date,
+        estimated_weeks: prd.estimated_weeks,
+        assigned_engineer: prd.assigned_engineer
       },
       
       // Related data
@@ -114,11 +117,36 @@ export async function PATCH(
       return NextResponse.json({ error: 'PRD not found' }, { status: 404 })
     }
 
-    // Update the PRD directly (single source of truth)
-    const updateData = {
-      ...body,
-      last_updated_by: session.user.email,
-      updated_at: new Date().toISOString()
+    // Handle roadmap data properly
+    let updateData = {}
+    
+    if (body.roadmap) {
+      // Extract roadmap fields that should be at the root level
+      const { roadmap, ...otherFields } = body
+      updateData = {
+        ...otherFields,
+        priority_order: roadmap.priority_order,
+        status: roadmap.status,
+        target_quarter: roadmap.target_quarter,
+        estimated_effort_points: roadmap.estimated_effort_points,
+        business_value_score: roadmap.business_value_score,
+        technical_complexity_score: roadmap.technical_complexity_score,
+        dependencies: roadmap.dependencies,
+        risks: roadmap.risks,
+        success_metrics: roadmap.success_metrics,
+        roadmap_notes: roadmap.roadmap_notes,
+        release_date: roadmap.release_date,
+        estimated_weeks: roadmap.estimated_weeks,
+        assigned_engineer: roadmap.assigned_engineer,
+        last_updated_by: session.user.email,
+        updated_at: new Date().toISOString()
+      }
+    } else {
+      updateData = {
+        ...body,
+        last_updated_by: session.user.email,
+        updated_at: new Date().toISOString()
+      }
     }
 
     const { data, error } = await supabase

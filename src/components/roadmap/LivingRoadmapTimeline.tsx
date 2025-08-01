@@ -174,7 +174,6 @@ export default function LivingRoadmapTimeline({ userEmail, onItemSelect }: Livin
       })
       
       if (response.ok) {
-        const newChannel = await response.json()
         // Refresh data after adding slack channel
         fetchPRDs()
         setEditingSlack(prev => ({ ...prev, [prdId]: false }))
@@ -194,7 +193,6 @@ export default function LivingRoadmapTimeline({ userEmail, onItemSelect }: Livin
       })
       
       if (response.ok) {
-        const newTicket = await response.json()
         // Refresh data after adding jira ticket
         fetchPRDs()
         setEditingJira(prev => ({ ...prev, [prdId]: false }))

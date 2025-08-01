@@ -31,9 +31,13 @@ export async function POST(request: Request) {
     });
 
     // Generate design summary focused on value proposition
-    const completion = await openai.chat.completions.create({
+    let completion;
+    try {
+      completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       response_format: { type: 'json_object' },
+      temperature: 0.7,
+      max_tokens: 1000,
       messages: [
         {
           role: 'system',
@@ -59,42 +63,38 @@ ${prdText}`,
         },
       ],
     });
+    } catch (openaiError) {
+      console.error('OpenAI API error:', openaiError);
+      throw new Error(`OpenAI API failed: ${openaiError instanceof Error ? openaiError.message : 'Unknown error'}`);
+    }
 
     const response = completion.choices[0].message.content;
     if (!response) {
       throw new Error('No response from OpenAI');
     }
 
-    const designData = JSON.parse(response);
+    let designData;
+    try {
+      designData = JSON.parse(response);
+    } catch (parseError) {
+      console.error('Failed to parse OpenAI response:', response);
+      throw new Error(`Failed to parse design data: ${parseError instanceof Error ? parseError.message : 'Invalid JSON'}`);
+    }
+    
+    // Validate the generated data
+    if (!designData.design_prompt) {
+      throw new Error('No design prompt generated from OpenAI response');
+    }
+    
+    if (!designData.design_summary) {
+      console.warn('No design summary generated, using fallback');
+      designData.design_summary = 'Design generated from PRD';
+    }
     
     console.log('Design prompt generated:', {
       designSummary: designData.design_summary?.substring(0, 100) + '...',
-      hasWorkflow: !!designData.primary_workflow
-    });
-
-    // Now call v0 to create the design with the generated prompt
-    console.log('Calling v0 to create design with prompt:', designData.design_prompt?.substring(0, 100) + '...');
-    
-    const v0Response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/v0-chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: designData.design_prompt
-      }),
-    });
-
-    if (!v0Response.ok) {
-      const errorData = await v0Response.json();
-      throw new Error(errorData.error || 'Failed to create v0 design');
-    }
-
-    const v0Result = await v0Response.json();
-    
-    console.log('V0 design created:', {
-      chatId: v0Result.chatId,
-      demoUrl: v0Result.demoUrl ? 'Present' : 'Not available'
+      hasWorkflow: !!designData.primary_workflow,
+      promptLength: designData.design_prompt?.length
     });
 
     return NextResponse.json({
@@ -102,11 +102,7 @@ ${prdText}`,
       designSummary: designData.design_summary,
       primaryWorkflow: designData.primary_workflow,
       designPrompt: designData.design_prompt,
-      pmProfileUsed: !!pmProfile,
-      // v0 response data
-      chatId: v0Result.chatId,
-      chatUrl: v0Result.chatUrl,
-      demoUrl: v0Result.demoUrl
+      pmProfileUsed: !!pmProfile
     });
 
   } catch (error) {

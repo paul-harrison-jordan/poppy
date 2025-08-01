@@ -34,7 +34,15 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<ChatMode>('brainstorm');
+  // Initialize mode from localStorage or default to 'draft' (PRD mode)
+  const [mode, setMode] = useState<ChatMode>('draft');
+  // Handle client-side initialization
+  useEffect(() => {
+    const savedMode = localStorage.getItem('currentChatMode') as ChatMode;
+    if (savedMode && ['chat', 'draft', 'brainstorm', 'agent', 'design', 'feedback'].includes(savedMode)) {
+      setMode(savedMode);
+    }
+  }, []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [pendingSummary, setPendingSummary] = useState<string | null>(null);
   const agenticMessages = usePRDStore((state) => state.agenticMessages);
@@ -54,12 +62,6 @@ export default function ChatInterface() {
   // Initialize component after session and hooks are ready
   useEffect(() => {
     if (status !== 'loading' && knowledgeSession && prdFlow) {
-      // Restore mode from localStorage
-      const savedMode = localStorage.getItem('currentChatMode') as ChatMode;
-      if (savedMode && ['chat', 'draft', 'brainstorm', 'agent', 'design', 'feedback'].includes(savedMode)) {
-        setMode(savedMode);
-      }
-      
       setIsInitialized(true);
     }
   }, [status, knowledgeSession, prdFlow]);
@@ -177,10 +179,10 @@ export default function ChatInterface() {
     try {
       console.log('Loading existing design for feature:', featureId);
       
-      const response = await fetch(`/api/features/${featureId}/design`);
+      const response = await fetch(`/api/roadmap/prd/${featureId}`);
       
       if (response.ok) {
-        const { feature } = await response.json();
+        const feature = await response.json();
         
         if (feature.demoUrl && feature.chatId) {
           console.log('Loading existing design:', {
@@ -292,20 +294,23 @@ export default function ChatInterface() {
       setIsCreatingDesign(true);
       console.log('Creating design with PRD content');
 
-      // Add simple loading message
+      // Add loading message for two-step process
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: (
-          <div className="flex items-center gap-3 py-4">
-            <div className="w-6 h-6 border-2 border-poppy border-t-transparent rounded-full animate-spin" />
-            <span className="text-gray-700">Creating your design...</span>
+          <div className="os-notification p-space-4 flex items-center gap-space-3">
+            <div className="loading-spinner"></div>
+            <div className="flex flex-col">
+              <span className="text-poppy-primary font-medium">Analyzing PRD and generating design prompt...</span>
+              <span className="text-xs text-warm-neutral">Step 1 of 2 • Product OS</span>
+            </div>
           </div>
         )
       }]);
 
 
-      // Call generate-design-prompt which now handles the v0 call
-      const response = await fetch('/api/generate-design-prompt', {
+      // Step 1: Generate design prompt from PRD
+      const promptResponse = await fetch('/api/generate-design-prompt', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -315,11 +320,54 @@ export default function ChatInterface() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate design');
+      if (!promptResponse.ok) {
+        throw new Error('Failed to generate design prompt');
       }
 
-      const result = await response.json();
+      const promptResult = await promptResponse.json();
+      
+      if (!promptResult.success || !promptResult.designPrompt) {
+        throw new Error('No design prompt generated');
+      }
+
+      console.log('Generated design prompt:', {
+        summary: promptResult.designSummary?.substring(0, 100) + '...',
+        promptLength: promptResult.designPrompt?.length
+      });
+
+      // Update loading message for step 2
+      setMessages(prev => prev.map((msg, index) => 
+        index === prev.length - 1 && typeof msg.content === 'object' ? {
+          ...msg,
+          content: (
+            <div className="os-notification p-space-4 flex items-center gap-space-3">
+              <div className="loading-spinner"></div>
+              <div className="flex flex-col">
+                <span className="text-poppy-primary font-medium">Creating design with v0...</span>
+                <span className="text-xs text-warm-neutral">Step 2 of 2 • Product OS</span>
+              </div>
+            </div>
+          )
+        } : msg
+      ));
+
+      // Step 2: Create v0 chat with both design prompt and PRD context
+      const v0Response = await fetch('/api/create-v0-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          designPrompt: promptResult.designPrompt,
+          prdContent: prdContent
+        }),
+      });
+
+      if (!v0Response.ok) {
+        throw new Error('Failed to create design');
+      }
+
+      const result = await v0Response.json();
 
 
       // Remove loading message
@@ -373,13 +421,13 @@ export default function ChatInterface() {
           role: 'assistant',
           content: (
             <div className="flex flex-col items-center gap-3 py-4">
-              <div className="flex items-center gap-2 text-green-600">
-                <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                  <span className="text-sm">✓</span>
+              <div className="flex items-center gap-space-3 text-sprout-success">
+                <div className="w-8 h-8 rounded-full bg-sprout-success-light flex items-center justify-center elevation-sm">
+                  <span className="text-lg">✓</span>
                 </div>
-                <span className="font-medium">Design created successfully!</span>
+                <span className="font-semibold">Design created successfully!</span>
               </div>
-              <p className="text-gray-600 text-center">
+              <p className="text-warm-neutral text-center">
                 Your design is ready above. Describe any changes you&apos;d like to make and I&apos;ll iterate on it for you.
               </p>
             </div>
@@ -849,9 +897,9 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
         setMessages(prev => [...prev, {
           role: 'assistant',
           content: (
-            <div className="flex items-center gap-3 py-4">
-              <div className="w-6 h-6 border-2 border-poppy border-t-transparent rounded-full animate-spin" />
-              <span className="text-gray-700">{v0ChatId ? 'Updating design...' : 'Creating design...'}</span>
+            <div className="os-notification p-space-4 flex items-center gap-space-3">
+              <div className="loading-spinner"></div>
+              <span className="text-poppy-primary font-medium">{v0ChatId ? 'Updating design...' : 'Creating design...'}</span>
             </div>
           )
         }]);
@@ -1164,13 +1212,16 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
     }
   };
 
-  // Show loading state while initializing
+  // Show professional loading state while initializing
   if (!isInitialized) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-poppy border-t-transparent rounded-full animate-spin" />
-          <span className="text-gray-600">Initializing Poppy...</span>
+        <div className="os-panel p-space-8 flex flex-col items-center gap-space-4">
+          <div className="loading-spinner loading-spinner--lg"></div>
+          <div className="text-center">
+            <span className="text-poppy-primary font-semibold">Initializing Product OS</span>
+            <p className="text-warm-neutral text-sm mt-1">Setting up your workspace...</p>
+          </div>
         </div>
       </div>
     );
@@ -1273,14 +1324,14 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
                     {mode === 'draft' && 'Ready to draft your PRD'}
                     {mode === 'brainstorm' && 'Let\'s brainstorm ideas'}
                     {mode === 'chat' && 'Chat with Poppy'}
-                    {mode === 'design' && 'Design Mode'}
+                    {mode === 'design' && 'Design Studio'}
                     {mode === 'feedback' && 'Search Customer Feedback'}
                   </div>
                   <div className="text-sm text-gray-500">
                     {mode === 'draft' && 'Share your product idea, JTBD, and context to get started'}
                     {mode === 'brainstorm' && 'Describe your initial thoughts or questions'}
                     {mode === 'chat' && 'Ask me anything about product management'}
-                    {mode === 'design' && 'Create or iterate on designs'}
+                    {mode === 'design' && 'Create and iterate on your product designs'}
                     {mode === 'feedback' && 'Describe a feature idea or pain point to find relevant customer feedback'}
                   </div>
                 </div>

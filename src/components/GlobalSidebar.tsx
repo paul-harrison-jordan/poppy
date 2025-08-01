@@ -7,13 +7,13 @@ import { signOut } from 'next-auth/react'
 import { 
   MessageSquare, 
   Map, 
-  Grid3X3, 
   Settings,
   RefreshCw,
   BookOpen,
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Users
 } from 'lucide-react'
 
 interface GlobalSidebarProps {
@@ -35,21 +35,24 @@ export default function GlobalSidebar({ isCollapsed = false, onToggleCollapse }:
     {
       path: '/',
       icon: MessageSquare,
-      label: 'Chat',
-      description: 'Create PRDs & brainstorm features'
+      label: 'AI Assistant',
+      description: 'Draft PRDs & brainstorm features',
+      actionable: true
     },
     {
       path: '/roadmap',
       icon: Map,
       label: 'Roadmap',
-      description: 'Plan & prioritize features'
+      description: 'Plan & track feature delivery',
+      actionable: true
     },
     {
-      path: '/features',
-      icon: Grid3X3,
-      label: 'Features',
-      description: 'Browse all features'
-    }
+      path: '/teams',
+      icon: Users,
+      label: 'Teams',
+      description: 'Organize & optimize capacity',
+      actionable: true
+    },
   ]
 
   const settingsNavigationItems = [
@@ -57,19 +60,22 @@ export default function GlobalSidebar({ isCollapsed = false, onToggleCollapse }:
       path: '/instructions',
       icon: Settings,
       label: 'Settings',
-      description: 'Tune Poppy'
+      description: 'Configure AI behavior',
+      actionable: false
     },
     {
       path: '/sync',
       icon: RefreshCw,
-      label: 'Sync Documents',
-      description: 'Connect your docs'
+      label: 'Document Sync',
+      description: 'Connect knowledge sources',
+      actionable: false
     },
     {
       path: '/key-terms',
       icon: BookOpen,
-      label: 'Key Terms',
-      description: 'Define terminology'
+      label: 'Terminology',
+      description: 'Define domain language',
+      actionable: false
     }
   ]
 
@@ -77,36 +83,39 @@ export default function GlobalSidebar({ isCollapsed = false, onToggleCollapse }:
     <motion.div 
       animate={{ width: isCollapsed ? 64 : 256 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="bg-white border-r border-gray-200 flex flex-col shadow-lg fixed left-0 top-0 h-full z-50 overflow-hidden"
+      className="os-header border-r border-border flex flex-col elevation-lg fixed left-0 top-0 h-full z-50 overflow-hidden"
     >
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200 flex-shrink-0">
-        <div className="flex items-center gap-3 mb-4">
+      {/* Professional OS Header */}
+      <div className="p-space-6 border-b border-border flex-shrink-0 bg-poppy-primary-light/30">
+        <div className="flex items-center gap-space-3 mb-space-4">
           <div className="text-2xl flex-shrink-0">🌺</div>
-          {!isCollapsed && <h1 className="text-xl font-bold text-gray-800">Poppy</h1>}
+          {!isCollapsed && <h1 className="text-xl font-bold text-poppy-primary">Poppy</h1>}
         </div>
+        {!isCollapsed && (
+          <p className="text-xs text-poppy-primary font-medium uppercase tracking-wider">Product Management OS</p>
+        )}
         {/* Collapse/Expand Toggle */}
         {onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
-            className="absolute top-4 right-4 p-1 hover:bg-gray-100 rounded-md transition-colors"
-            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="absolute top-space-4 right-space-4 p-2 hover:bg-poppy-primary/10 rounded-lg transition-smooth"
+            title={isCollapsed ? 'Expand OS panel' : 'Collapse OS panel'}
           >
             {isCollapsed ? (
-              <ChevronRight className="w-4 h-4 text-gray-500" />
+              <ChevronRight className="w-4 h-4 text-poppy-primary" />
             ) : (
-              <ChevronLeft className="w-4 h-4 text-gray-500" />
+              <ChevronLeft className="w-4 h-4 text-poppy-primary" />
             )}
           </button>
         )}
       </div>
       
-      {/* Main Navigation */}
-      <nav className="flex-1 px-3 py-6 space-y-6 overflow-y-auto">
-        <div className="space-y-2">
+      {/* Professional OS Navigation */}
+      <nav className="flex-1 px-space-3 py-space-6 space-y-space-6 overflow-y-auto">
+        <div className="space-y-space-2">
           {!isCollapsed && (
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-3">
-              Main
+            <h2 className="text-xs font-semibold text-poppy-primary uppercase tracking-wider mb-space-3 px-space-3">
+              Core Workflows
             </h2>
           )}
           {mainNavigationItems.map((item) => {
@@ -120,11 +129,11 @@ export default function GlobalSidebar({ isCollapsed = false, onToggleCollapse }:
                 key={item.path}
                 onClick={() => handleNavigation(item.path)}
                 className={`
-                  w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3
+                  w-full text-left px-space-4 py-space-3 rounded-xl transition-smooth flex items-center gap-space-3
                   ${isCollapsed ? 'justify-center' : ''}
                   ${isActive 
-                    ? 'bg-poppy/10 text-poppy font-semibold border border-poppy/20' 
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-poppy border border-transparent hover:border-gray-200'
+                    ? 'bg-poppy-primary-light text-poppy-primary font-semibold border border-poppy-primary/20 elevation-sm' 
+                    : 'text-warm-neutral hover:bg-warm-neutral-light hover:text-poppy-primary border border-transparent hover:border-warm-neutral/20'
                   }
                 `}
                 whileHover={{ scale: 1.02 }}
@@ -135,7 +144,7 @@ export default function GlobalSidebar({ isCollapsed = false, onToggleCollapse }:
                 {!isCollapsed && (
                   <div>
                     <div className="font-medium">{item.label}</div>
-                    <div className="text-xs opacity-60">{item.description}</div>
+                    <div className="text-xs opacity-75">{item.description}</div>
                   </div>
                 )}
               </motion.button>
@@ -143,11 +152,11 @@ export default function GlobalSidebar({ isCollapsed = false, onToggleCollapse }:
           })}
         </div>
 
-        {/* Settings Navigation */}
-        <div className="space-y-2">
+        {/* System Configuration */}
+        <div className="space-y-space-2">
           {!isCollapsed && (
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-3">
-              Setup
+            <h2 className="text-xs font-semibold text-warm-neutral uppercase tracking-wider mb-space-3 px-space-3">
+              Configuration
             </h2>
           )}
           {settingsNavigationItems.map((item) => {
@@ -160,11 +169,11 @@ export default function GlobalSidebar({ isCollapsed = false, onToggleCollapse }:
                 key={item.path}
                 onClick={() => handleNavigation(item.path)}
                 className={`
-                  w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3
+                  w-full text-left px-space-4 py-space-3 rounded-xl transition-smooth flex items-center gap-space-3
                   ${isCollapsed ? 'justify-center' : ''}
                   ${isActive 
-                    ? 'bg-poppy/10 text-poppy font-semibold border border-poppy/20' 
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-poppy border border-transparent hover:border-gray-200'
+                    ? 'bg-lavender-secondary-light text-lavender-secondary font-semibold border border-lavender-secondary/20 elevation-sm' 
+                    : 'text-warm-neutral hover:bg-warm-neutral-light hover:text-lavender-secondary border border-transparent hover:border-warm-neutral/20'
                   }
                 `}
                 whileHover={{ scale: 1.02 }}
@@ -175,7 +184,7 @@ export default function GlobalSidebar({ isCollapsed = false, onToggleCollapse }:
                 {!isCollapsed && (
                   <div>
                     <div className="font-medium">{item.label}</div>
-                    <div className="text-xs opacity-60">{item.description}</div>
+                    <div className="text-xs opacity-75">{item.description}</div>
                   </div>
                 )}
               </motion.button>
@@ -184,23 +193,23 @@ export default function GlobalSidebar({ isCollapsed = false, onToggleCollapse }:
         </div>
       </nav>
 
-      {/* Sign Out */}
-      <div className="p-3 border-t border-gray-200 flex-shrink-0">
+      {/* System Logout */}
+      <div className="p-space-3 border-t border-border flex-shrink-0 bg-warm-neutral-light/30">
         <motion.button
           onClick={() => signOut({ callbackUrl: "/" })}
           className={`
-            w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 text-gray-700 hover:bg-gray-50 hover:text-poppy border border-transparent hover:border-gray-200
+            w-full text-left px-space-4 py-space-3 rounded-xl transition-smooth flex items-center gap-space-3 text-warm-neutral hover:bg-destructive/10 hover:text-destructive border border-transparent hover:border-destructive/20
             ${isCollapsed ? 'justify-center' : ''}
           `}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          title={isCollapsed ? 'Sign Out' : undefined}
+          title={isCollapsed ? 'End Session' : undefined}
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {!isCollapsed && (
             <div>
-              <div className="font-medium">Sign Out</div>
-              <div className="text-xs opacity-60">End your session</div>
+              <div className="font-medium">End Session</div>
+              <div className="text-xs opacity-75">Sign out safely</div>
             </div>
           )}
         </motion.button>

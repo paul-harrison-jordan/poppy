@@ -1,893 +1,846 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
-  ArrowLeft,
+  FileText, 
+  Palette, 
+  Layers, 
   ExternalLink,
-  FileText,
-  Palette,
-  MessageSquare,
-  Plus,
-  Share2,
-  Sparkles,
-  Home,
-  Clock,
-  Users,
-  Edit,
-  Save,
-  X,
+  ArrowLeft,
+  Calendar,
+  User,
   CheckCircle2,
-
-  Search,
-  Mail
+  Circle,
+  Loader2,
+  BarChart3,
+  Plus,
+  Edit2,
+  Trash2,
+  Clock
 } from 'lucide-react'
 import Link from 'next/link'
-import SlackChannelsTab from '@/components/roadmap/SlackChannelsTab'
-import JiraTicketsTab from '@/components/roadmap/JiraTicketsTab'
-import EngineerAssignmentModal from '@/components/roadmap/EngineerAssignmentModal'
-import { usePRDDetail, getWeeksToShip } from '@/hooks/useRoadmapData'
 
-interface FeatureDetailProps {
-  featureId: number
-  currentUserEmail: string
+interface Phase {
+  id: number
+  name: string
+  description: string
+  customer_value?: string
+  is_complete?: boolean
+  priority: number
 }
 
-
-
-interface CustomerFeedback {
-  id?: number
-  customer_name: string
-  feedback_text: string
-  feedback_type: 'request' | 'complaint' | 'compliment' | 'suggestion'
+interface Feature {
+  id: number
+  title?: string
+  description?: string
+  'drive-link': string
+  'v0-link': string
+  user: string
+  shipped: boolean
+  created_at?: string
+  roadmap?: {
+    priority_order?: number
+    status?: string
+    target_quarter?: string
+    estimated_effort_points?: number
+    business_value_score?: number
+    technical_complexity_score?: number
+    dependencies?: string[]
+    risks?: string[]
+    success_metrics?: string[]
+    roadmap_notes?: string
+    release_date?: string
+    estimated_weeks?: number
+    assigned_engineer?: string
+  }
 }
 
-interface CustomerMatch {
-  gmv: string
-  klaviyo_account_id: string
-  nps_score_raw: string
-  nps_verbatim: string
-  survey_end_date: string
-  match_score: number
-  row_number: number
-  email?: string
+interface FeatureDetailViewProps {
+  feature: Feature
 }
 
-const statusColors = {
-  planned: 'bg-blue-50 text-blue-800 border-blue-200',
-  in_progress: 'bg-poppy/10 text-poppy border-poppy/30',
-  in_review: 'bg-purple-50 text-purple-800 border-purple-200',
-  shipped: 'bg-sprout/10 text-sprout border-sprout/30',
-  on_hold: 'bg-gray-50 text-gray-800 border-gray-200'
-}
-
-const feedbackTypeColors = {
-  request: 'bg-poppy/5 border-poppy/20',
-  complaint: 'bg-red-50 border-red-200',
-  compliment: 'bg-sprout/10 border-sprout/30',
-  suggestion: 'bg-blue-50 border-blue-200'
-}
-
-export default function FeatureDetailView({ featureId, currentUserEmail }: FeatureDetailProps) {
-  const [showAddFeedback, setShowAddFeedback] = useState(false)
-  const [creatingDesign, setCreatingDesign] = useState(false)
-  const [editingWeeks, setEditingWeeks] = useState(false)
-  const [weeksValue, setWeeksValue] = useState('')
-  const [searchingCustomers, setSearchingCustomers] = useState(false)
-  const [customerMatches, setCustomerMatches] = useState<CustomerMatch[]>([])
-  const [loadingEmail, setLoadingEmail] = useState<string | null>(null)
-  const [newFeedback, setNewFeedback] = useState<CustomerFeedback>({
-    customer_name: '',
-    feedback_text: '',
-    feedback_type: 'request'
+export default function FeatureDetailView({ feature: initialFeature }: FeatureDetailViewProps) {
+  const [feature, setFeature] = useState(initialFeature)
+  const [activeTab, setActiveTab] = useState('prd')
+  const [phases, setPhases] = useState<Phase[]>([])
+  const [loadingPhases, setLoadingPhases] = useState(false)
+  const [decomposing, setDecomposing] = useState(false)
+  const [editingPhase, setEditingPhase] = useState<number | null>(null)
+  const [phaseValues, setPhaseValues] = useState<{ [key: number]: Phase }>({})
+  const [engineers, setEngineers] = useState<Array<{ id: string; name: string; email: string }>>([])
+  const [editingRoadmap, setEditingRoadmap] = useState(false)
+  const [roadmapValues, setRoadmapValues] = useState({
+    release_date: feature.roadmap?.release_date || '',
+    estimated_weeks: feature.roadmap?.estimated_weeks || 0,
+    assigned_engineer: feature.roadmap?.assigned_engineer || 'unassigned'
   })
 
-  // Use shared hook for fetching PRD detail
-  const { prd: feature, loading, refetch: fetchFeatureDetail } = usePRDDetail(featureId)
+  // Calculate overall progress
+  const calculateOverallProgress = () => {
+    let completedSteps = 0
+    const totalSteps = 3 // PRD, Design, Decomposition
+    
+    if (feature['drive-link']) completedSteps++
+    if (feature['v0-link']) completedSteps++
+    if (phases.length > 0) completedSteps++ // Mark as complete when phases are generated
+    
+    return Math.round((completedSteps / totalSteps) * 100)
+  }
 
+  // Calculate status based on engineer assignment and dates
+  const calculateStatus = () => {
+    if (!feature.roadmap?.assigned_engineer || feature.roadmap?.assigned_engineer === 'unassigned') return 'Planning'
+    if (!feature.roadmap?.release_date || !feature.roadmap?.estimated_weeks) return 'Ready'
+    
+    const releaseDate = new Date(feature.roadmap.release_date)
+    const startDate = new Date(releaseDate)
+    startDate.setDate(startDate.getDate() - (feature.roadmap.estimated_weeks * 7))
+    
+    const today = new Date()
+    if (today >= startDate) return 'In Progress'
+    return 'Ready'
+  }
+
+  // Fetch existing phases
   useEffect(() => {
-    if (feature?.roadmap?.weeks_to_ship) {
-      setWeeksValue(feature.roadmap.weeks_to_ship.toString())
+    const fetchPhases = async () => {
+      setLoadingPhases(true)
+      try {
+        const response = await fetch(`/api/roadmap/prd/${feature.id}/phases`)
+        if (response.ok) {
+          const data = await response.json()
+          setPhases(data.phases || [])
+        }
+      } catch (error) {
+        console.error('Error fetching phases:', error)
+      } finally {
+        setLoadingPhases(false)
+      }
     }
-  }, [feature?.roadmap?.weeks_to_ship])
 
-  const handleAddFeedback = async () => {
-    if (!newFeedback.customer_name.trim() || !newFeedback.feedback_text.trim()) return
+    fetchPhases()
+  }, [feature.id])
 
+  // Fetch available engineers
+  useEffect(() => {
+    const fetchEngineers = async () => {
+      try {
+        const response = await fetch('/api/engineers')
+        if (response.ok) {
+          const data = await response.json()
+          setEngineers(data.engineers || [])
+        }
+      } catch (error) {
+        console.error('Error fetching engineers:', error)
+      }
+    }
+
+    fetchEngineers()
+  }, [])
+
+  const handleDecompose = async () => {
+    if (!feature['drive-link']) {
+      alert('Please add a Google Doc link first to decompose the PRD')
+      return
+    }
+
+    setDecomposing(true)
     try {
-      const response = await fetch(`/api/roadmap/prd/${featureId}/feedback`, {
+      // First get the Google Doc content
+      const docResponse = await fetch('/api/get-google-doc-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newFeedback)
+        body: JSON.stringify({ driveLink: feature['drive-link'] })
       })
 
-      if (response.ok) {
-        await fetchFeatureDetail() // Refresh data
-        setNewFeedback({ customer_name: '', feedback_text: '', feedback_type: 'request' })
-        setShowAddFeedback(false)
+      if (!docResponse.ok) {
+        throw new Error('Failed to fetch Google Doc content')
       }
-    } catch (error) {
-      console.error('Error adding feedback:', error)
-    }
-  }
 
-  const handleSearchCustomers = async () => {
-    if (!feature) return
-    
-    setSearchingCustomers(true)
-    try {
-      const response = await fetch(`/api/roadmap/prd/${featureId}/match-customers`, {
+      const { content } = await docResponse.json()
+
+      // Then decompose it
+      const decomposeResponse = await fetch('/api/decompose-prd', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
       })
 
-      if (response.ok) {
-        const result = await response.json()
-        
-        // Add the matches to the customer matches state
-        if (result.matches && result.matches.length > 0) {
-          setCustomerMatches(result.matches)
-        } else {
-          setCustomerMatches([])
-          alert('No relevant customer feedback found for this PRD.')
+      if (!decomposeResponse.ok) {
+        throw new Error('Failed to decompose PRD')
+      }
+
+      const reader = decomposeResponse.body?.getReader()
+      let result = ''
+      
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          result += new TextDecoder().decode(value)
         }
-      } else {
-        const errorData = await response.json()
-        console.error('Failed to search customers:', errorData)
-        alert('Failed to search for customers. Please try again.')
+      }
+
+      // Parse the JSON response and save phases
+      const parsedPhases = JSON.parse(result)
+      
+      // Save phases to database
+      const saveResponse = await fetch(`/api/roadmap/prd/${feature.id}/phases`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phases: parsedPhases })
+      })
+
+      if (saveResponse.ok) {
+        setPhases(parsedPhases)
+        setActiveTab('decomposition')
       }
     } catch (error) {
-      console.error('Error searching customers:', error)
-      alert('An error occurred while searching for customers.')
+      console.error('Error decomposing PRD:', error)
+      alert('Failed to decompose PRD. Please try again.')
     } finally {
-      setSearchingCustomers(false)
+      setDecomposing(false)
     }
   }
 
-  const handleGetEmail = async (customerMatch: CustomerMatch, index: number) => {
-    setLoadingEmail(customerMatch.klaviyo_account_id)
+  const togglePhaseComplete = async (phaseId: number, isComplete: boolean) => {
     try {
-      // Get Google Sheets ID from localStorage
-      const CUSTOMER_SHEET_ID = localStorage.getItem('customer_sheet_id')
-      
-      if (!CUSTOMER_SHEET_ID) {
-        alert('Please configure your Google Sheets ID in Settings first. Go to Instructions/Settings page and add your customer sheet ID.')
-        return
-      }
+      await fetch(`/api/roadmap/prd/${feature.id}/phases/${phaseId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_complete: isComplete })
+      })
 
-      console.log('Customer match data:', customerMatch)
-      console.log('Row number:', customerMatch.row_number)
-      
-      // Use row_number if available, otherwise fallback to index + 2 (assuming header row)
-      const rowNumber = customerMatch.row_number && customerMatch.row_number > 0 
-        ? customerMatch.row_number 
-        : index + 2;
-      
-      const response = await fetch('/api/get-email', {
+      setPhases(phases.map(phase => 
+        phase.id === phaseId ? { ...phase, is_complete: isComplete } : phase
+      ))
+    } catch (error) {
+      console.error('Error updating phase:', error)
+    }
+  }
+
+  const handleSaveNewPhase = async () => {
+    const newPhase = phaseValues[-1]
+    if (!newPhase?.name || !newPhase?.description) {
+      alert('Please provide both name and description for the phase')
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/roadmap/prd/${feature.id}/phases`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          documentId: CUSTOMER_SHEET_ID,
-          rowNumber: rowNumber
+          phases: [{
+            name: newPhase.name,
+            description: newPhase.description,
+            customer_value: newPhase.customer_value || '',
+            priority: phases.length + 1,
+            user_email: feature.user
+          }]
         })
       })
 
       if (response.ok) {
-        const { email } = await response.json()
-        
-        // Update the customer match with email
-        setCustomerMatches(prev => 
-          prev.map((match, i) => 
-            i === index ? { ...match, email } : match
-          )
-        )
-        
-        // Generate and open email draft
-        await generateEmail(customerMatch, email)
-      } else {
-        const errorData = await response.json()
-        console.error('Failed to fetch email:', errorData)
-        alert('Failed to fetch customer email. Please check your Google Sheets configuration.')
+        const data = await response.json()
+        setPhases([...phases, ...data.phases])
+        setEditingPhase(null)
+        setPhaseValues({})
       }
     } catch (error) {
-      console.error('Error fetching email:', error)
-      alert('An error occurred while fetching customer email.')
-    } finally {
-      setLoadingEmail(null)
+      console.error('Error adding phase:', error)
     }
   }
 
-  const generateEmail = async (customerMatch: CustomerMatch, email: string) => {
+  const handleUpdatePhase = async (phaseId: number) => {
+    const updatedPhase = phaseValues[phaseId]
+    if (!updatedPhase) return
+
     try {
-      const emailSubject = `Following up on your feedback about ${feature?.title}`
-      const emailBody = `Hi there,
-
-I hope this email finds you well! I'm reaching out because I noticed you provided some valuable feedback in our recent survey (NPS: ${customerMatch.nps_score_raw}).
-
-You mentioned: "${customerMatch.nps_verbatim}"
-
-I wanted to let you know that we're actively working on improvements in this area with a new feature called "${feature?.title}". Your feedback has been incredibly helpful in shaping our product roadmap.
-
-I'd love to:
-1. Share more details about what we're building
-2. Get your thoughts on our approach
-3. Potentially include you in our beta testing when it's ready
-
-Would you be interested in a brief 15-minute call to discuss this further? I'm happy to work around your schedule.
-
-Thanks for being such a valuable customer and for taking the time to share your feedback with us.
-
-Best regards,
-[Your Name]
-
-P.S. If you have any other thoughts or suggestions, I'm always happy to hear them!`
-
-      // Create Gmail compose URL
-      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`
-      
-      // Open Gmail in new tab
-      window.open(gmailUrl, '_blank')
-      
-    } catch (error) {
-      console.error('Error generating email:', error)
-      alert('An error occurred while generating the email.')
-    }
-  }
-
-  const handleShare = async () => {
-    const url = window.location.href
-    await navigator.clipboard.writeText(url)
-  }
-
-  const handleCreateDesign = async () => {
-    setCreatingDesign(true)
-    try {
-      // First get the PRD content
-      const prdResponse = await fetch(feature!['drive-link'])
-      if (!prdResponse.ok) throw new Error('Could not fetch PRD content')
-      
-      const prdText = await prdResponse.text()
-      
-      // Generate design prompt
-      const designResponse = await fetch('/api/generate-design-prompt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prdText })
-      })
-      
-      if (!designResponse.ok) throw new Error('Failed to generate design prompt')
-      
-      const designData = await designResponse.json()
-      
-      // Create v0 chat with the design prompt
-      const v0Response = await fetch('/api/create-v0-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: designData.designPrompt,
-          apiKey: localStorage.getItem('v0-api-key')
-        })
-      })
-      
-      const v0Data = await v0Response.json()
-      
-      if (!v0Data.success) {
-        // Handle specific error types
-        if (v0Data.timeout) {
-          throw new Error('Design generation timed out. This can happen with complex designs. Please try again with a simpler approach.')
-        } else if (v0Data.invalidApiKey) {
-          throw new Error('Invalid V0 API key. Please check your API key in Settings.')
-        } else {
-          throw new Error(v0Data.error || 'Failed to create design')
-        }
-      }
-      
-      // Open the design in a new tab
-      window.open(v0Data.chat.demo, '_blank')
-      
-    } catch (error) {
-      console.error('Error creating design:', error)
-      
-      // Show more specific error messages
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create design'
-      
-      if (errorMessage.includes('timed out')) {
-        alert('⏱️ Design creation timed out\n\nThis can happen with complex designs. Try:\n• Simplifying your PRD\n• Breaking down the feature into smaller parts\n• Trying again in a few minutes')
-      } else if (errorMessage.includes('API key')) {
-        alert('🔑 Invalid V0 API Key\n\nPlease check your V0 API key in Settings and try again.')
-      } else {
-        alert(`❌ Failed to create design\n\n${errorMessage}\n\nPlease try again or contact support if the issue persists.`)
-      }
-    } finally {
-      setCreatingDesign(false)
-    }
-  }
-
-
-  const handleUpdateWeeks = async () => {
-    const weeks = parseInt(weeksValue)
-    if (isNaN(weeks) || weeks < 0) return
-    
-    try {
-      const response = await fetch(`/api/roadmap/prd/${featureId}`, {
+      const response = await fetch(`/api/roadmap/prd/${feature.id}/phases/${phaseId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ weeks_to_ship: weeks })
+        body: JSON.stringify({
+          name: updatedPhase.name,
+          description: updatedPhase.description,
+          customer_value: updatedPhase.customer_value
+        })
       })
-      
+
       if (response.ok) {
-        await fetchFeatureDetail()
-        setEditingWeeks(false)
+        setPhases(phases.map(phase => 
+          phase.id === phaseId ? updatedPhase : phase
+        ))
+        setEditingPhase(null)
+        setPhaseValues({})
       }
     } catch (error) {
-      console.error('Error updating weeks:', error)
+      console.error('Error updating phase:', error)
     }
   }
 
-  const handleCancelEdit = () => {
-    setWeeksValue(feature?.roadmap?.weeks_to_ship?.toString() || '')
-    setEditingWeeks(false)
+  const handleDeletePhase = async (phaseId: number) => {
+    if (!confirm('Are you sure you want to delete this phase?')) return
+
+    try {
+      const response = await fetch(`/api/roadmap/prd/${feature.id}/phases/${phaseId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        setPhases(phases.filter(phase => phase.id !== phaseId))
+      }
+    } catch (error) {
+      console.error('Error deleting phase:', error)
+    }
   }
 
+  const handleSaveRoadmapDetails = async () => {
+    try {
+      const response = await fetch(`/api/roadmap/prd/${feature.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roadmap: {
+            ...feature.roadmap,
+            ...roadmapValues,
+            assigned_engineer: roadmapValues.assigned_engineer === 'unassigned' ? null : roadmapValues.assigned_engineer,
+            status: calculateStatus()
+          }
+        })
+      })
 
-  // Check if current user can edit this feature
-  const canEdit = feature?.user === currentUserEmail
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-neutral/80 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-poppy"></div>
-      </div>
-    )
-  }
-
-  if (!feature) {
-    return (
-      <div className="min-h-screen bg-neutral/80 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-primary mb-4">Feature not found</h1>
-          <div className="flex gap-3">
-            <Link href="/">
-              <Button variant="outline" className="border-gray-300 hover:border-poppy/30">
-                <Home className="w-4 h-4 mr-2" />
-                Back to Home
-              </Button>
-            </Link>
-            <Link href="/roadmap">
-              <Button className="bg-poppy hover:bg-poppy/90 text-white">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Roadmap
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    )
+      if (response.ok) {
+        const updatedFeature = await response.json()
+        setFeature(updatedFeature)
+        setEditingRoadmap(false)
+      }
+    } catch (error) {
+      console.error('Error updating roadmap details:', error)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-neutral/80">
-      {/* Compact Navigation Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <div className="text-xl">🌺</div>
-                <h1 className="text-lg font-bold text-gray-800">Poppy</h1>
+    <div className="min-h-screen bg-gradient-to-b from-poppy-primary-light/5 to-white">
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Enhanced Header as Command Center */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start gap-4">
+              <Link href="/roadmap">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Roadmap
+                </Button>
               </Link>
-              <div className="flex items-center gap-1 text-sm text-gray-500">
-                <span>/</span>
-                <Link href="/roadmap" className="text-poppy hover:text-poppy/80 transition-colors font-medium">
-                  Roadmap
-                </Link>
-                <span>/</span>
-                <span className="text-gray-700 font-medium">Feature</span>
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-poppy-primary mb-2">
+                  {feature.title || `Feature #${feature.id}`}
+                </h1>
+                {feature.description && (
+                  <p className="text-warm-neutral text-lg">{feature.description}</p>
+                )}
               </div>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleShare}
-                className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 text-gray-700 hover:bg-gray-50 hover:text-poppy"
+            <div className="flex items-center gap-3">
+              <Badge 
+                variant={feature.shipped ? "default" : "secondary"}
+                className={feature.shipped ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}
               >
-                <Share2 className="w-4 h-4" />
-                <span>Share</span>
-              </button>
-              <Link href="/roadmap">
-                <button className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 bg-poppy/10 text-poppy font-medium border border-poppy/20 hover:bg-poppy/20">
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
-                </button>
-              </Link>
+                {feature.shipped ? "Shipped" : "In Progress"}
+              </Badge>
+              <Button variant="outline">
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Request Sign-off
+              </Button>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        
-        {/* Compact Feature Header */}
-        <div className="mb-6">
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex-1 min-w-0 mr-4">
-              <h1 className="text-2xl font-bold text-poppy mb-2 tracking-tight">
-                {feature.title || `Feature #${feature.id}`}
-              </h1>
-              {feature.description && (
-                <p className="text-sm text-primary/80 leading-relaxed line-clamp-2">
-                  {feature.description}
+          {/* Progress Overview */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Feature Details</h3>
+            {editingRoadmap ? (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditingRoadmap(false)
+                    setRoadmapValues({
+                      release_date: feature.roadmap?.release_date || '',
+                      estimated_weeks: feature.roadmap?.estimated_weeks || 0,
+                      assigned_engineer: feature.roadmap?.assigned_engineer || 'unassigned'
+                    })
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSaveRoadmapDetails}
+                >
+                  Save Changes
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEditingRoadmap(true)}
+              >
+                <Edit2 className="w-4 h-4 mr-2" />
+                Edit Details
+              </Button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <User className="w-4 h-4 text-warm-neutral" />
+                <span className="text-sm text-warm-neutral">Owner</span>
+              </div>
+              <p className="font-semibold text-gray-900">{feature.user?.split('@')[0] || 'Unknown'}</p>
+            </div>
+            
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Calendar className="w-4 h-4 text-warm-neutral" />
+                <span className="text-sm text-warm-neutral">Release Date</span>
+              </div>
+              {editingRoadmap ? (
+                <Input
+                  type="date"
+                  value={roadmapValues.release_date}
+                  onChange={(e) => setRoadmapValues({ ...roadmapValues, release_date: e.target.value })}
+                  className="mt-1"
+                />
+              ) : (
+                <p className="font-semibold text-gray-900">
+                  {feature.roadmap?.release_date 
+                    ? new Date(feature.roadmap.release_date).toLocaleDateString()
+                    : 'Not set'}
                 </p>
               )}
             </div>
-            
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Badge className={statusColors[feature.roadmap?.status as keyof typeof statusColors] || statusColors.planned}>
-                {feature.roadmap?.status || 'Planned'}
-              </Badge>
-              
-              {canEdit && editingWeeks ? (
-                <div className="flex items-center gap-1">
-                  <Input
-                    type="number"
-                    value={weeksValue}
-                    onChange={(e) => setWeeksValue(e.target.value)}
-                    className="w-16 h-7 text-xs"
-                    placeholder="0"
-                    min="0"
-                  />
-                  <button 
-                    onClick={handleUpdateWeeks}
-                    className="h-7 px-2 rounded bg-poppy/10 text-poppy border border-poppy/20 hover:bg-poppy/20"
-                  >
-                    <Save className="w-3 h-3" />
-                  </button>
-                  <button 
-                    onClick={handleCancelEdit}
-                    className="h-7 px-2 rounded border border-gray-200 text-gray-600 hover:bg-gray-50"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
+
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Clock className="w-4 h-4 text-warm-neutral" />
+                <span className="text-sm text-warm-neutral">Estimated Weeks</span>
+              </div>
+              {editingRoadmap ? (
+                <Input
+                  type="number"
+                  value={roadmapValues.estimated_weeks}
+                  onChange={(e) => setRoadmapValues({ ...roadmapValues, estimated_weeks: parseInt(e.target.value) || 0 })}
+                  className="mt-1"
+                  min="1"
+                  max="52"
+                />
               ) : (
-                <div className="flex items-center gap-1">
-                  <Badge 
-                    variant="outline" 
-                    className={`text-xs border-poppy/30 text-poppy bg-poppy/5 ${canEdit ? 'cursor-pointer' : ''}`} 
-                    onClick={canEdit ? () => setEditingWeeks(true) : undefined}
-                  >
-                    <Clock className="w-3 h-3 mr-1" />
-                    {feature ? getWeeksToShip(feature) || 'Set' : 'Set'}w
-                  </Badge>
-                  {canEdit && (
-                    <button 
-                      onClick={() => setEditingWeeks(true)}
-                      className="h-6 w-6 p-0 rounded hover:bg-gray-100"
-                    >
-                      <Edit className="w-3 h-3 text-gray-500" />
-                    </button>
-                  )}
-                </div>
+                <p className="font-semibold text-gray-900">
+                  {feature.roadmap?.estimated_weeks || 0} weeks
+                </p>
               )}
             </div>
-          </div>
-          
-          <div className="flex items-center gap-2 text-xs text-primary/60">
-            <Users className="w-3 h-3" />
-            <span>Owned by {feature.user.split('@')[0]}</span>
-            {canEdit && (
-              <Badge variant="outline" className="text-xs bg-green-50 border-green-200 text-green-700">
-                You can edit
-              </Badge>
-            )}
-          </div>
-        </div>
 
-        {/* Dashboard Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Left Column - Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            
-            {/* Development Status - Compact for editors */}
-            {canEdit && (
-              <Card className="p-4 bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-600" />
-                    Development Status
-                  </h3>
-                </div>
-                <div className="p-3 border rounded-lg bg-gray-50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-3 h-3 rounded-full ${
-                      feature?.roadmap?.status === 'shipped' ? 'bg-green-500' :
-                      feature?.roadmap?.status === 'in_progress' ? 'bg-blue-500' :
-                      feature?.roadmap?.status === 'in_review' ? 'bg-purple-500' :
-                      'bg-gray-400'
-                    }`}></div>
-                    <span className="text-sm font-medium text-primary capitalize">
-                      {feature?.roadmap?.status?.replace('_', ' ') || 'Planned'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600">
-                    {feature?.roadmap?.status === 'shipped' ? 'Feature is live for all users' :
-                     feature?.roadmap?.status === 'in_review' ? 'Feature is being tested' :
-                     feature?.roadmap?.status === 'in_progress' ? 'Development in progress' :
-                     'Planning phase'}
-                  </p>
-                </div>
-              </Card>
-            )}
-
-            {/* PRD & Design Resources - Compact */}
-            <Card className="p-4 bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-blue-600" />
-                  Resources
-                </h3>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <User className="w-4 h-4 text-warm-neutral" />
+                <span className="text-sm text-warm-neutral">Assigned Engineer</span>
               </div>
-              <div className="grid grid-cols-1 gap-3">
-                <a
-                  href={feature['drive-link']}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:shadow-md hover:border-blue-300 transition-all group bg-white/70"
+              {editingRoadmap ? (
+                <Select
+                  value={roadmapValues.assigned_engineer}
+                  onValueChange={(value) => setRoadmapValues({ ...roadmapValues, assigned_engineer: value })}
                 >
-                  <div className="p-2 bg-blue-50 rounded border border-blue-200">
-                    <FileText className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm text-primary group-hover:text-blue-600">PRD Document</h4>
-                    <p className="text-xs text-gray-600 truncate">Requirements and specifications</p>
-                  </div>
-                  <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-blue-600" />
-                </a>
-
-                {feature['v0-link'] ? (
-                  <a
-                    href={feature['v0-link']}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:shadow-md hover:border-green-300 transition-all group bg-white/70"
-                  >
-                    <div className="p-2 bg-green-50 rounded border border-green-200">
-                      <Palette className="w-4 h-4 text-green-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm text-primary group-hover:text-green-600">Design Mockups</h4>
-                      <p className="text-xs text-gray-600 truncate">Interactive prototypes</p>
-                    </div>
-                    <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-green-600" />
-                  </a>
-                ) : (
-                  <button
-                    onClick={handleCreateDesign}
-                    disabled={creatingDesign}
-                    className="flex items-center gap-3 p-3 border border-poppy/30 rounded-lg hover:shadow-md hover:bg-poppy/5 transition-all group bg-poppy/5 disabled:opacity-50"
-                  >
-                    {creatingDesign ? (
-                      <div className="w-6 h-6 animate-spin rounded-full border-2 border-poppy border-t-transparent" />
-                    ) : (
-                      <div className="p-2 bg-poppy/10 rounded border border-poppy/30">
-                        <Sparkles className="w-4 h-4 text-poppy" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0 text-left">
-                      <h4 className="font-medium text-sm text-primary group-hover:text-poppy">
-                        {creatingDesign ? 'Creating...' : 'Create Design'}
-                      </h4>
-                      <p className="text-xs text-gray-600 truncate">
-                        {creatingDesign ? 'Generating designs' : 'AI-generated from PRD'}
-                      </p>
-                    </div>
-                  </button>
-                )}
-              </div>
-            </Card>
-
-            {/* Engineering Management - Only for owners */}
-            {canEdit && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Engineer Assignment */}
-                <Card className="p-4 bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
-                  <div className="mb-3">
-                    <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
-                      <Users className="w-4 h-4 text-green-600" />
-                      Engineering Team
-                    </h3>
-                  </div>
-                  <div className="space-y-3">
-                    <EngineerAssignmentModal
-                      prdId={feature.id}
-                      prdTitle={feature.title || `Feature #${feature.id}`}
-                      onAssignmentsChange={fetchFeatureDetail}
-                      trigger={
-                        <button className="w-full flex items-center gap-2 p-3 border border-green-200 rounded-lg hover:shadow-md hover:bg-green-50 transition-all bg-green-50/50">
-                          <Users className="w-4 h-4 text-green-600" />
-                          <span className="text-sm font-medium text-green-800">Manage Engineers</span>
-                        </button>
-                      }
-                    />
-                    
-                    {/* Weeks Estimation */}
-                    <div className="p-3 border border-gray-200 rounded-lg bg-gray-50/50">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Estimated Duration</span>
-                        {editingWeeks ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              step="0.5"
-                              min="0.5"
-                              value={weeksValue}
-                              onChange={(e) => setWeeksValue(e.target.value)}
-                              className="w-16 px-2 py-1 text-sm border border-poppy rounded focus:outline-none focus:ring-1 focus:ring-poppy"
-                              placeholder="0"
-                            />
-                            <span className="text-sm text-gray-600">weeks</span>
-                            <button
-                              onClick={handleUpdateWeeks}
-                              className="p-1 text-green-600 hover:text-green-800"
-                            >
-                              <Save className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={handleCancelEdit}
-                              className="p-1 text-gray-600 hover:text-gray-800"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setEditingWeeks(true)}
-                            className="flex items-center gap-1 text-sm text-poppy hover:text-poppy/80"
-                          >
-                            <Clock className="w-4 h-4" />
-                            <span>{feature ? getWeeksToShip(feature) || 'Set' : 'Set'} weeks</span>
-                            <Edit className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Engineering Tools */}
-                <Card className="p-4 bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
-                  <div className="mb-3">
-                    <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-blue-600" />
-                      Tools & Communication
-                    </h3>
-                  </div>
-                  <div className="space-y-3">
-                    {/* Slack Channels */}
-                    <div className="max-h-24 overflow-y-auto">
-                      <SlackChannelsTab 
-                        prd={feature} 
-                        userEmail={feature.user} 
-                        onUpdate={fetchFeatureDetail}
-                      />
-                    </div>
-                    
-                    {/* Jira Tickets */}
-                    <div className="max-h-24 overflow-y-auto">
-                      <JiraTicketsTab 
-                        prd={feature} 
-                        userEmail={feature.user} 
-                        onUpdate={fetchFeatureDetail}
-                      />
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            )}
-          </div>
-
-          {/* Right Column - Feedback & Comments */}
-          <div className="space-y-6">
-            
-            {/* Customer Feedback Section - Compact */}
-            <Card className="p-4 bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-blue-600" />
-                  Customer Feedback
-                </h3>
-              </div>
-              
-              <div className="space-y-3 mb-4">
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSearchCustomers}
-                    disabled={searchingCustomers}
-                    className="flex-1 px-3 py-2 rounded-lg text-xs flex items-center justify-center gap-1 bg-blue-50 text-blue-600 font-medium border border-blue-200 hover:bg-blue-100 disabled:opacity-50"
-                  >
-                    <Search className={`w-3 h-3 ${searchingCustomers ? 'animate-spin' : ''}`} />
-                    <span>{searchingCustomers ? 'Searching...' : 'Find'}</span>
-                  </button>
-                  <button
-                    onClick={() => setShowAddFeedback(true)}
-                    className="flex-1 px-3 py-2 rounded-lg text-xs flex items-center justify-center gap-1 bg-poppy/10 text-poppy font-medium border border-poppy/20 hover:bg-poppy/20"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Add</span>
-                  </button>
-                </div>
-              </div>
-
-              {showAddFeedback && (
-                <div className="mb-4 p-3 border border-poppy/20 rounded-lg bg-poppy/5">
-                  <div className="space-y-3">
-                    <div>
-                      <Input
-                        value={newFeedback.customer_name}
-                        onChange={(e) => setNewFeedback({...newFeedback, customer_name: e.target.value})}
-                        placeholder="Customer name"
-                        className="text-xs"
-                      />
-                    </div>
-                    <div>
-                      <select
-                        value={newFeedback.feedback_type}
-                        onChange={(e) => setNewFeedback({...newFeedback, feedback_type: e.target.value as CustomerFeedback['feedback_type']})}
-                        className="w-full p-2 border border-gray-300 rounded text-xs"
-                      >
-                        <option value="request">Request</option>
-                        <option value="complaint">Complaint</option>
-                        <option value="compliment">Compliment</option>
-                        <option value="suggestion">Suggestion</option>
-                      </select>
-                    </div>
-                    <div>
-                      <Textarea
-                        value={newFeedback.feedback_text}
-                        onChange={(e) => setNewFeedback({...newFeedback, feedback_text: e.target.value})}
-                        placeholder="What did the customer say?"
-                        rows={2}
-                        className="text-xs"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={handleAddFeedback} size="sm" className="bg-poppy hover:bg-poppy/90 text-white text-xs">
-                        Add
-                      </Button>
-                      <Button 
-                        onClick={() => setShowAddFeedback(false)} 
-                        variant="outline" 
-                        size="sm"
-                        className="text-xs"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select engineer..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {engineers.map((engineer) => (
+                      <SelectItem key={engineer.id} value={engineer.email}>
+                        {engineer.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="font-semibold text-gray-900">
+                  {feature.roadmap?.assigned_engineer && feature.roadmap?.assigned_engineer !== 'unassigned' 
+                    ? engineers.find(e => e.email === feature.roadmap?.assigned_engineer)?.name || 'Unassigned'
+                    : 'Unassigned'
+                  }
+                </p>
               )}
+            </div>
 
-              <div className="space-y-3 max-h-80 overflow-y-auto">
-                {/* AI-matched customer feedback */}
-                {customerMatches.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-medium text-gray-700 flex items-center gap-1">
-                      <Search className="w-3 h-3 text-blue-600" />
-                      AI Matches ({customerMatches.length})
-                    </h4>
-                    {customerMatches.map((match, index) => (
-                      <div key={`match-${index}`} className="p-3 rounded-lg border border-blue-200 bg-blue-50/50">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-medium text-primary truncate">
-                                Customer {match.klaviyo_account_id}
-                              </span>
-                              <Badge variant="outline" className="text-xs border-gray-300 bg-white">
-                                NPS: {match.nps_score_raw}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-primary/80 leading-relaxed line-clamp-2">{match.nps_verbatim}</p>
-                          </div>
-                          <button
-                            onClick={() => handleGetEmail(match, index)}
-                            disabled={loadingEmail === match.klaviyo_account_id}
-                            className="ml-2 px-2 py-1 rounded text-xs bg-poppy/10 text-poppy border border-poppy/20 hover:bg-poppy/20 disabled:opacity-50"
-                          >
-                            {loadingEmail === match.klaviyo_account_id ? (
-                              <div className="w-3 h-3 animate-spin rounded-full border border-poppy border-t-transparent" />
-                            ) : (
-                              <Mail className="w-3 h-3" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Manual customer feedback */}
-                {feature.customer_feedback && feature.customer_feedback.length > 0 && (
-                  <div className="space-y-2">
-                    {customerMatches.length > 0 && (
-                      <h4 className="text-xs font-medium text-gray-700 flex items-center gap-1">
-                        <MessageSquare className="w-3 h-3 text-gray-600" />
-                        Manual Feedback
-                      </h4>
-                    )}
-                    {feature.customer_feedback.map((feedback) => (
-                      <div key={feedback.id} className={`p-3 rounded-lg border ${feedbackTypeColors[feedback.feedback_type as keyof typeof feedbackTypeColors]}`}>
-                        <div className="flex items-start justify-between mb-1">
-                          <span className="text-xs font-medium text-primary">{feedback.customer_name}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {feedback.feedback_type}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-primary/80 line-clamp-2">{feedback.feedback_text}</p>
-                        <span className="text-xs text-gray-500 mt-1 block">
-                          {new Date(feedback.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Empty state */}
-                {(!feature.customer_feedback || feature.customer_feedback.length === 0) && customerMatches.length === 0 && (
-                  <div className="text-center py-6 text-gray-500">
-                    <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-xs text-gray-600">No feedback yet</p>
-                    <p className="text-xs text-gray-400">Use buttons above to add</p>
-                  </div>
-                )}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Layers className="w-4 h-4 text-warm-neutral" />
+                <span className="text-sm text-warm-neutral">Status</span>
               </div>
-            </Card>
+              <p className="font-semibold text-gray-900">
+                <Badge variant={calculateStatus() === 'In Progress' ? 'default' : 'secondary'}>
+                  {calculateStatus()}
+                </Badge>
+              </p>
+            </div>
 
-            {/* Team Comments - Compact */}
-            <Card className="p-4 bg-white/90 backdrop-blur-sm border-gray-100 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-poppy" />
-                  Team Comments
-                </h3>
-                <button className="px-2 py-1 rounded text-xs bg-poppy/10 text-poppy font-medium border border-poppy/20 hover:bg-poppy/20">
-                  <Plus className="w-3 h-3" />
-                </button>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <BarChart3 className="w-4 h-4 text-warm-neutral" />
+                <span className="text-sm text-warm-neutral">Progress</span>
               </div>
-              
-              <div className="space-y-3">
-                <div className="p-3 border border-gray-200 rounded-lg bg-gray-50">
-                  <Textarea
-                    placeholder="Add a comment..."
-                    rows={2}
-                    className="text-xs border-gray-300 bg-white"
-                  />
-                  <div className="mt-2 flex justify-end">
-                    <button className="px-3 py-1 rounded text-xs bg-poppy/10 text-poppy font-medium border border-poppy/20 hover:bg-poppy/20">
-                      Post
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {/* TODO: Implement real team comments system */}
-                  <div className="text-center py-6 text-gray-500">
-                    <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-xs text-gray-600">No comments yet</p>
-                    <p className="text-xs text-gray-400">Start the conversation</p>
-                  </div>
-                </div>
-              </div>
-            </Card>
+              <p className="font-semibold text-gray-900">
+                {calculateOverallProgress()}%
+              </p>
+            </div>
           </div>
         </div>
+
+        {/* Tabs - Command Center Interface */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 bg-white border shadow-sm">
+            <TabsTrigger 
+              value="prd" 
+              className="flex items-center gap-2 data-[state=active]:bg-poppy-primary data-[state=active]:text-white"
+            >
+              <FileText className="w-4 h-4" />
+              PRD Document
+              {feature['drive-link'] && <CheckCircle2 className="w-3 h-3 ml-1" />}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="design" 
+              className="flex items-center gap-2 data-[state=active]:bg-poppy-primary data-[state=active]:text-white"
+            >
+              <Palette className="w-4 h-4" />
+              Design Mockups
+              {feature['v0-link'] && <CheckCircle2 className="w-3 h-3 ml-1" />}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="decomposition" 
+              className="flex items-center gap-2 data-[state=active]:bg-poppy-primary data-[state=active]:text-white"
+            >
+              <Layers className="w-4 h-4" />
+              Release Phases
+              {phases.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{phases.length}</Badge>}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* PRD Tab */}
+          <TabsContent value="prd" className="space-y-4">
+            <Card className="border-0 shadow-lg">
+              <CardHeader className="bg-gray-50 border-b">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-poppy-primary" />
+                    Product Requirements Document
+                  </div>
+                  {feature['drive-link'] && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={feature['drive-link']} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Open in Google Docs
+                      </a>
+                    </Button>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {feature['drive-link'] ? (
+                  <div className="w-full h-[700px] bg-gray-50">
+                    <iframe
+                      src={`https://docs.google.com/document/d/${feature['drive-link'].match(/\/d\/([a-zA-Z0-9-_]+)/)?.[1]}/preview`}
+                      className="w-full h-full"
+                      title="PRD Document"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-24 bg-gray-50">
+                    <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <p className="text-gray-600 mb-2">No PRD document linked yet</p>
+                    <p className="text-sm text-gray-500">Add a Google Doc link to get started</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Design Tab */}
+          <TabsContent value="design" className="space-y-4">
+            <Card className="border-0 shadow-lg">
+              <CardHeader className="bg-gray-50 border-b">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Palette className="w-5 h-5 text-poppy-primary" />
+                    Design Mockups
+                  </div>
+                  {feature['v0-link'] && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={feature['v0-link']} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Open in V0
+                      </a>
+                    </Button>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {feature['v0-link'] ? (
+                  <div className="w-full h-[700px] bg-gray-50">
+                    <iframe
+                      src={feature['v0-link']}
+                      className="w-full h-full"
+                      title="Design Mockup"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-24 bg-gray-50">
+                    <Palette className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <p className="text-gray-600 mb-2">No design mockup linked yet</p>
+                    <p className="text-sm text-gray-500">Add a V0 link to showcase your designs</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Decomposition Tab */}
+          <TabsContent value="decomposition" className="space-y-4">
+            <Card className="border-0 shadow-lg">
+              <CardHeader className="bg-gray-50 border-b">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-poppy-primary" />
+                    Release Phases
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditingPhase(-1)}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Phase
+                    </Button>
+                    <Button 
+                      onClick={handleDecompose} 
+                      disabled={decomposing || !feature['drive-link']}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {decomposing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Decomposing...
+                        </>
+                      ) : (
+                        <>
+                          <Layers className="w-4 h-4 mr-2" />
+                          {phases.length > 0 ? 'Re-decompose' : 'Decompose PRD'}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {loadingPhases ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                    <span>Loading phases...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Add new phase form */}
+                    {editingPhase === -1 && (
+                      <Card className="border-2 border-dashed border-poppy-primary bg-poppy-primary-light/10">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <input
+                              type="text"
+                              placeholder="Phase name"
+                              className="w-full px-3 py-2 border rounded-md"
+                              value={phaseValues[-1]?.name || ''}
+                              onChange={(e) => setPhaseValues({
+                                ...phaseValues,
+                                [-1]: { ...phaseValues[-1], name: e.target.value, id: -1, priority: phases.length + 1 }
+                              })}
+                            />
+                            <textarea
+                              placeholder="Phase description"
+                              className="w-full px-3 py-2 border rounded-md"
+                              rows={2}
+                              value={phaseValues[-1]?.description || ''}
+                              onChange={(e) => setPhaseValues({
+                                ...phaseValues,
+                                [-1]: { ...phaseValues[-1], description: e.target.value }
+                              })}
+                            />
+                            <textarea
+                              placeholder="Customer value (optional)"
+                              className="w-full px-3 py-2 border rounded-md"
+                              rows={2}
+                              value={phaseValues[-1]?.customer_value || ''}
+                              onChange={(e) => setPhaseValues({
+                                ...phaseValues,
+                                [-1]: { ...phaseValues[-1], customer_value: e.target.value }
+                              })}
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingPhase(null)
+                                  setPhaseValues({})
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleSaveNewPhase()}
+                              >
+                                Save Phase
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Existing phases */}
+                    {phases.map((phase) => (
+                      <Card key={phase.id} className="border-l-4 border-l-poppy-primary hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
+                          {editingPhase === phase.id ? (
+                            <div className="space-y-3">
+                              <input
+                                type="text"
+                                className="w-full px-3 py-2 border rounded-md font-semibold"
+                                value={phaseValues[phase.id]?.name || phase.name}
+                                onChange={(e) => setPhaseValues({
+                                  ...phaseValues,
+                                  [phase.id]: { ...phase, ...phaseValues[phase.id], name: e.target.value }
+                                })}
+                              />
+                              <textarea
+                                className="w-full px-3 py-2 border rounded-md"
+                                rows={2}
+                                value={phaseValues[phase.id]?.description || phase.description}
+                                onChange={(e) => setPhaseValues({
+                                  ...phaseValues,
+                                  [phase.id]: { ...phase, ...phaseValues[phase.id], description: e.target.value }
+                                })}
+                              />
+                              <textarea
+                                placeholder="Customer value (optional)"
+                                className="w-full px-3 py-2 border rounded-md"
+                                rows={2}
+                                value={phaseValues[phase.id]?.customer_value || phase.customer_value || ''}
+                                onChange={(e) => setPhaseValues({
+                                  ...phaseValues,
+                                  [phase.id]: { ...phase, ...phaseValues[phase.id], customer_value: e.target.value }
+                                })}
+                              />
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingPhase(null)
+                                    setPhaseValues({})
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleUpdatePhase(phase.id)}
+                                >
+                                  Save Changes
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <button
+                                    onClick={() => togglePhaseComplete(phase.id, !phase.is_complete)}
+                                    className="text-warm-neutral hover:text-poppy-primary transition-colors"
+                                  >
+                                    {phase.is_complete ? (
+                                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                                    ) : (
+                                      <Circle className="w-5 h-5" />
+                                    )}
+                                  </button>
+                                  <h3 className="font-semibold text-lg">{phase.name}</h3>
+                                  <Badge variant="outline">Phase {phase.priority}</Badge>
+                                </div>
+                                <p className="text-warm-neutral mb-3">{phase.description}</p>
+                                {phase.customer_value && (
+                                  <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                                    <p className="text-sm font-medium text-green-800 mb-1">Customer Value</p>
+                                    <p className="text-sm text-green-700">{phase.customer_value}</p>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 ml-4">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingPhase(phase.id)
+                                    setPhaseValues({ [phase.id]: phase })
+                                  }}
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDeletePhase(phase.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+
+                    {/* Empty state */}
+                    {phases.length === 0 && editingPhase !== -1 && (
+                      <div className="text-center py-24 bg-gray-50 rounded-lg">
+                        <Layers className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                        <p className="text-gray-600 mb-2">No decomposition phases yet</p>
+                        <p className="text-sm text-gray-500 mb-4">
+                          {feature['drive-link'] 
+                            ? 'Click "Decompose PRD" to break down your feature into release phases'
+                            : 'Add a Google Doc link first to enable PRD decomposition'
+                          }
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )
-} 
+}

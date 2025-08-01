@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Settings, RefreshCw, CheckCircle } from "lucide-react"
+import { Settings, RefreshCw } from "lucide-react"
 import GlobalSidebar from './GlobalSidebar'
 import { cn } from "@/lib/utils"
 import { determineCategory, analyzeSummary } from '@/lib/prdCategorization'
@@ -196,13 +196,13 @@ export default function GlobalLayout({ children }: { children: React.ReactNode }
   const isDocsSynced = steps[1].complete
 
   // Height of the banner (adjust if you change banner padding/margin)
-  const bannerHeight = (!isHome && (!isPersonalContextComplete || !isDocsSynced)) || (!isHome && isPersonalContextComplete && isDocsSynced) ? 112 : 0
+  const bannerHeight = (!isHome && (!isPersonalContextComplete || !isDocsSynced)) ? 112 : 0
   const sidebarWidth = isSidebarCollapsed ? 64 : 256
 
   return (
     <div className={cn(
-      "min-h-screen w-full flex",
-      isHome ? "bg-gradient-to-br from-[#FFFAF3] to-white" : "bg-neutral/80"
+      "min-h-screen w-full flex transition-smooth",
+      isHome ? "bg-gradient-to-br from-cream to-white" : "bg-warm-neutral-light"
     )}>
       {/* Global Sidebar - completely hidden in design mode */}
       {!isDesignMode && (
@@ -217,56 +217,46 @@ export default function GlobalLayout({ children }: { children: React.ReactNode }
         className="flex-1 flex flex-col transition-all duration-300"
         style={{ marginLeft: isDesignMode ? '0px' : `${sidebarWidth}px` }}
       >
-        {/* Fixed onboarding banner at the top - hidden in design mode */}
+        {/* Professional OS onboarding banner - hidden in design mode */}
         {!isHome && !isDesignMode && (!isPersonalContextComplete || !isDocsSynced) && (
           <div 
-            className="fixed top-0 right-0 px-0 py-5 bg-white/90 border-b border-poppy/20 shadow z-40 flex flex-col items-center transition-all duration-300"
+            className="fixed top-0 right-0 px-0 py-space-6 os-header border-b border-poppy-primary/20 elevation-md z-40 flex flex-col items-center transition-smooth"
             style={{ left: `${sidebarWidth}px` }}
           >
             <div className="w-full max-w-2xl mx-auto">
-              <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-                <div className="bg-poppy h-2 rounded-full transition-all" style={{ width: `${(completedCount / totalCount) * 100}%` }} />
+              <div className="progress-bar mb-space-4">
+                <div className="progress-bar__fill" style={{ width: `${(completedCount / totalCount) * 100}%` }} />
               </div>
-              <div className="flex flex-col gap-4 w-full">
+              <div className="flex flex-col gap-space-4 w-full">
                 {!isPersonalContextComplete && (
-                  <div className="flex items-center gap-4">
-                    <Settings className="w-6 h-6 text-poppy" />
-                    <div className="flex-1">
-                      <div className="font-semibold text-poppy">Add your personal context</div>
-                      <div className="text-xs text-gray-500">Help Poppy understand your product and team.</div>
+                  <div className="flex items-center gap-space-4">
+                    <div className="p-space-3 bg-poppy-primary-light rounded-xl">
+                      <Settings className="w-6 h-6 text-poppy-primary" />
                     </div>
-                    <Link href="/instructions" className="px-4 py-2 rounded-full bg-poppy text-white font-semibold hover:bg-poppy/90 transition-colors text-sm shadow">
-                      Get Started
+                    <div className="flex-1">
+                      <div className="font-semibold text-poppy-primary">Configure Personal Context</div>
+                      <div className="text-xs text-warm-neutral">Help Poppy understand your product strategy and team dynamics.</div>
+                    </div>
+                    <Link href="/instructions" className="px-space-4 py-space-2 rounded-xl bg-gradient-to-r from-poppy-primary to-poppy-primary/90 text-poppy-primary-foreground font-semibold hover:elevation-md transition-smooth text-sm elevation-sm">
+                      Configure
                     </Link>
                   </div>
                 )}
                 {!isDocsSynced && (
-                  <div className="flex items-center gap-4">
-                    <RefreshCw className="w-6 h-6 text-poppy" />
-                    <div className="flex-1">
-                      <div className="font-semibold text-poppy">Sync your first document</div>
-                      <div className="text-xs text-gray-500">Give Poppy access to your docs for better results.</div>
+                  <div className="flex items-center gap-space-4">
+                    <div className="p-space-3 bg-lavender-secondary-light rounded-xl">
+                      <RefreshCw className="w-6 h-6 text-lavender-secondary" />
                     </div>
-                    <Link href="/sync" className="px-4 py-2 rounded-full bg-poppy text-white font-semibold hover:bg-poppy/90 transition-colors text-sm shadow">
+                    <div className="flex-1">
+                      <div className="font-semibold text-lavender-secondary">Sync Knowledge Base</div>
+                      <div className="text-xs text-warm-neutral">Connect your documents to enhance product intelligence.</div>
+                    </div>
+                    <Link href="/sync" className="px-space-4 py-space-2 rounded-xl bg-gradient-to-r from-lavender-secondary-light to-lavender-secondary-light/90 text-lavender-secondary-foreground font-semibold hover:elevation-md transition-smooth text-sm elevation-sm">
                       Sync Now
                     </Link>
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-        )}
-        {!isHome && !isDesignMode && isPersonalContextComplete && isDocsSynced && (
-          <div 
-            className="fixed top-0 right-0 px-0 py-4 bg-white/90 border-b border-poppy/10 shadow-sm flex items-center justify-center z-40 transition-all duration-300"
-            style={{ left: `${sidebarWidth}px` }}
-          >
-            <div className="w-full max-w-2xl mx-auto flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-poppy mr-2" />
-              <span className="text-poppy font-semibold">You&apos;re all set! Head to Chat to get started.</span>
-              <Link href="/" className="ml-4 px-4 py-2 rounded-full bg-poppy text-white font-semibold hover:bg-poppy/90 transition-colors text-sm shadow">
-                Go to Chat
-              </Link>
             </div>
           </div>
         )}

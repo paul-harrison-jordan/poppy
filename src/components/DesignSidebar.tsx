@@ -33,16 +33,16 @@ export default function DesignSidebar({
     <div className="flex flex-col h-full bg-white text-gray-800">
       
       {/* Header with back navigation */}
-      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-yellow-50">
+      <div className="p-4 border-b border-poppy-primary/10 bg-gradient-to-r from-poppy-primary-light to-lavender-secondary-light">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Paintbrush className="w-5 h-5 text-poppy" />
-            <span className="font-semibold text-primary">Design Mode</span>
+            <Paintbrush className="w-5 h-5 text-poppy-primary" />
+            <span className="font-semibold text-poppy-primary">Design Studio</span>
           </div>
           <button
             onClick={() => onModeChange('brainstorm')}
-            className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-gray-100 text-gray-600 hover:text-primary transition-colors"
-            title="Exit Design Mode"
+            className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-white/50 text-poppy-primary/70 hover:text-poppy-primary transition-colors"
+            title="Exit Design Studio"
           >
             <ArrowLeft className="w-3 h-3" />
             Exit
@@ -51,8 +51,8 @@ export default function DesignSidebar({
         
         {/* Session status indicator */}
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${v0ChatId ? 'bg-sprout' : 'bg-yellow-500'}`}></div>
-          <span className="text-xs text-gray-600">
+          <div className={`w-2 h-2 rounded-full ${v0ChatId ? 'bg-sprout-success' : 'bg-lavender-secondary'}`}></div>
+          <span className="text-xs text-poppy-primary/80">
             {v0ChatId ? 'Design session active' : 'Ready to create'}
           </span>
         </div>
@@ -85,8 +85,8 @@ export default function DesignSidebar({
                 transition={{ duration: 0.3, delay: idx * 0.05 }}
                 className={`p-3 rounded-lg animate-slide-in ${
                   msg.role === 'user' 
-                    ? 'bg-poppy text-white ml-6 shadow-lg' 
-                    : 'bg-gray-50 text-gray-800 mr-6 border border-gray-200'
+                    ? 'bg-poppy-primary text-poppy-primary-foreground ml-6 shadow-lg' 
+                    : 'bg-warm-neutral-light text-gray-800 mr-6 border border-poppy-primary/10'
                 }`}
               >
                 <div className="text-sm leading-relaxed">

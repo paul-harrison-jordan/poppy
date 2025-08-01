@@ -1,0 +1,2 @@
+-- This file has been replaced by prd-phases-table.sql
+-- Please use prd-phases-table.sql instead

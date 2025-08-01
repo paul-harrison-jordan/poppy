@@ -97,7 +97,7 @@ export default function Home() {
       {/* Hide navigation links in design mode */}
       {!isDesignMode && (
         <div className="absolute top-6 right-8 flex flex-col gap-4 z-10">
-          <Link href="/features" className="text-poppy hover:text-poppy/80 transition-colors" aria-label="View all features">
+          <Link href="/roadmap" className="text-poppy hover:text-poppy/80 transition-colors" aria-label="View roadmap">
             <Grid3X3 className="w-7 h-7" />
           </Link>
           <Link href="/instructions" className="text-poppy hover:text-poppy/80 transition-colors" aria-label="Tune Poppy settings">

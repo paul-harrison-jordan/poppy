@@ -6,14 +6,17 @@ import { redirect } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import RoadmapDashboard from '@/components/roadmap/RoadmapDashboard'
 import CapacityPlanningView from '@/components/roadmap/CapacityPlanningView'
+import CreateFeatureModal from '@/components/CreateFeatureModal'
 import { 
   Calendar, 
-  Users
+  Users,
+  Plus
 } from 'lucide-react'
 
 export default function RoadmapPage() {
   const { data: session, status } = useSession()
   const [activeTab, setActiveTab] = useState('roadmap')
+  const [showCreateModal, setShowCreateModal] = useState(false)
   
   if (status === 'loading') {
     return (
@@ -27,8 +30,28 @@ export default function RoadmapPage() {
     redirect('/auth/signin')
   }
 
+  const handleFeatureCreated = () => {
+    // Refresh data if needed
+    setShowCreateModal(false)
+  }
+
   return (
     <div className="w-full max-w-7xl mx-auto p-6">
+      {/* Header with Create Button */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-poppy-primary">Product Roadmap</h1>
+          <p className="text-warm-neutral mt-1">Plan and track your product features</p>
+        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-poppy-primary text-poppy-primary-foreground rounded-lg font-medium hover:bg-poppy-primary-hover transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New Feature
+        </button>
+      </div>
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-2 lg:w-96">
           <TabsTrigger value="roadmap" className="flex items-center gap-2">
@@ -49,6 +72,13 @@ export default function RoadmapPage() {
           <CapacityPlanningView userEmail={session.user.email} />
         </TabsContent>
       </Tabs>
+
+      {/* Create Feature Modal */}
+      <CreateFeatureModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onFeatureCreated={handleFeatureCreated}
+      />
     </div>
   )
 }

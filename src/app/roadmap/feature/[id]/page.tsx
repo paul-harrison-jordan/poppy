@@ -1,45 +1,53 @@
-'use client'
+import { createClient } from '@/utils/supabase/server';
+import { notFound } from 'next/navigation';
+import FeatureDetailView from './FeatureDetailView';
 
-import React from 'react'
-import { notFound } from 'next/navigation'
-import { useSession } from 'next-auth/react'
-import { redirect } from 'next/navigation'
-import FeatureDetailView from './FeatureDetailView'
-
-interface Params {
-  id: string
+interface Feature {
+  id: number;
+  title?: string;
+  description?: string;
+  'drive-link': string;
+  'v0-link': string;
+  user: string;
+  shipped: boolean;
+  created_at?: string;
+  roadmap?: {
+    priority_order?: number;
+    status?: string;
+    target_quarter?: string;
+    estimated_effort_points?: number;
+    business_value_score?: number;
+    technical_complexity_score?: number;
+    dependencies?: string[];
+    risks?: string[];
+    success_metrics?: string[];
+    roadmap_notes?: string;
+  };
 }
 
-export default function FeatureDetailPage({
+export default async function FeatureDetailPage({
   params,
 }: {
-  params: Promise<Params>
+  params: Promise<{ id: string }>;
 }) {
-  const { data: session, status } = useSession()
-  const [featureId, setFeatureId] = React.useState<number | null>(null)
-  
-  React.useEffect(() => {
-    params.then(resolvedParams => {
-      const id = parseInt(resolvedParams.id)
-      if (isNaN(id)) {
-        notFound()
-      }
-      setFeatureId(id)
-    })
-  }, [params])
-  
-  // Handle loading states after all hooks are called
-  if (status === 'loading' || featureId === null) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-primary animate-pulse font-sans">Loading...</div>
-      </div>
-    )
-  }
-  
-  if (!session?.user?.email) {
-    redirect('/auth/signin')
+  const supabase = await createClient();
+  const resolvedParams = await params;
+  const featureId = parseInt(resolvedParams.id);
+
+  if (isNaN(featureId)) {
+    notFound();
   }
 
-  return <FeatureDetailView featureId={featureId} currentUserEmail={session.user.email} />
-} 
+  // Fetch feature details
+  const { data: feature } = await supabase
+    .from('prds')
+    .select('*')
+    .eq('id', featureId)
+    .single() as { data: Feature | null };
+
+  if (!feature) {
+    notFound();
+  }
+
+  return <FeatureDetailView feature={feature} />;
+}

@@ -19,6 +19,9 @@ export interface PRD {
     business_value_score?: number
     technical_complexity_score?: number
     roadmap_notes?: string
+    release_date?: string
+    estimated_weeks?: number
+    assigned_engineer?: string
   }
   assigned_engineers_count?: number
   total_estimated_weeks?: number
