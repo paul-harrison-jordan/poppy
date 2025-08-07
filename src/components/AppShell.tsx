@@ -76,10 +76,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // (If you want to use usePathname, you can, but window.location.pathname is fine for this case)
   const isHome = pathname === "/";
 
-  const [steps, setSteps] = useState<Step[]>([
-    { complete: false },
-    { complete: false }
-  ]);
+  // Steps state for potential future use
+  // const [steps, setSteps] = useState<Step[]>([
+  //   { complete: false },
+  //   { complete: false }
+  // ]);
 
   // Track notified PRDs to avoid duplicate notifications
   const [notifiedPrdIds, setNotifiedPrdIds] = useState<Set<string>>(new Set());

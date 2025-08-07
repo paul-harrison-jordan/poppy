@@ -64,7 +64,7 @@ export default function SyncConfirmationModal({
     if (isOpen && !isSyncing) {
       initializeSyncItems();
     }
-  }, [isOpen, folders, documents, isSyncing]);
+  }, [isOpen, folders, documents, isSyncing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const initializeSyncItems = async () => {
     const items: SyncItem[] = [];

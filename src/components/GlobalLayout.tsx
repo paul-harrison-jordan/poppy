@@ -77,10 +77,11 @@ export default function GlobalLayout({ children }: { children: React.ReactNode }
   const isDesignMode = pathname === "/" && typeof window !== 'undefined' && 
     localStorage.getItem('currentChatMode') === 'design'
 
-  const [steps, setSteps] = useState<Step[]>([
-    { complete: false },
-    { complete: false }
-  ])
+  // Steps state for potential future use
+  // const [steps, setSteps] = useState<Step[]>([
+  //   { complete: false },
+  //   { complete: false }
+  // ])
 
   // Sidebar collapse state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(isDesignMode)

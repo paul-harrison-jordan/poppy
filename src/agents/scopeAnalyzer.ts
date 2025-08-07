@@ -1,5 +1,5 @@
 import { LLMAgent } from './LLMAgent';
-import { AgentContext, AgentResult } from './types';
+// import { AgentContext, AgentResult } from './types';
 
 export interface ScopeAnalysisResult {
   inScope: string[];

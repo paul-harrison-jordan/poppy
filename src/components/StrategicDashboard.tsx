@@ -42,15 +42,16 @@ export default function StrategicDashboard({
     }
   };
 
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case 'critical': return 'text-red-600 bg-red-100 border-red-200';
-      case 'high': return 'text-orange-600 bg-orange-100 border-orange-200';
-      case 'medium': return 'text-poppy-primary bg-poppy-primary/10 border-poppy-primary/20';
-      case 'low': return 'text-warm-neutral bg-warm-neutral/10 border-warm-neutral/20';
-      default: return 'text-warm-neutral bg-warm-neutral/10 border-warm-neutral/20';
-    }
-  };
+  // Utility function for potential future use
+  // const getUrgencyColor = (urgency: string) => {
+  //   switch (urgency) {
+  //     case 'critical': return 'text-red-600 bg-red-100 border-red-200';
+  //     case 'high': return 'text-orange-600 bg-orange-100 border-orange-200';
+  //     case 'medium': return 'text-poppy-primary bg-poppy-primary/10 border-poppy-primary/20';
+  //     case 'low': return 'text-warm-neutral bg-warm-neutral/10 border-warm-neutral/20';
+  //     default: return 'text-warm-neutral bg-warm-neutral/10 border-warm-neutral/20';
+  //   }
+  // };
 
   const renderQuarterlyOverview = () => {
     const currentQuarter = Object.entries(dashboard.quarters)[0]?.[1];

@@ -737,3 +737,69 @@
   animation: float 3s ease-in-out infinite;
   animation-delay: 1s;
 }
+
+/* Enhanced Onboarding Completion Animations */
+@keyframes bounce-slow {
+  0%, 100% { 
+    transform: translateY(0) scale(1);
+  }
+  50% { 
+    transform: translateY(-8px) scale(1.05);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
+@keyframes fade-in-delayed {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in-delayed 1s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-slide-up {
+  animation: fade-in-delayed 1.2s ease-out forwards;
+  animation-delay: 0.5s;
+  opacity: 0;
+}
+
+/* Floating particles for completion screen */
+@keyframes float-random {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.3;
+  }
+  33% {
+    transform: translateY(-20px) rotate(120deg);
+    opacity: 0.8;
+  }
+  66% {
+    transform: translateY(-10px) rotate(240deg);
+    opacity: 0.5;
+  }
+}
+
+.animate-float-delay-0 {
+  animation: float-random 4s ease-in-out infinite;
+}
+
+.animate-float-delay-1 {
+  animation: float-random 4.5s ease-in-out infinite;
+  animation-delay: 0.5s;
+}
+
+.animate-float-delay-2 {
+  animation: float-random 5s ease-in-out infinite;
+  animation-delay: 1s;
+}

@@ -1,7 +1,7 @@
 'use client';
 
-import OnboardingChatInterface from '@/components/OnboardingChatInterface';
+import StepWizardOnboarding from '@/components/StepWizardOnboarding';
 
 export default function OnboardingPage() {
-  return <OnboardingChatInterface testMode={true} />;
+  return <StepWizardOnboarding testMode={false} />;
 }
