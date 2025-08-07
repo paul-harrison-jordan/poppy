@@ -60,16 +60,12 @@ export class SupabaseService {
     options: QueryOptions = {}
   ): Promise<ServiceResponse<T[]>> {
     try {
-      let query = this.client.from(table);
-
-      // Apply select
-      if (options.select) {
-        query = query.select(options.select);
-      } else {
-        query = query.select('*');
-      }
-
-      // Apply filters
+      // Build the base query with select first
+      const baseQuery = this.client.from(table);
+      const selectQuery = options.select ? baseQuery.select(options.select) : baseQuery.select('*');
+      
+      // Apply filters to the select query
+      let query = selectQuery;
       filters.forEach(filter => {
         switch (filter.operator) {
           case 'eq':
@@ -91,16 +87,16 @@ export class SupabaseService {
             query = query.lte(filter.column, filter.value);
             break;
           case 'like':
-            query = query.like(filter.column, filter.value);
+            query = query.like(filter.column, filter.value as string);
             break;
           case 'ilike':
-            query = query.ilike(filter.column, filter.value);
+            query = query.ilike(filter.column, filter.value as string);
             break;
           case 'in':
-            query = query.in(filter.column, filter.value);
+            query = query.in(filter.column, filter.value as readonly unknown[]);
             break;
           case 'is':
-            query = query.is(filter.column, filter.value);
+            query = query.is(filter.column, filter.value as null);
             break;
         }
       });
@@ -139,13 +135,8 @@ export class SupabaseService {
 
   async findById<T>(table: string, id: string | number, select?: string): Promise<ServiceResponse<T>> {
     try {
-      let query = this.client.from(table);
-
-      if (select) {
-        query = query.select(select);
-      } else {
-        query = query.select('*');
-      }
+      const baseQuery = this.client.from(table);
+      const query = select ? baseQuery.select(select) : baseQuery.select('*');
 
       const { data, error } = await query.eq('id', id).single();
 
@@ -169,13 +160,8 @@ export class SupabaseService {
 
   async create<T>(table: string, data: Partial<T>, select?: string): Promise<ServiceResponse<T>> {
     try {
-      let query = this.client.from(table).insert(data);
-
-      if (select) {
-        query = query.select(select);
-      } else {
-        query = query.select('*');
-      }
+      const insertQuery = this.client.from(table).insert(data);
+      const query = select ? insertQuery.select(select) : insertQuery.select('*');
 
       const { data: result, error } = await query.single();
 
@@ -204,13 +190,8 @@ export class SupabaseService {
     select?: string
   ): Promise<ServiceResponse<T>> {
     try {
-      let query = this.client.from(table).update(data).eq('id', id);
-
-      if (select) {
-        query = query.select(select);
-      } else {
-        query = query.select('*');
-      }
+      const updateQuery = this.client.from(table).update(data).eq('id', id);
+      const query = select ? updateQuery.select(select) : updateQuery.select('*');
 
       const { data: result, error } = await query.single();
 

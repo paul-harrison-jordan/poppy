@@ -45,9 +45,10 @@ export class LearningSystem {
       }
 
       // Log recommended agent tweaks (no live tuning yet)
-      if (analysisResult.result.agentTweaks.length > 0) {
+      const outcomeAnalysis = analysisResult.result as { whatWorked: string[], whatFailed: string[], agentTweaks: string[] };
+      if (outcomeAnalysis.agentTweaks.length > 0) {
         console.log(`[LearningSystem] Recommended agent tweaks for PRD ${prdId}:`);
-        analysisResult.result.agentTweaks.forEach((tweak, index) => {
+        outcomeAnalysis.agentTweaks.forEach((tweak, index) => {
           console.log(`  ${index + 1}. ${tweak}`);
         });
       }
@@ -58,7 +59,7 @@ export class LearningSystem {
 
       return {
         prdId,
-        analysisResult: analysisResult.result,
+        analysisResult: outcomeAnalysis,
         profileUpdated: true // Placeholder for now
       };
     } catch (error) {

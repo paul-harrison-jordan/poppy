@@ -61,12 +61,13 @@ export class PRDOrchestrator {
         throw new Error(`Roadmap positioning failed: ${roadmapResult.error}`);
       }
 
-      console.log(`[PRDOrchestrator] Phase 1 completed. Extracted ${jobsResult.result.jobs.length} jobs`);
+      const extractedJobs = (jobsResult.result as { jobs: unknown[] }).jobs;
+      console.log(`[PRDOrchestrator] Phase 1 completed. Extracted ${extractedJobs.length} jobs`);
 
       // Phase 2: Scope Definition (dependent on jobs)
       console.log(`[PRDOrchestrator] Phase 2: Running scope analysis`);
       const scopeResult = await this.scopeAnalyzer.execute({
-        jobs: JSON.stringify(jobsResult.result.jobs),
+        jobs: JSON.stringify(extractedJobs),
         constraints: pmProfile?.personal_context?.teamStrategy || 'Standard development constraints'
       });
 
@@ -74,7 +75,8 @@ export class PRDOrchestrator {
         throw new Error(`Scope analysis failed: ${scopeResult.error}`);
       }
 
-      console.log(`[PRDOrchestrator] Phase 2 completed. In-scope: ${scopeResult.result.inScope.length}, Out-scope: ${scopeResult.result.outOfScope.length}`);
+      const scopeAnalysis = scopeResult.result as { inScope: unknown[], outOfScope: unknown[] };
+      console.log(`[PRDOrchestrator] Phase 2 completed. In-scope: ${scopeAnalysis.inScope.length}, Out-scope: ${scopeAnalysis.outOfScope.length}`);
 
       // Phase 3: Engineering Analysis (dependent on scope)
       console.log(`[PRDOrchestrator] Phase 3: Running engineering estimation`);
@@ -87,14 +89,15 @@ export class PRDOrchestrator {
         throw new Error(`Engineering estimation failed: ${engineeringResult.error}`);
       }
 
-      console.log(`[PRDOrchestrator] Phase 3 completed. Estimated ${engineeringResult.result.storyPoints} story points`);
+      const engineeringAnalysis = engineeringResult.result as { storyPoints: number };
+      console.log(`[PRDOrchestrator] Phase 3 completed. Estimated ${engineeringAnalysis.storyPoints} story points`);
 
       const bundle: AnalysisBundle = {
-        jobs: jobsResult.result,
-        scope: scopeResult.result,
-        competitive: competitiveResult.result,
-        roadmap: roadmapResult.result,
-        engineering: engineeringResult.result
+        jobs: jobsResult.result as JobsExtractionResult,
+        scope: scopeResult.result as ScopeAnalysisResult,
+        competitive: competitiveResult.result as CompetitiveLandscapeResult,
+        roadmap: roadmapResult.result as RoadmapPositionResult,
+        engineering: engineeringResult.result as EngineeringEstimateResult
       };
 
       const totalTime = Date.now() - startTime;
@@ -128,8 +131,9 @@ export class PRDOrchestrator {
       });
 
       if (result.success) {
-        sections.push(result.result);
-        console.log(`[PRDOrchestrator] ${section.name} section generated (${result.result.content.length} chars)`);
+        const prdSection = result.result as PRDSection;
+        sections.push(prdSection);
+        console.log(`[PRDOrchestrator] ${section.name} section generated (${prdSection.content.length} chars)`);
       } else {
         console.error(`[PRDOrchestrator] Failed to generate ${section.name}:`, result.error);
         // Add placeholder section so we don't break the flow
