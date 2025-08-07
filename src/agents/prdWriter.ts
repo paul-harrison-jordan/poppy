@@ -48,13 +48,13 @@ Focus only on the requested section. Write in markdown format.`,
 
   async execute(context: AgentContext): Promise<AgentResult> {
     // Store the section name for the parseResponse method
-    this.currentSectionName = context.sectionName || 'unknown_section';
+    this.currentSectionName = (context.sectionName as string) || 'unknown_section';
     
     const result = await super.execute(context);
     
-    if (result.success) {
+    if (result.success && typeof result.result === 'object' && result.result !== null) {
       // Add the section name to the result
-      result.result.sectionName = this.currentSectionName;
+      (result.result as PRDSection).sectionName = this.currentSectionName;
     }
     
     return result;

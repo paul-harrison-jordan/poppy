@@ -1,10 +1,10 @@
 export interface AgentContext {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AgentResult {
   success: boolean;
-  result: any;
+  result: unknown;
   metadata?: {
     tokensUsed?: number;
     modelUsed?: string;

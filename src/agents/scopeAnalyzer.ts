@@ -36,11 +36,11 @@ Consider what features, functionality, and requirements should be included in th
 
       // Ensure arrays and filter out invalid entries
       const inScope = Array.isArray(parsed.inScope) 
-        ? parsed.inScope.filter((item: any) => typeof item === 'string' && item.trim().length > 0)
+        ? parsed.inScope.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
         : [];
       
       const outOfScope = Array.isArray(parsed.outOfScope)
-        ? parsed.outOfScope.filter((item: any) => typeof item === 'string' && item.trim().length > 0)
+        ? parsed.outOfScope.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
         : [];
 
       return { inScope, outOfScope };

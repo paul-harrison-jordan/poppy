@@ -265,7 +265,7 @@ export default function StrategicDashboard({
           <div className="flex flex-col gap-space-2">
             <select
               value={selectedUrgency}
-              onChange={(e) => setSelectedUrgency(e.target.value as any)}
+              onChange={(e) => setSelectedUrgency(e.target.value as 'low' | 'medium' | 'high' | 'critical')}
               className="px-space-3 py-space-2 border border-border rounded-lg focus:border-poppy-primary focus:outline-none"
             >
               <option value="low">Low Priority</option>
@@ -299,7 +299,7 @@ export default function StrategicDashboard({
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
-            onClick={() => setActiveTab(key as any)}
+            onClick={() => setActiveTab(key as 'overview' | 'squads' | 'vision' | 'proposals')}
             className={`flex items-center gap-space-2 px-space-4 py-space-3 border-b-2 transition-colors ${
               activeTab === key 
                 ? 'border-poppy-primary text-poppy-primary' 

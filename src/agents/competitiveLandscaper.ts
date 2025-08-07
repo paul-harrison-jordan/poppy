@@ -47,14 +47,18 @@ TODO: plug search API for real-time competitive intelligence`,
 
       // Filter and validate competitors
       const validCompetitors = parsed.competitors
-        .filter((competitor: any) => 
-          competitor && 
-          typeof competitor.name === 'string' && 
-          typeof competitor.summary === 'string' && 
-          typeof competitor.ourEdge === 'string' &&
-          competitor.name.trim().length > 0 &&
-          competitor.summary.trim().length > 0 &&
-          competitor.ourEdge.trim().length > 0
+        .filter((competitor: unknown): competitor is Competitor => 
+          competitor !== null &&
+          typeof competitor === 'object' &&
+          'name' in competitor &&
+          'summary' in competitor &&
+          'ourEdge' in competitor &&
+          typeof (competitor as Competitor).name === 'string' && 
+          typeof (competitor as Competitor).summary === 'string' && 
+          typeof (competitor as Competitor).ourEdge === 'string' &&
+          (competitor as Competitor).name.trim().length > 0 &&
+          (competitor as Competitor).summary.trim().length > 0 &&
+          (competitor as Competitor).ourEdge.trim().length > 0
         );
 
       return { competitors: validCompetitors };

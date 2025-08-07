@@ -51,15 +51,15 @@ Return JSON: { whatWorked: string[], whatFailed: string[], agentTweaks: string[]
       
       // Validate structure and ensure arrays
       const whatWorked = Array.isArray(parsed.whatWorked) 
-        ? parsed.whatWorked.filter((item: any) => typeof item === 'string' && item.trim().length > 0)
+        ? parsed.whatWorked.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
         : [];
       
       const whatFailed = Array.isArray(parsed.whatFailed)
-        ? parsed.whatFailed.filter((item: any) => typeof item === 'string' && item.trim().length > 0)
+        ? parsed.whatFailed.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
         : [];
       
       const agentTweaks = Array.isArray(parsed.agentTweaks)
-        ? parsed.agentTweaks.filter((item: any) => typeof item === 'string' && item.trim().length > 0)
+        ? parsed.agentTweaks.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
         : [];
 
       return {

@@ -2,11 +2,12 @@
 
 import { useSession, signOut } from 'next-auth/react';
 import { useState } from 'react';
+import Link from 'next/link';
 
 export default function TestAuthPage() {
   const { data: session, status } = useSession();
-  const [authStatus, setAuthStatus] = useState<any>(null);
-  const [testResult, setTestResult] = useState<any>(null);
+  const [authStatus, setAuthStatus] = useState<unknown>(null);
+  const [testResult, setTestResult] = useState<unknown>(null);
 
   const checkAuthStatus = async () => {
     try {
@@ -50,12 +51,12 @@ export default function TestAuthPage() {
     return (
       <div className="p-8">
         <h1 className="text-2xl mb-4">Not authenticated</h1>
-        <a
+        <Link
           href="/api/auth/signin/google"
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
           Sign in with Google
-        </a>
+        </Link>
       </div>
     );
   }
@@ -88,7 +89,7 @@ export default function TestAuthPage() {
             Check Auth Status
           </button>
 
-          {authStatus && (
+          {authStatus !== null && (
             <div className="bg-gray-100 p-4 rounded">
               <h3 className="font-semibold mb-2">Auth Status Result</h3>
               <pre className="text-sm overflow-auto">
@@ -106,7 +107,7 @@ export default function TestAuthPage() {
             Test Google Docs Access
           </button>
 
-          {testResult && (
+          {testResult !== null && (
             <div className="bg-gray-100 p-4 rounded">
               <h3 className="font-semibold mb-2">Google Docs Test Result</h3>
               <pre className="text-sm overflow-auto">
@@ -119,7 +120,7 @@ export default function TestAuthPage() {
         <div className="bg-yellow-100 p-4 rounded">
           <h3 className="font-semibold mb-2">Instructions</h3>
           <ol className="list-decimal list-inside space-y-2 text-sm">
-            <li>First, click "Check Auth Status" to see if your Google access token is properly stored</li>
+            <li>First, click &quot;Check Auth Status&quot; to see if your Google access token is properly stored</li>
             <li>If the token is missing, you may need to sign out and sign back in to re-authorize</li>
             <li>To test actual Google Docs access, you need to replace the test document ID with a real one</li>
             <li>Make sure the document is accessible to your Google account</li>

@@ -812,7 +812,7 @@ describe('LearningSystem', () => {
       total_questions_answered: 25,
       created_at: '2024-01-01',
       updated_at: '2024-01-01'
-    } as any
+    } as const
 
     const learnings = {
       whatWorked: ['Clear acceptance criteria', 'Regular stakeholder check-ins'],

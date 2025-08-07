@@ -38,12 +38,16 @@ Product idea: {{input}}`,
 
       // Filter and validate jobs
       const validJobs = parsed.jobs
-        .filter((job: any) => 
-          job && 
-          typeof job.id === 'string' && 
-          typeof job.description === 'string' && 
-          typeof job.rank === 'number' &&
-          job.rank >= 1 && job.rank <= 5
+        .filter((job: unknown): job is Job => 
+          job !== null &&
+          typeof job === 'object' &&
+          'id' in job &&
+          'description' in job &&
+          'rank' in job &&
+          typeof (job as Job).id === 'string' && 
+          typeof (job as Job).description === 'string' && 
+          typeof (job as Job).rank === 'number' &&
+          (job as Job).rank >= 1 && (job as Job).rank <= 5
         )
         .sort((a: Job, b: Job) => a.rank - b.rank); // Sort by rank (1 = highest importance)
 

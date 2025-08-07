@@ -82,7 +82,7 @@ export default function DocumentOnboarding({ testMode = false }: DocumentOnboard
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [, setIsComplete] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const autoSaveInterval = useRef<NodeJS.Timeout>();
+  const autoSaveInterval = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-save functionality
   useEffect(() => {

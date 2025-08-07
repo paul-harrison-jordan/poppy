@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import Link from 'next/link';
 import DocumentSyncOnboarding from '@/components/DocumentSyncOnboarding';
 
 interface GoogleDriveFolder {
@@ -42,12 +43,12 @@ export default function TestPickerPage() {
     return (
       <div className="p-8">
         <h1 className="text-2xl mb-4">Not authenticated</h1>
-        <a
+        <Link
           href="/api/auth/signin/google"
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
           Sign in with Google
-        </a>
+        </Link>
       </div>
     );
   }

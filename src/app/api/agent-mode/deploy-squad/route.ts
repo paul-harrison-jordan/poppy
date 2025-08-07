@@ -106,7 +106,7 @@ async function executeAgentSquad(agentTypes: string[], context: { input: string 
       const { ScopeAnalyzerAgent } = await import('@/agents/scopeAnalyzer');
       const agent = new ScopeAnalyzerAgent();
       const jobsResult = results.find(r => r.agent === 'JobsExtractorAgent');
-      const extractedJobs = (jobsResult?.result as any)?.jobs || [];
+      const extractedJobs = (jobsResult?.result as { jobs?: unknown[] })?.jobs || [];
       
       const result = await agent.execute({ 
         input: context.input,

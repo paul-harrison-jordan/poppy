@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import StrategicDashboard from '@/components/StrategicDashboard';
 import MorningBrief from '@/components/MorningBrief';
 import { AgentSquadManager } from '@/services/AgentSquadManager';
-import { StrategicDirectiveParser } from '@/services/StrategicDirectiveParser';
 import type { 
   StrategicDashboard as StrategicDashboardType, 
   MorningBrief as MorningBriefType
@@ -13,16 +12,11 @@ import type {
 export default function AgentModePage() {
   const [activeView, setActiveView] = useState<'dashboard' | 'brief'>('brief');
   const [squadManager] = useState(() => new AgentSquadManager());
-  const [directiveParser] = useState(() => new StrategicDirectiveParser());
   const [dashboard, setDashboard] = useState<StrategicDashboardType | null>(null);
   const [morningBrief, setMorningBrief] = useState<MorningBriefType | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    initializeAgentMode();
-  }, [squadManager, directiveParser]);
-
-  const initializeAgentMode = async () => {
+  const initializeAgentMode = useCallback(async () => {
     try {
       // Initialize dashboard data
       const dashboardData: StrategicDashboardType = {
@@ -86,7 +80,11 @@ export default function AgentModePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [squadManager]);
+
+  useEffect(() => {
+    initializeAgentMode();
+  }, [initializeAgentMode]);
 
   const handleDirectiveSubmit = async (directive: string, urgency: 'low' | 'medium' | 'high' | 'critical') => {
     try {

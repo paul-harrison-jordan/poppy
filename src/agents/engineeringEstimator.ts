@@ -48,12 +48,12 @@ Return JSON: { storyPoints: number, rolesNeeded: string[], risks: string[] }`,
 
       // Ensure rolesNeeded is an array of strings
       const rolesNeeded = Array.isArray(parsed.rolesNeeded) 
-        ? parsed.rolesNeeded.filter((role: any) => typeof role === 'string' && role.trim().length > 0)
+        ? parsed.rolesNeeded.filter((role: unknown): role is string => typeof role === 'string' && role.trim().length > 0)
         : [];
 
       // Ensure risks is an array of strings
       const risks = Array.isArray(parsed.risks)
-        ? parsed.risks.filter((risk: any) => typeof risk === 'string' && risk.trim().length > 0)
+        ? parsed.risks.filter((risk: unknown): risk is string => typeof risk === 'string' && risk.trim().length > 0)
         : [];
 
       return {

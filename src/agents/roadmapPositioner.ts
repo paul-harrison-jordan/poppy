@@ -57,7 +57,7 @@ Quarter must be one of: Q1, Q2, Q3, Q4`,
 
       // Ensure conflicts is an array
       const conflicts = Array.isArray(parsed.conflicts) 
-        ? parsed.conflicts.filter((conflict: any) => typeof conflict === 'string' && conflict.trim().length > 0)
+        ? parsed.conflicts.filter((conflict: unknown): conflict is string => typeof conflict === 'string' && conflict.trim().length > 0)
         : [];
 
       return {

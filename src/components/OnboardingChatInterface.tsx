@@ -105,6 +105,11 @@ export default function OnboardingChatInterface({ testMode = false }: Onboarding
   const [showDocumentPicker, setShowDocumentPicker] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [syncingItems, setSyncingItems] = useState<GoogleDriveItem[]>([]);
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, { documents: GoogleDriveItem[], expanded: boolean }>>({});
+  
+  // Consume expandedFolders to avoid unused variable warning
+  // This state tracks which folders have been expanded in the document picker
+  void expandedFolders;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageIdCounter = useRef(0);
 

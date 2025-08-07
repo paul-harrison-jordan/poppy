@@ -33,9 +33,7 @@ interface GoogleDocumentPickerProps {
 export default function GoogleDocumentPicker({ 
   onDocumentsSelected, 
   onSyncRequested,
-  selectedDocumentIds = [], 
-  syncingItems: _syncingItems = [],
-  expandedFolders: _expandedFolders = {}
+  selectedDocumentIds = []
 }: GoogleDocumentPickerProps) {
   const [documents, setDocuments] = useState<GoogleDriveItem[]>([]);
   const [folders, setFolders] = useState<GoogleDriveItem[]>([]);

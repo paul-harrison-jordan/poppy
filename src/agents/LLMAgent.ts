@@ -105,7 +105,7 @@ export abstract class LLMAgent implements Agent {
     return prompt;
   }
 
-  protected parseResponse(response: string): any {
+  protected parseResponse(response: string): unknown {
     // Default implementation returns raw response
     // Subclasses can override for structured parsing
     return response.trim();

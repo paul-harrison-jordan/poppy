@@ -7,21 +7,12 @@ import { determineCategory, analyzeSummary } from '@/lib/prdCategorization'
 import { usePRDStore, PRD } from '@/store/prdStore';
 import { useAgenticPRDNotifications } from '@/hooks/useAgenticPRDNotifications';
 
-interface PersonalContext {
-  teamStrategy: string;
-  howYouThinkAboutProduct: string;
-  pillarGoalsKeyTermsBackground: string;
-}
+// PersonalContext interface removed - not being used
+// interface PersonalContext { ... }
 
-interface Step {
-  complete: boolean;
-}
 
-interface StepConfig {
-  title: string;
-  description: string;
-  checkComplete: (ctx: PersonalContext | string[]) => boolean;
-}
+// StepConfig interface removed - not being used
+// interface StepConfig { ... }
 
 interface PRDDocument {
   id: string;
@@ -30,28 +21,8 @@ interface PRDDocument {
   createdAt: string;
 }
 
-const stepsConfig: StepConfig[] = [
-  {
-    title: "Tune Poppy",
-    description: "Add your team's strategy and product thinking",
-    checkComplete: (ctx: PersonalContext | string[]) => {
-      if ('teamStrategy' in ctx) {
-        return Object.values(ctx as PersonalContext).every((v) => v && v !== "");
-      }
-      return Array.isArray(ctx) && ctx.length > 0;
-    }
-  },
-  {
-    title: "Sync Documents",
-    description: "Connect your team's documents",
-    checkComplete: (docs: PersonalContext | string[]) => {
-      if (Array.isArray(docs)) {
-        return docs.length > 0;
-      }
-      return false;
-    }
-  }
-];
+// Steps configuration removed for now - not being used
+// const stepsConfig: StepConfig[] = [...]
 
 // Helper to trigger agentic notification
 function triggerAgenticNotification(prd: PRD) {
@@ -106,12 +77,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       const merged = Array.from(new Set([...existing, ...prdDocIds]));
       localStorage.setItem('syncedDocs', JSON.stringify(merged));
     }
-    const personalContext = JSON.parse(localStorage.getItem("personalContext") || "{}") as PersonalContext;
-    const syncedDocs = JSON.parse(localStorage.getItem("syncedDocs") || "[]") as string[];
-    setSteps([
-      { complete: stepsConfig[0].checkComplete(personalContext) },
-      { complete: stepsConfig[1].checkComplete(syncedDocs) }
-    ]);
+    // const personalContext = JSON.parse(localStorage.getItem("personalContext") || "{}") as PersonalContext;
+    // const syncedDocs = JSON.parse(localStorage.getItem("syncedDocs") || "[]") as string[];
+    // Steps tracking removed for now
   }, []);
 
   // On mount, check all PRDs for at risk and trigger notifications

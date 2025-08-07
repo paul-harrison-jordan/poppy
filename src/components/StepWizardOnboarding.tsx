@@ -83,10 +83,13 @@ export default function StepWizardOnboarding({ testMode = false }: StepWizardOnb
       if (saved) {
         try {
           const data = JSON.parse(saved);
-          setSteps(prev => prev.map(step => ({
+          
+          // Update steps with saved data
+          const updatedSteps = STEPS.map(step => ({
             ...step,
             value: data[step.id] || ''
-          })));
+          }));
+          setSteps(updatedSteps);
           
           // Find first incomplete step
           const firstIncomplete = STEPS.findIndex(step => !data[step.id] || countParagraphs(data[step.id]) < step.minParagraphs);

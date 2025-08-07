@@ -28,7 +28,7 @@ export class SupabaseService {
 
   constructor(client: SupabaseClient, session?: { user?: { email?: string } } | null) {
     this.client = client;
-    this.session = session;
+    this.session = session ?? null;
   }
 
   static async createAuthenticated(): Promise<SupabaseService | null> {
@@ -38,7 +38,7 @@ export class SupabaseService {
         return null;
       }
       const client = createServiceClient();
-      return new SupabaseService(client, session);
+      return new SupabaseService(client, { user: { email: session.user.email } });
     } catch (error) {
       console.error('Failed to create authenticated service:', error);
       return null;
