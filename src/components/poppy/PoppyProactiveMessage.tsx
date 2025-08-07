@@ -16,7 +16,7 @@ const PoppyProactiveMessage: React.FC<PoppyProactiveMessageProps> = ({
   onBrainstorm,
 }) => {
   return (
-    <div className="max-w-xl mx-auto my-6 p-4 bg-poppy-50 border border-poppy-200 rounded-xl shadow flex gap-4 items-start animate-fade-in">
+    <div className="max-w-xl mx-auto my-6 p-4 bg-poppy-50 border border-poppy-200 rounded-xl shadow flex gap-4 items-start animate-fade-in relative z-30">
       <div className="flex-shrink-0">
         <div className="w-12 h-12 rounded-full bg-poppy-200 flex items-center justify-center text-poppy-700 font-bold text-2xl">
           🧑‍💻

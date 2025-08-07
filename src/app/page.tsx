@@ -48,8 +48,11 @@ export default function Home() {
 
     if (session?.user) {
       checkOnboardingStatus();
+    } else if (status !== 'loading') {
+      // If there's no session and we're not loading, we don't need to check onboarding
+      setIsCheckingOnboarding(false);
     }
-  }, [session?.user, router]);
+  }, [session?.user, status, router]);
 
   useEffect(() => {
     const initializePinecone = async () => {

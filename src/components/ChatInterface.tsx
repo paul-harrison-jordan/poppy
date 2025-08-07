@@ -1272,7 +1272,7 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
     }`}>
       {mode === 'agent' ? (
         // Agent mode UI
-        <div className="p-4">
+        <div className="p-4 relative z-30">
           {agenticMessages.map((msg, idx) => (
             <PoppyProactiveMessage
               key={idx}

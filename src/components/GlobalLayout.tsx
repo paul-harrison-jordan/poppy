@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
+import { useSession } from 'next-auth/react'
 import GlobalSidebar from './GlobalSidebar'
 import { cn } from "@/lib/utils"
 import { determineCategory, analyzeSummary } from '@/lib/prdCategorization'
@@ -41,6 +42,7 @@ function triggerAgenticNotification(prd: PRD) {
 }
 
 export default function GlobalLayout({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession()
   const pathname = usePathname()
   const isHome = pathname === "/"
   const isOnboarding = pathname === "/onboarding"
@@ -165,8 +167,8 @@ export default function GlobalLayout({ children }: { children: React.ReactNode }
       "min-h-screen w-full flex transition-smooth",
       isHome ? "bg-gradient-to-br from-cream to-white" : "bg-warm-neutral-light"
     )}>
-      {/* Global Sidebar - completely hidden in design mode and onboarding */}
-      {!isDesignMode && !isOnboarding && (
+      {/* Global Sidebar - completely hidden in design mode, onboarding, and when not authenticated */}
+      {!isDesignMode && !isOnboarding && session && (
         <GlobalSidebar 
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={toggleSidebar}
@@ -176,13 +178,13 @@ export default function GlobalLayout({ children }: { children: React.ReactNode }
       {/* Main Content Area */}
       <div 
         className="flex-1 flex flex-col transition-all duration-300"
-        style={{ marginLeft: (isDesignMode || isOnboarding) ? '0px' : `${sidebarWidth}px` }}
+        style={{ marginLeft: (isDesignMode || isOnboarding || !session) ? '0px' : `${sidebarWidth}px` }}
       >
 
         {/* Main content with proper spacing for banner */}
         <main 
           className="flex-1 flex flex-col min-h-0"
-          style={{ marginTop: (isDesignMode || isOnboarding) ? '0px' : `${bannerHeight}px` }}
+          style={{ marginTop: (isDesignMode || isOnboarding || !session) ? '0px' : `${bannerHeight}px` }}
         >
           {children}
         </main>
