@@ -5,10 +5,10 @@ const squadStorage = new Map();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { squadId: string } }
+  { params }: { params: Promise<{ squadId: string }> }
 ) {
   try {
-    const squadId = params.squadId;
+    const { squadId } = await params;
     
     if (!squadId) {
       return NextResponse.json(
@@ -87,10 +87,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { squadId: string } }
+  { params }: { params: Promise<{ squadId: string }> }
 ) {
   try {
-    const squadId = params.squadId;
+    const { squadId } = await params;
     const { action, data } = await request.json();
     
     if (!squadId) {
