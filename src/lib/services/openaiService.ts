@@ -444,3 +444,292 @@ ${Object.keys(terms).join(', ')}${pmProfileContext}`,
     return [];
   }
 }
+
+// Document Analysis Functions
+export interface DocumentAnalysisRequest {
+  documentBody: string;
+  analysisPrompt?: string;
+  model?: string;
+  maxTokens?: number;
+}
+
+export async function analyzeDocument(opts: DocumentAnalysisRequest): Promise<string> {
+  const { analysisPrompt, model = 'gpt-4-turbo-preview', maxTokens = 200 } = opts;
+
+  const defaultPrompt = `Analyze the following document and its matches across different databases. 
+  Provide a brief analysis of why these matches are relevant and what insights can be drawn.`;
+
+  const completion = await openai.chat.completions.create({
+    model,
+    messages: [
+      {
+        role: 'system',
+        content: 'You are an AI assistant that analyzes document matches and provides insights.',
+      },
+      {
+        role: 'user',
+        content: analysisPrompt || defaultPrompt,
+      },
+    ],
+    max_tokens: maxTokens,
+  });
+
+  return completion.choices[0]?.message?.content || 'No analysis available';
+}
+
+export interface GenerateEmbeddingRequest {
+  input: string | string[];
+  model?: string;
+}
+
+export async function generateEmbedding(opts: GenerateEmbeddingRequest) {
+  const { input, model = 'text-embedding-3-small' } = opts;
+
+  const response = await openai.embeddings.create({
+    model,
+    input,
+  });
+
+  return response;
+}
+
+export interface DesignPromptRequest {
+  prdText: string;
+  pmProfile?: PMPreferenceProfile;
+}
+
+export interface DesignPromptResponse {
+  design_summary: string;
+  primary_workflow?: string;
+  design_prompt: string;
+}
+
+export async function generateDesignPrompt(opts: DesignPromptRequest): Promise<DesignPromptResponse> {
+  const { prdText, pmProfile } = opts;
+
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    response_format: { type: 'json_object' },
+    temperature: 0.7,
+    max_tokens: 1000,
+    messages: [
+      {
+        role: 'system',
+        content: `Extract key design requirements from a PRD to create a focused design prompt.
+
+Focus on:
+1. Core value proposition 
+2. Primary user workflow
+3. Key UI requirements
+
+${pmProfile?.domain_expertise ? `Domain context: ${pmProfile.domain_expertise.join(', ')}` : ''}
+
+Return JSON with:
+- "design_summary": 1-2 sentence summary
+- "primary_workflow": Single most important user workflow
+- "design_prompt": Concise prompt for v0 (max 200 words)`,
+      },
+      {
+        role: 'user',
+        content: `Extract design requirements from this PRD:
+
+${prdText}`,
+      },
+    ],
+  });
+
+  const response = completion.choices[0].message.content;
+  if (!response) {
+    throw new Error('No response from OpenAI');
+  }
+
+  try {
+    return JSON.parse(response) as DesignPromptResponse;
+  } catch (parseError) {
+    throw new Error(`Failed to parse design data: ${parseError instanceof Error ? parseError.message : 'Invalid JSON'}`);
+  }
+}
+
+export interface SummarizePRDRequest {
+  prdContent: string;
+  title?: string;
+  model?: string;
+}
+
+export async function summarizePRD(opts: SummarizePRDRequest): Promise<string> {
+  const { prdContent, title, model = 'gpt-4o-mini' } = opts;
+
+  const completion = await openai.chat.completions.create({
+    model,
+    messages: [
+      {
+        role: 'system',
+        content: `You are a product manager assistant that creates concise summaries of PRDs specifically for matching against customer feedback.
+
+Focus on:
+1. Core user problems and pain points addressed
+2. Key features and functionality described
+3. User experience improvements mentioned
+4. Specific use cases and scenarios
+5. Target user types and personas
+
+Create a clear, searchable summary that would match well against customer feedback about related problems, requests, or experiences. Use natural language that customers might use when describing these issues.
+
+Keep the summary under 200 words but comprehensive enough to capture the essence of what customers might have feedback about.`
+      },
+      {
+        role: 'user',
+        content: `Please summarize this PRD for customer feedback matching:
+
+Title: ${title || 'Untitled PRD'}
+
+Content:
+${prdContent}`
+      }
+    ]
+  });
+
+  const summary = completion.choices[0].message.content;
+  if (!summary) {
+    throw new Error('No summary generated from OpenAI');
+  }
+
+  return summary;
+}
+
+export interface FeedbackAnalysis {
+  topics: string[];
+  themes: string[];
+  features: string[];
+  sentiment: 'positive' | 'negative' | 'neutral';
+}
+
+export async function enrichFeedback(feedback: string): Promise<{ enrichedText: string; analysis: FeedbackAnalysis }> {
+  const completion = await openai.chat.completions.create({
+    messages: [
+      {
+        role: "system",
+        content: `You are a system that analyzes customer feedback and extracts key themes, topics, and sentiment. 
+        For the given feedback, identify the main topics, themes, and any specific product features or issues mentioned.
+        Return a JSON object with the following structure:
+        {
+          "topics": ["topic1", "topic2", ...],
+          "themes": ["theme1", "theme2", ...],
+          "features": ["feature1", "feature2", ...],
+          "sentiment": "positive" | "negative" | "neutral"
+        }`
+      },
+      {
+        role: "user",
+        content: feedback
+      }
+    ],
+    model: "gpt-4o-mini",
+    response_format: { type: "json_object" }
+  });
+
+  const analysis: FeedbackAnalysis = JSON.parse(completion.choices[0].message.content || '{}');
+  const enrichedText = `${feedback}\n\nTopics: ${analysis.topics.join(', ')}\nThemes: ${analysis.themes.join(', ')}\nFeatures: ${analysis.features.join(', ')}\nSentiment: ${analysis.sentiment}`;
+  
+  return { enrichedText, analysis };
+}
+
+export interface ChatRequest {
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  storedContext?: string;
+  teamTerms?: Record<string, string>;
+  model?: string;
+}
+
+export async function streamChat(opts: ChatRequest) {
+  const { messages, storedContext = '', teamTerms = {}, model = 'gpt-4' } = opts;
+
+  // Format team terms for the prompt
+  const formattedTeamTerms = Object.entries(teamTerms)
+    .map(([key, value]) => `- ${key}: ${value}`)
+    .join('\n');
+
+  // Construct system prompt
+  const systemPrompt = `
+    You are Poppy, an AI assistant helping product managers with their work. You have access to the following context:
+
+    Here are the team's key terms:
+    ${formattedTeamTerms}
+
+    Here is the user's personal context:
+    ${storedContext}
+
+    Answer the user's questions using the above context. If the context is not enough, say so. You are meant to be a representation of the user's work, so you should know the answers to the questions.
+
+    Your responses should be helpful, insightful, and concise. You should strive to be direct and to the point.
+  `;
+
+  // Call OpenAI with message history
+  const chatMessages: ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt },
+    ...messages.map(m => ({ 
+      role: m.role, 
+      content: m.content 
+    } as ChatCompletionMessageParam)),
+  ];
+
+  const stream = await openai.chat.completions.create({
+    model,
+    messages: chatMessages,
+    stream: true,
+  });
+
+  return streamTextResponse(stream, 'text/plain');
+}
+
+export interface DecomposePRDRequest {
+  content: string;
+  prompt?: string;
+  model?: string;
+}
+
+export async function decomposePRD(opts: DecomposePRDRequest) {
+  const { content, prompt, model = 'o3' } = opts;
+
+  const defaultPrompt = `# PRD Decomposition Prompt for Phased Releases
+
+You are a product strategist specializing in breaking down Product Requirement Documents (PRDs) into sequential, narrow releases that enable faster development and early learning. Your goal is to transform a comprehensive PRD into a phased release plan that delivers value incrementally while reducing risk.
+
+## Input
+Here is a Product Requirement Document  ${content}
+
+## Your Task
+Analyze the PRD and create a phased release plan that:
+1. Breaks down the full scope into 3-7 sequential phases
+2. Each phase should be independently valuable and testable
+3. Earlier phases should de-risk and inform later phases
+4. Focus on product maturity milestones, not just technical implementation
+
+## IMPORTANT: Response Format
+Respond with ONLY a valid JSON array of phase objects. Each phase object should have this structure:
+{
+  "name": "Phase name",
+  "description": "Detailed description of what this phase accomplishes",
+  "customer_value": "Justification and explination of customer value achieved by releasing this phase"
+  "priority": 1
+}
+
+Do not include any markdown formatting, explanations, or text outside the JSON array. Return only the JSON array.`;
+
+  const stream = await openai.chat.completions.create({
+    model,
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a product management expert who excels at breaking down complex features into manageable release phases. Always respond with valid JSON.'
+      },
+      {
+        role: 'user',
+        content: prompt || defaultPrompt
+      }
+    ],
+    stream: true,
+  });
+
+  return streamTextResponse(stream);
+}

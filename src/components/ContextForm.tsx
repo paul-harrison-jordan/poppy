@@ -8,14 +8,12 @@ interface FormData {
   teamStrategy: string;
   howYouThinkAboutProduct: string;
   pillarGoalsKeyTermsBackground: string;
-  examplesOfHowYouThink: string;
 }
 
 const defaultFormData: FormData = {
   teamStrategy: '',
   howYouThinkAboutProduct: '',
   pillarGoalsKeyTermsBackground: '',
-  examplesOfHowYouThink: '',
 };
 
 interface ContextFormProps {
@@ -160,31 +158,6 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
                 </button>
               </div>
             </div>
-            <div>
-              <label htmlFor="examplesOfHowYouThink" className="block font-medium text-gray-900 mb-1">
-                Annotated Example PRD
-              </label>
-              <div className="flex gap-2 items-start">
-                <textarea
-                  id="examplesOfHowYouThink"
-                  name="examplesOfHowYouThink"
-                  value={formData.examplesOfHowYouThink}
-                  onChange={handleInputChange}
-                  rows={4}
-                  className="w-full rounded-xl border border-neutral bg-white/90 backdrop-blur-sm px-4 py-3 text-primary shadow-sm focus:ring-2 focus:ring-poppy focus:outline-none resize-vertical"
-                  placeholder="Paste the markdown text of an example PRD that has additional context written by you explaining why you wrote things the way you did, and why the structure of the document is important. The more you provide about how you think and why the PRD looks the way it does, the better your results will be."
-                  required
-                  readOnly
-                />
-                <button
-                  type="button"
-                  className="ml-2 px-3 py-2 rounded-xl bg-poppy text-white font-semibold shadow-sm hover:bg-poppy/90 focus:outline-none focus:ring-2 focus:ring-poppy"
-                  onClick={() => handleEditClick("examplesOfHowYouThink")}
-                >
-                  Edit
-                </button>
-              </div>
-            </div>
           </div>
           <div className="flex justify-center">
             <button
@@ -212,7 +185,6 @@ export default function ContextForm({ onComplete }: ContextFormProps) {
                     case "teamStrategy": return "Team Strategy";
                     case "howYouThinkAboutProduct": return "How you think about Product";
                     case "pillarGoalsKeyTermsBackground": return "Pillar Goals, Key Terms, and Background";
-                    case "examplesOfHowYouThink": return "Annotated Example PRD";
                     default: return "";
                   }
                 })()}

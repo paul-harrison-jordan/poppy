@@ -19,8 +19,20 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       redirectUri: process.env.GOOGLE_REDIRECT_URI,
     });
+    // Debug logging
+    console.log('Fetch-docs session data:', {
+      hasAccessToken: !!session.accessToken,
+      hasUser: !!session.user,
+      userEmail: session.user?.email,
+      tokenExpiry: session.expiresAt
+    });
+
     if (!session.accessToken) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+      console.error('No access token available in session for fetch-docs');
+      return NextResponse.json({ 
+        error: 'No access token available. Please re-authenticate with Google.',
+        debugInfo: 'Session exists but no accessToken property found'
+      }, { status: 401 });
     }
     auth.setCredentials({ access_token: session.accessToken });
 

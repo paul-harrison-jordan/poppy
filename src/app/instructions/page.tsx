@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import AppShell from '@/components/AppShell';
-import Banner from '@/components/Banner';
 import { Home, Eye, EyeOff, Check, X } from 'lucide-react';
 
 export default function InstructionsPage() {
@@ -62,7 +61,6 @@ export default function InstructionsPage() {
         <Link href="/" className="absolute top-0 right-0 mt-6 mr-8 text-poppy hover:text-poppy/80 transition-colors z-10" aria-label="Back to Chat">
           <Home className="w-7 h-7" />
         </Link>
-        <Banner status="instructions" />
         <div className="bg-white/90 rounded-b-2xl shadow-sm p-8 text-primary font-sans space-y-8">
           
           {/* Configuration Section */}

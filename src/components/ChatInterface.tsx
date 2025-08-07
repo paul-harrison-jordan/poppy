@@ -9,6 +9,7 @@ import { useKnowledgeSession } from '@/hooks/useKnowledgeSession';
 import { usePRDFlow } from '@/hooks/usePRDFlow';
 import ChatMessageList from './ChatMessageList';
 import ChatInput from './ChatInput';
+import { getEnrichedPersonalContext } from '@/lib/utils/contextHelpers';
 
 // Lazy load heavy components
 const DesignSidebar = lazy(() => import('./DesignSidebar'));
@@ -54,6 +55,7 @@ export default function ChatInterface() {
   const [v0ChatId, setV0ChatId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [typingDemo, setTypingDemo] = useState(false);
 
   // Use custom hooks
   const knowledgeSession = useKnowledgeSession();
@@ -65,6 +67,43 @@ export default function ChatInterface() {
       setIsInitialized(true);
     }
   }, [status, knowledgeSession, prdFlow]);
+
+  // Subtle typing demo on first load when there are no messages
+  useEffect(() => {
+    if (messages.length === 0 && input === '' && isInitialized && !typingDemo) {
+      const timer = setTimeout(() => {
+        setTypingDemo(true);
+        const demoTexts = {
+          draft: "Draft a PRD for user authentication...",
+          brainstorm: "Brainstorm solutions for user onboarding...",
+          design: "Create a design for mobile checkout...",
+          feedback: "Find customer feedback about search...",
+          chat: "Help me with roadmap planning..."
+        };
+        
+        const demoText = demoTexts[mode as keyof typeof demoTexts] || demoTexts.draft;
+        let i = 0;
+        
+        const typeInterval = setInterval(() => {
+          if (i < demoText.length) {
+            setInput(demoText.slice(0, i + 1));
+            i++;
+          } else {
+            // Clear after showing full text for 1.5 seconds
+            setTimeout(() => {
+              setInput('');
+              setTypingDemo(false);
+            }, 1500);
+            clearInterval(typeInterval);
+          }
+        }, 50);
+        
+        return () => clearInterval(typeInterval);
+      }, 2000); // Start demo after 2 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [messages.length, input, isInitialized, mode, typingDemo]);
 
   // Track design mode changes
   useEffect(() => {
@@ -491,7 +530,7 @@ export default function ChatInterface() {
         content: "I'm summarizing our conversation and preparing to start the PRD..." 
       }]);
 
-      const storedContext = localStorage.getItem("personalContext");
+      const storedContext = getEnrichedPersonalContext();
       const teamTerms = JSON.parse(localStorage.getItem("teamTerms") || "{}");
       const chatMessages = [
         ...messages.map((m) => ({ role: m.role, content: m.content })),
@@ -1039,7 +1078,7 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
             messages: [...messages, userMessage],
             additionalContext: prdFlow.matchedContext.join("\n"),
             teamTerms: JSON.parse(localStorage.getItem("teamTerms") || "{}"),
-            storedContext: localStorage.getItem("personalContext"),
+            storedContext: getEnrichedPersonalContext(),
             startPrd: false
           }),
         });
@@ -1157,7 +1196,7 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
             messages: [...messages, userMessage],
             additionalContext: "",
             teamTerms: JSON.parse(localStorage.getItem("teamTerms") || "{}"),
-            storedContext: localStorage.getItem("personalContext"),
+            storedContext: getEnrichedPersonalContext(),
             startPrd: false
           }),
         });
@@ -1305,7 +1344,7 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
       // Centered overlay chat interface
       <div className="flex flex-col h-screen relative">
         {/* Messages area - centered container with consistent width */}
-        <div className="flex-1 overflow-y-auto pb-48 relative">
+        <div className="flex-1 overflow-y-auto pb-32 relative">
           <div className="flex justify-center px-6">
             <div className="w-full max-w-4xl">
             {messages.length > 0 ? (
@@ -1317,17 +1356,26 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
                 />
               </div>
             ) : (
-              /* Empty state with contextual guidance */
+                  /* Empty state with contextual guidance - OS style */
               <div className="h-full flex items-center justify-center">
-                <div className="text-center text-gray-500 max-w-md">
-                  <div className="text-lg font-medium mb-2 text-gray-700">
+                <div className="text-center max-w-md os-panel p-space-8">
+                  <div className="w-16 h-16 bg-gradient-to-br from-poppy-primary-light to-poppy-secondary-light rounded-2xl flex items-center justify-center mx-auto mb-space-6 elevation-sm">
+                    <div className="text-2xl">
+                      {mode === 'draft' && '📝'}
+                      {mode === 'brainstorm' && '💡'}
+                      {mode === 'chat' && '💬'}
+                      {mode === 'design' && '🎨'}
+                      {mode === 'feedback' && '🔍'}
+                    </div>
+                  </div>
+                  <div className="text-lg font-semibold mb-space-3 text-poppy-primary">
                     {mode === 'draft' && 'Ready to draft your PRD'}
                     {mode === 'brainstorm' && 'Let\'s brainstorm ideas'}
                     {mode === 'chat' && 'Chat with Poppy'}
                     {mode === 'design' && 'Design Studio'}
                     {mode === 'feedback' && 'Search Customer Feedback'}
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-warm-neutral">
                     {mode === 'draft' && 'Share your product idea, JTBD, and context to get started'}
                     {mode === 'brainstorm' && 'Describe your initial thoughts or questions'}
                     {mode === 'chat' && 'Ask me anything about product management'}
@@ -1344,21 +1392,21 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
           <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white via-white/80 to-transparent pointer-events-none z-10" />
           
           {/* Fade overlay at bottom to prevent content from showing behind input */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white via-white/90 to-transparent pointer-events-none z-10" />
+          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-none z-10" />
         </div>
 
-        {/* Input at bottom - normal positioning */}
+        {/* Input at bottom - OS style */}
         <div 
-          className="fixed bottom-6 z-20"
+          className="fixed bottom-space-6 z-20"
           style={{
             left: `${sidebarWidth}px`,
             right: '0px',
-            paddingLeft: '24px',
-            paddingRight: '24px',
+            paddingLeft: 'var(--space-6)',
+            paddingRight: 'var(--space-6)',
           }}
         >
           <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6">
+            <div className="os-panel p-space-6 elevation-lg border-2 border-poppy-primary/10">
               <ChatInput
                 input={input}
                 loading={loading}

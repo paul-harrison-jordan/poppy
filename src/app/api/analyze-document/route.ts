@@ -2,14 +2,10 @@ import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api';
 import { Session } from 'next-auth';
 import { Pinecone } from '@pinecone-database/pinecone';
-import { OpenAI } from 'openai';
+import { generateEmbedding, analyzeDocument } from '@/lib/services/openaiService';
 
 const pc = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY!,
-});
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
 });
 
 const DATABASES = ['arjun-madgavkar', 'jeremy-blanchard', 'kevin-twomey'];
@@ -26,10 +22,9 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
       return NextResponse.json({ error: 'Document body is required' }, { status: 400 });
     }
 
-    // Generate embedding for the document
-    const embeddingResponse = await openai.embeddings.create({
-      model: 'text-embedding-3-small',
-      input: documentBody,
+    // Generate embedding for the document using centralized service
+    const embeddingResponse = await generateEmbedding({
+      input: documentBody
     });
 
     const embedding = embeddingResponse.data[0].embedding;
@@ -71,27 +66,15 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
       .filter(result => result.averageScore > 0.7)
       .map(result => result.database);
 
-    // Use OpenAI to analyze the matches and provide context
+    // Use centralized service to analyze the matches and provide context
     const analysisPrompt = `Analyze the following document and its matches across different databases. 
     The document has been matched with the following databases: ${relevantDatabases.join(', ')}.
     Provide a brief analysis of why these matches are relevant and what insights can be drawn.`;
 
-    const analysisResponse = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an AI assistant that analyzes document matches and provides insights.',
-        },
-        {
-          role: 'user',
-          content: analysisPrompt,
-        },
-      ],
-      max_tokens: 200,
+    const analysis = await analyzeDocument({
+      documentBody,
+      analysisPrompt
     });
-
-    const analysis = analysisResponse.choices[0]?.message?.content || 'No analysis available';
 
     return NextResponse.json({
       relevantDatabases,

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api';
 import { getUserIndex } from '@/lib/pinecone';
-import { openai } from '@/lib/openai';
+import { enrichFeedback, generateEmbedding } from '@/lib/services/openaiService';
 import { nanoid } from 'nanoid';
 
 
@@ -16,33 +16,7 @@ interface FeedbackRow {
   FIRST_NAME: string;
 }
 
-async function enrichFeedback(feedback: string): Promise<string> {
-  const completion = await openai.chat.completions.create({
-    messages: [
-      {
-        role: "system",
-        content: `You are a system that analyzes customer feedback and extracts key themes, topics, and sentiment. 
-        For the given feedback, identify the main topics, themes, and any specific product features or issues mentioned.
-        Return a JSON object with the following structure:
-        {
-          "topics": ["topic1", "topic2", ...],
-          "themes": ["theme1", "theme2", ...],
-          "features": ["feature1", "feature2", ...],
-          "sentiment": "positive" | "negative" | "neutral"
-        }`
-      },
-      {
-        role: "user",
-        content: feedback
-      }
-    ],
-    model: "gpt-4o-mini",
-    response_format: { type: "json_object" }
-  });
-
-  const analysis = JSON.parse(completion.choices[0].message.content || '{}');
-  return `${feedback}\n\nTopics: ${analysis.topics.join(', ')}\nThemes: ${analysis.themes.join(', ')}\nFeatures: ${analysis.features.join(', ')}\nSentiment: ${analysis.sentiment}`;
-}
+// This function is now imported from openaiService
 
 export const POST = withAuth(async (session, request: Request) => {
   try {
@@ -59,14 +33,15 @@ export const POST = withAuth(async (session, request: Request) => {
       return NextResponse.json({ error: 'No valid feedback texts to embed' }, { status: 400 });
     }
 
-    // Enrich each feedback with keywords and analysis
-    const enrichedFeedback = await Promise.all(
+    // Enrich each feedback with keywords and analysis using centralized service
+    const enrichedResults = await Promise.all(
       feedbackTexts.map((text: string) => enrichFeedback(text))
     );
+    
+    const enrichedFeedback = enrichedResults.map(result => result.enrichedText);
 
-    const embeddings = await openai.embeddings.create({
-      model: "text-embedding-3-small",
-      input: enrichedFeedback,
+    const embeddings = await generateEmbedding({
+      input: enrichedFeedback
     });
 
     // Create Pinecone records - only for rows with valid feedback

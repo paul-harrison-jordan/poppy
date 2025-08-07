@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api'
 import { Session } from 'next-auth'
-import { openai } from '@/lib/openai'
-import { streamTextResponse } from '@/lib/services/openaiService'
+import { decomposePRD } from '@/lib/services/openaiService'
 
 export const POST = withAuth<NextResponse, Session, [Request]>(async (session, req) => {
   try {
@@ -123,23 +122,11 @@ Respond with ONLY a valid JSON array of phase objects. Each phase object should 
 
 Do not include any markdown formatting, explanations, or text outside the JSON array. Return only the JSON array.`
 
-    // Simple streaming - just return the full response using the same pattern as generate-content
-    const stream = await openai.chat.completions.create({
-      model: 'o3',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a product management expert who excels at breaking down complex features into manageable release phases. Always respond with valid JSON.'
-        },
-        {
-          role: 'user',
-          content: decompositionPrompt
-        }
-      ],
-      stream: true,
+    // Simple streaming - just return the full response using the centralized service
+    return await decomposePRD({
+      content,
+      prompt: decompositionPrompt
     })
-
-    return streamTextResponse(stream)
 
   } catch (error) {
     console.error('Error decomposing PRD:', error)

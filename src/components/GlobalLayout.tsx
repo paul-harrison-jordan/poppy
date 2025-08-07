@@ -1,9 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from "react"
-import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Settings, RefreshCw } from "lucide-react"
 import GlobalSidebar from './GlobalSidebar'
 import { cn } from "@/lib/utils"
 import { determineCategory, analyzeSummary } from '@/lib/prdCategorization'
@@ -14,7 +12,6 @@ interface PersonalContext {
   teamStrategy: string
   howYouThinkAboutProduct: string
   pillarGoalsKeyTermsBackground: string
-  examplesOfHowYouThink: string
 }
 
 interface Step {
@@ -76,6 +73,7 @@ function triggerAgenticNotification(prd: PRD) {
 export default function GlobalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isHome = pathname === "/"
+  const isOnboarding = pathname === "/onboarding"
   const isDesignMode = pathname === "/" && typeof window !== 'undefined' && 
     localStorage.getItem('currentChatMode') === 'design'
 
@@ -190,13 +188,8 @@ export default function GlobalLayout({ children }: { children: React.ReactNode }
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [notifiedPrdIds])
 
-  const completedCount = steps.filter((s) => s.complete).length
-  const totalCount = steps.length
-  const isPersonalContextComplete = steps[0].complete
-  const isDocsSynced = steps[1].complete
-
-  // Height of the banner (adjust if you change banner padding/margin)
-  const bannerHeight = (!isHome && (!isPersonalContextComplete || !isDocsSynced)) ? 112 : 0
+  // No banner needed anymore
+  const bannerHeight = 0
   const sidebarWidth = isSidebarCollapsed ? 64 : 256
 
   return (
@@ -204,8 +197,8 @@ export default function GlobalLayout({ children }: { children: React.ReactNode }
       "min-h-screen w-full flex transition-smooth",
       isHome ? "bg-gradient-to-br from-cream to-white" : "bg-warm-neutral-light"
     )}>
-      {/* Global Sidebar - completely hidden in design mode */}
-      {!isDesignMode && (
+      {/* Global Sidebar - completely hidden in design mode and onboarding */}
+      {!isDesignMode && !isOnboarding && (
         <GlobalSidebar 
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={toggleSidebar}
@@ -215,56 +208,13 @@ export default function GlobalLayout({ children }: { children: React.ReactNode }
       {/* Main Content Area */}
       <div 
         className="flex-1 flex flex-col transition-all duration-300"
-        style={{ marginLeft: isDesignMode ? '0px' : `${sidebarWidth}px` }}
+        style={{ marginLeft: (isDesignMode || isOnboarding) ? '0px' : `${sidebarWidth}px` }}
       >
-        {/* Professional OS onboarding banner - hidden in design mode */}
-        {!isHome && !isDesignMode && (!isPersonalContextComplete || !isDocsSynced) && (
-          <div 
-            className="fixed top-0 right-0 px-0 py-space-6 os-header border-b border-poppy-primary/20 elevation-md z-40 flex flex-col items-center transition-smooth"
-            style={{ left: `${sidebarWidth}px` }}
-          >
-            <div className="w-full max-w-2xl mx-auto">
-              <div className="progress-bar mb-space-4">
-                <div className="progress-bar__fill" style={{ width: `${(completedCount / totalCount) * 100}%` }} />
-              </div>
-              <div className="flex flex-col gap-space-4 w-full">
-                {!isPersonalContextComplete && (
-                  <div className="flex items-center gap-space-4">
-                    <div className="p-space-3 bg-poppy-primary-light rounded-xl">
-                      <Settings className="w-6 h-6 text-poppy-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-poppy-primary">Configure Personal Context</div>
-                      <div className="text-xs text-warm-neutral">Help Poppy understand your product strategy and team dynamics.</div>
-                    </div>
-                    <Link href="/instructions" className="px-space-4 py-space-2 rounded-xl bg-gradient-to-r from-poppy-primary to-poppy-primary/90 text-poppy-primary-foreground font-semibold hover:elevation-md transition-smooth text-sm elevation-sm">
-                      Configure
-                    </Link>
-                  </div>
-                )}
-                {!isDocsSynced && (
-                  <div className="flex items-center gap-space-4">
-                    <div className="p-space-3 bg-lavender-secondary-light rounded-xl">
-                      <RefreshCw className="w-6 h-6 text-lavender-secondary" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-lavender-secondary">Sync Knowledge Base</div>
-                      <div className="text-xs text-warm-neutral">Connect your documents to enhance product intelligence.</div>
-                    </div>
-                    <Link href="/sync" className="px-space-4 py-space-2 rounded-xl bg-gradient-to-r from-lavender-secondary-light to-lavender-secondary-light/90 text-lavender-secondary-foreground font-semibold hover:elevation-md transition-smooth text-sm elevation-sm">
-                      Sync Now
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Main content with proper spacing for banner */}
         <main 
           className="flex-1 flex flex-col min-h-0"
-          style={{ marginTop: isDesignMode ? '0px' : `${bannerHeight}px` }}
+          style={{ marginTop: (isDesignMode || isOnboarding) ? '0px' : `${bannerHeight}px` }}
         >
           {children}
         </main>

@@ -13,7 +13,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Users
+  Users,
+  Bot
 } from 'lucide-react'
 
 interface GlobalSidebarProps {
@@ -51,6 +52,13 @@ export default function GlobalSidebar({ isCollapsed = false, onToggleCollapse }:
       icon: Users,
       label: 'Teams',
       description: 'Organize & optimize capacity',
+      actionable: true
+    },
+    {
+      path: '/agent-mode',
+      icon: Bot,
+      label: 'Agent Mode',
+      description: 'Autonomous task execution',
       actionable: true
     },
   ]

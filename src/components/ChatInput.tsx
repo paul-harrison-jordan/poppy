@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Sparkles, FileText, Paintbrush, Bot, MessageSquare } from 'lucide-react';
 
 type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'agent' | 'design' | 'feedback';
@@ -45,31 +45,89 @@ export default function ChatInput({
   onOpenAgentMode
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [currentPlaceholder, setCurrentPlaceholder] = useState('');
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  // Animated placeholders based on mode
+  const getPlaceholders = useCallback(() => {
+    switch (mode) {
+      case 'draft':
+        if (draftStep === 'questions') {
+          return [`Answer question ${currentQuestionIndex + 1} of ${questions.length}...`];
+        } else if (draftStep === 'vocabulary') {
+          return [`Define term ${currentTermIndex + 1} of ${teamTerms.length}...`];
+        }
+        return [
+          "Draft a PRD for a mobile checkout feature...",
+          "Create specs for user authentication system...",
+          "Document requirements for analytics dashboard...",
+          "Share your product idea and context..."
+        ];
+      case 'brainstorm':
+        return [
+          "Brainstorm solutions for user onboarding...",
+          "Explore ideas for improving retention...",
+          "What pain points should we solve first?",
+          "How might we increase engagement?"
+        ];
+      case 'design':
+        return [
+          "Create a design for dashboard analytics...",
+          "Design a mobile-first checkout flow...",
+          "Prototype the user profile settings...",
+          "Describe design changes you'd like..."
+        ];
+      case 'feedback':
+        return [
+          "Find customer feedback about search functionality...",
+          "Search for complaints about checkout process...",
+          "Look for requests about mobile app features...",
+          "Describe a feature or pain point to search..."
+        ];
+      default:
+        return [
+          "Ask me anything about product management...",
+          "Get help with roadmap planning...",
+          "Discuss user research insights...",
+          "Message Poppy about your product needs..."
+        ];
+    }
+  }, [mode, draftStep, currentQuestionIndex, questions.length, currentTermIndex, teamTerms.length]);
+
+  // Cycle through placeholders
+  useEffect(() => {
+    if (input.trim()) return; // Don't animate if user is typing
+    
+    const placeholders = getPlaceholders();
+    if (placeholders.length <= 1) {
+      setCurrentPlaceholder(placeholders[0] || '');
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+    }, 3000); // Change every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [mode, input, getPlaceholders]);
+
+  // Update current placeholder when index changes
+  useEffect(() => {
+    const placeholders = getPlaceholders();
+    setCurrentPlaceholder(placeholders[placeholderIndex] || placeholders[0] || '');
+  }, [placeholderIndex, getPlaceholders]);
 
   // Auto-focus the textarea when component mounts or when input is cleared
   useEffect(() => {
     if (textareaRef.current && !loading) {
       textareaRef.current.focus();
+      // Reset height when input is cleared (after message sent)
+      if (!input.trim()) {
+        textareaRef.current.style.height = '56px';
+      }
     }
   }, [loading, mode, input]);
 
-  const getPlaceholder = () => {
-    if (mode === 'draft') {
-      if (draftStep === 'questions') {
-        return `Answer question ${currentQuestionIndex + 1} of ${questions.length}...`;
-      } else if (draftStep === 'vocabulary') {
-        return `Define term ${currentTermIndex + 1} of ${teamTerms.length}...`;
-      }
-      return "Share your product idea...";
-    } else if (mode === 'brainstorm') {
-      return "What's on your mind?";
-    } else if (mode === 'design') {
-      return "Describe design changes...";
-    } else if (mode === 'feedback') {
-      return "Describe a feature or pain point...";
-    }
-    return "Message Poppy...";
-  };
 
   // Calculate progress for draft mode
   const getDraftProgress = () => {
@@ -98,10 +156,10 @@ export default function ChatInput({
       <button
         type="button"
         onClick={() => onModeChange('brainstorm')}
-        className={`px-3 py-2 text-sm rounded-lg transition-all flex flex-col items-center gap-1 group ${
+        className={`px-space-3 py-space-2 text-sm rounded-xl transition-smooth flex flex-col items-center gap-1 group ${
           mode === 'brainstorm' 
-            ? 'bg-gradient-to-br from-poppy to-poppy/80 text-white shadow-md' 
-            : 'text-gray-600 hover:text-poppy hover:bg-poppy/5 border border-gray-200 hover:border-poppy/30'
+            ? 'bg-gradient-to-br from-poppy-primary to-poppy-primary/80 text-white elevation-sm' 
+            : 'text-warm-neutral hover:text-poppy-primary hover:bg-poppy-primary/5 border border-border hover:border-poppy-primary/30'
         }`}
       >
         <Sparkles className={`w-4 h-4 ${mode === 'brainstorm' ? '' : 'group-hover:scale-110 transition-transform'}`} />
@@ -113,10 +171,10 @@ export default function ChatInput({
       <button
         type="button"
         onClick={() => onModeChange('draft')}
-        className={`px-3 py-2 text-sm rounded-lg transition-all flex flex-col items-center gap-1 group ${
+        className={`px-space-3 py-space-2 text-sm rounded-xl transition-smooth flex flex-col items-center gap-1 group ${
           mode === 'draft' 
-            ? 'bg-gradient-to-br from-poppy to-poppy/80 text-white shadow-md' 
-            : 'text-gray-600 hover:text-poppy hover:bg-poppy/5 border border-gray-200 hover:border-poppy/30'
+            ? 'bg-gradient-to-br from-poppy-primary to-poppy-primary/80 text-white elevation-sm' 
+            : 'text-warm-neutral hover:text-poppy-primary hover:bg-poppy-primary/5 border border-border hover:border-poppy-primary/30'
         }`}
       >
         <FileText className={`w-4 h-4 ${mode === 'draft' ? '' : 'group-hover:scale-110 transition-transform'}`} />
@@ -128,10 +186,10 @@ export default function ChatInput({
       <button
         type="button"
         onClick={() => onModeChange('design')}
-        className={`px-3 py-2 text-sm rounded-lg transition-all flex flex-col items-center gap-1 group ${
+        className={`px-space-3 py-space-2 text-sm rounded-xl transition-smooth flex flex-col items-center gap-1 group ${
           mode === ('design' as ChatMode) 
-            ? 'bg-gradient-to-br from-poppy to-poppy/80 text-white shadow-md' 
-            : 'text-gray-600 hover:text-poppy hover:bg-poppy/5 border border-gray-200 hover:border-poppy/30'
+            ? 'bg-gradient-to-br from-poppy-primary to-poppy-primary/80 text-white elevation-sm' 
+            : 'text-warm-neutral hover:text-poppy-primary hover:bg-poppy-primary/5 border border-border hover:border-poppy-primary/30'
         }`}
       >
         <Paintbrush className={`w-4 h-4 ${mode === 'design' ? '' : 'group-hover:scale-110 transition-transform'}`} />
@@ -143,10 +201,10 @@ export default function ChatInput({
       <button
         type="button"
         onClick={() => onModeChange('feedback')}
-        className={`px-3 py-2 text-sm rounded-lg transition-all flex flex-col items-center gap-1 group ${
+        className={`px-space-3 py-space-2 text-sm rounded-xl transition-smooth flex flex-col items-center gap-1 group ${
           mode === 'feedback' 
-            ? 'bg-gradient-to-br from-poppy to-poppy/80 text-white shadow-md' 
-            : 'text-gray-600 hover:text-poppy hover:bg-poppy/5 border border-gray-200 hover:border-poppy/30'
+            ? 'bg-gradient-to-br from-poppy-primary to-poppy-primary/80 text-white elevation-sm' 
+            : 'text-warm-neutral hover:text-poppy-primary hover:bg-poppy-primary/5 border border-border hover:border-poppy-primary/30'
         }`}
       >
         <MessageSquare className={`w-4 h-4 ${mode === 'feedback' ? '' : 'group-hover:scale-110 transition-transform'}`} />
@@ -182,10 +240,10 @@ export default function ChatInput({
         <div className="relative">
           <textarea
             ref={textareaRef}
-            className="w-full p-4 pr-12 rounded-xl border border-gray-200 resize-none focus:ring-2 focus:ring-poppy focus:border-poppy outline-none text-base placeholder-gray-500 min-h-[56px] max-h-32 bg-white shadow-sm transition-all"
+            className="w-full p-space-4 pr-12 rounded-xl border border-border resize-none focus:ring-2 focus:ring-poppy-primary focus:border-poppy-primary outline-none text-base placeholder-warm-neutral min-h-[56px] max-h-32 bg-white elevation-sm transition-smooth"
             value={input}
             onChange={e => onInputChange(e.target.value)}
-            placeholder={getPlaceholder()}
+            placeholder={currentPlaceholder}
             disabled={loading}
             rows={1}
             onKeyDown={(e) => {
@@ -203,7 +261,7 @@ export default function ChatInput({
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-lg bg-poppy text-white hover:bg-poppy/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-xl bg-poppy-primary text-white hover:bg-poppy-primary/90 disabled:bg-warm-neutral disabled:cursor-not-allowed transition-smooth elevation-sm"
           >
             {loading ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -227,18 +285,18 @@ export default function ChatInput({
           {progress.show && (
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="text-xs text-gray-600 font-medium truncate">
+                <div className="text-xs text-warm-neutral font-medium truncate">
                   {progress.step}
                 </div>
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="w-16 h-2 bg-border rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-poppy rounded-full transition-all duration-300 ease-out"
+                      className="h-full bg-poppy-primary rounded-full transition-smooth"
                       style={{ width: `${progress.percent}%` }}
                     />
                   </div>
                 </div>
-                <div className="text-xs text-gray-500 font-mono">
+                <div className="text-xs text-warm-neutral font-mono">
                   {Math.round(progress.percent)}%
                 </div>
               </div>
@@ -249,10 +307,10 @@ export default function ChatInput({
 
       {/* Show PRD button in brainstorm mode */}
       {showStartPrdButton && mode === 'brainstorm' && onSummarizeAndSave && (
-        <div className="fixed bottom-6 right-6 z-50">
+        <div className="fixed bottom-space-6 right-space-6 z-50">
           <button
             type="button"
-            className="px-4 py-2 rounded-lg bg-poppy text-white font-medium text-sm hover:bg-poppy/90 transition-all duration-150 shadow-lg flex items-center gap-2"
+            className="px-space-4 py-space-2 rounded-xl bg-poppy-primary text-white font-medium text-sm hover:bg-poppy-primary/90 transition-smooth elevation-lg flex items-center gap-2"
             onClick={onSummarizeAndSave}
             disabled={loading}
           >

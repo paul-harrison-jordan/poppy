@@ -4,11 +4,52 @@ import SignIn from '@/app/auth/signin/page';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import ChatInterface from '@/components/ChatInterface';
+import { useRouter } from 'next/navigation';
 import { Settings, Grid3X3 } from 'lucide-react';
 
 export default function Home() {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const [isDesignMode, setIsDesignMode] = useState(false);
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
+
+  // Check onboarding status
+  useEffect(() => {
+    const checkOnboardingStatus = () => {
+      const personalContext = localStorage.getItem('personalContext');
+      const syncedDocs = localStorage.getItem('syncedDocs');
+      const onboardingMarker = localStorage.getItem('onboardingComplete');
+      
+      // Check if user has completed onboarding
+      if (onboardingMarker !== 'true') {
+        let needsOnboarding = true;
+        
+        if (personalContext && syncedDocs) {
+          const context = JSON.parse(personalContext);
+          const docs = JSON.parse(syncedDocs);
+          
+          // Check if all required fields are filled
+          const contextComplete = context.teamStrategy && 
+                                context.howYouThinkAboutProduct && 
+                                context.pillarGoalsKeyTermsBackground;
+          const docsComplete = docs.length > 0;
+          
+          needsOnboarding = !(contextComplete && docsComplete);
+        }
+        
+        if (needsOnboarding) {
+          router.push('/onboarding');
+          return;
+        }
+      }
+      
+      setIsCheckingOnboarding(false);
+    };
+
+    if (session?.user) {
+      checkOnboardingStatus();
+    }
+  }, [session?.user, router]);
 
   useEffect(() => {
     const initializePinecone = async () => {
@@ -76,7 +117,7 @@ export default function Home() {
     };
   }, []);
 
-  if (status === 'loading') {
+  if (status === 'loading' || isCheckingOnboarding) {
     return (
       <div className="min-h-screen bg-neutral/80 flex items-center justify-center">
         <div className="text-primary animate-pulse font-sans">Loading...</div>
@@ -91,6 +132,7 @@ export default function Home() {
       </div>
     );
   }
+
 
   return (
     <div className={`min-h-screen bg-neutral/80 flex flex-col relative ${isDesignMode ? 'design-mode-fullscreen' : ''}`}>

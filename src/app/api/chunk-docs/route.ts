@@ -18,6 +18,22 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
       );
     }
 
+    // Debug logging
+    console.log('Session data:', {
+      hasAccessToken: !!session.accessToken,
+      hasUser: !!session.user,
+      userEmail: session.user?.email,
+      tokenExpiry: session.expiresAt
+    });
+
+    if (!session.accessToken) {
+      console.error('No access token available in session');
+      return NextResponse.json(
+        { error: 'No access token available. Please re-authenticate with Google.' },
+        { status: 401 }
+      );
+    }
+
     // Initialize the OAuth2 client
     const auth = new OAuth2Client({
       clientId: process.env.GOOGLE_CLIENT_ID,
