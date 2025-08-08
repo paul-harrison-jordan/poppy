@@ -17,20 +17,9 @@ export default function ChatMessageList({ messages, loading, messagesEndRef }: C
   const containerRef = useRef<HTMLDivElement>(null);
   const [messageOpacities, setMessageOpacities] = useState<number[]>([]);
 
-  // Calculate opacity based on distance from top border
-  const calculateOpacity = (element: HTMLElement) => {
-    if (!containerRef.current) return 1;
-    
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const elementRect = element.getBoundingClientRect();
-    const fadeZone = 100; // pixels from top where fade effect starts
-    
-    const distanceFromTop = elementRect.top - containerRect.top;
-    
-    if (distanceFromTop > fadeZone) return 1;
-    if (distanceFromTop < 0) return 0;
-    
-    return Math.max(0, distanceFromTop / fadeZone);
+  // No fade effect - all messages fully visible
+  const calculateOpacity = () => {
+    return 1; // Always fully visible
   };
 
   // Update opacities on scroll or resize
@@ -39,8 +28,8 @@ export default function ChatMessageList({ messages, loading, messagesEndRef }: C
       if (!containerRef.current) return;
       
       const messageElements = containerRef.current.querySelectorAll('[data-message-index]');
-      const newOpacities = Array.from(messageElements).map((element) => 
-        calculateOpacity(element as HTMLElement)
+      const newOpacities = Array.from(messageElements).map(() => 
+        calculateOpacity()
       );
       setMessageOpacities(newOpacities);
     };
@@ -80,8 +69,8 @@ export default function ChatMessageList({ messages, loading, messagesEndRef }: C
               <div
                 className={
                   msg.role === 'user'
-                    ? 'px-4 py-3 rounded-2xl max-w-[85%] bg-poppy text-white text-sm shadow-sm'
-                    : `px-4 py-3 rounded-2xl max-w-[85%] bg-white text-gray-900 text-sm whitespace-pre-line shadow-sm border border-gray-200 ${msg.className || ''}`
+                    ? 'px-5 py-3 rounded-2xl max-w-[85%] bg-poppy text-white text-base shadow-md'
+                    : `px-5 py-3 rounded-2xl max-w-[85%] bg-gray-50 text-gray-900 text-base whitespace-pre-line shadow-sm border border-gray-100 ${msg.className || ''}`
                 }
               >
                 {msg.content}
@@ -96,9 +85,13 @@ export default function ChatMessageList({ messages, loading, messagesEndRef }: C
           exit={{ opacity: 0 }}
           className="flex justify-start"
         >
-          <div className="px-4 py-3 rounded-2xl bg-white text-gray-500 text-sm border border-gray-200 shadow-sm flex items-center gap-2">
-            <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-            Thinking...
+          <div className="px-5 py-3 rounded-2xl bg-poppy/10 text-poppy text-base border border-poppy/20 shadow-sm flex items-center gap-3">
+            <div className="flex gap-1">
+              <div className="w-2 h-2 bg-poppy rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 bg-poppy rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 bg-poppy rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+            <span className="font-medium">Poppy is thinking...</span>
           </div>
         </motion.div>
       )}

@@ -266,9 +266,19 @@ export default function ChatInterface() {
     }
   };
 
-  // Add useEffect for auto-scrolling
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const scrollTimeout = setTimeout(() => {
+      if (messagesEndRef.current) {
+        const container = messagesEndRef.current.closest('.overflow-y-auto');
+        if (container) {
+          // Always scroll to absolute bottom to show latest message
+          container.scrollTop = container.scrollHeight;
+        }
+      }
+    }, 100);
+    
+    return () => clearTimeout(scrollTimeout);
   }, [messages, loading]);
 
   useEffect(() => {
@@ -698,7 +708,7 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
           setMessages(prev => prev.filter(msg => msg.content !== "Thinking..."));
           setMessages(prev => [...prev, {
             role: 'assistant',
-            content: `Can you please define "${firstTerm.term}"?`
+            content: `Excellent! I love the direction you're taking. To make sure we're aligned on terminology, can you please define "${firstTerm.term}" in your own words?`
           }]);
         } catch (error) {
           console.error("Error processing initial input:", error);
@@ -716,7 +726,12 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
           if (isLastTerm) {
             const result = await prdFlow.showNextTerm();
             if (result.shouldGenerateQuestions) {
-              await new Promise(resolve => setTimeout(resolve, 800));
+              // Add transition message
+              setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: "Great! I understand your key terms. Now let me ask some questions to help shape your PRD..."
+              }]);
+              await new Promise(resolve => setTimeout(resolve, 1500));
               try {
                 const firstQuestion = await prdFlow.generateQuestions();
                 setMessages(prev => [...prev, {
@@ -739,7 +754,7 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
             if (result.nextTerm) {
               setMessages(prev => [...prev, {
                 role: 'assistant',
-                content: `Can you please define "${result.nextTerm.term}"?`
+                content: `Thanks! Now, can you please define "${result.nextTerm.term}"?`
               }]);
             }
           }
@@ -794,15 +809,22 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
                 return [...withoutWriting, {
                   role: 'assistant',
                   content: (
-                    <div className="flex flex-col items-center gap-4">
-                      <p>Your {docType.text} is ready! Click below to view it in Google Docs or create a design prototype.</p>
-                      <div className="flex gap-3">
+                    <div className="flex flex-col items-center gap-4 py-4">
+                      <div className="text-4xl mb-2">🎉</div>
+                      <h3 className="text-xl font-bold text-gray-900">Congratulations! Your PRD is complete!</h3>
+                      <p className="text-gray-600 text-center max-w-md">
+                        I&apos;ve captured all your insights and organized them into a comprehensive PRD. You can now share it with your team or turn it into a design.
+                      </p>
+                      <div className="flex gap-3 mt-2">
                       <a
                         href={docData.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md"
+                        className="px-6 py-3 bg-poppy text-white rounded-full font-medium hover:bg-poppy/90 transition-colors shadow-md flex items-center gap-2"
                       >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
                         View {docType.title} in Google Docs
                       </a>
                         <button
@@ -816,7 +838,12 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
                               Creating Design...
                             </>
                           ) : (
-                            'Create Design'
+                            <>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              Create Design
+                            </>
                           )}
                         </button>
                       </div>
@@ -1343,10 +1370,10 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
     ) : (
       // Centered overlay chat interface
       <div className="flex flex-col h-screen relative">
-        {/* Messages area - centered container with consistent width */}
-        <div className="flex-1 overflow-y-auto pb-32 relative">
-          <div className="flex justify-center px-6">
-            <div className="w-full max-w-4xl">
+        {/* Messages area - anchored to bottom when scrollable */}
+        <div className="flex-1 overflow-y-auto relative flex flex-col" style={{ paddingBottom: '240px' }}>
+          <div className="flex-1 flex flex-col justify-end px-6">
+            <div className="w-full max-w-4xl mx-auto">
             {messages.length > 0 ? (
               <div className="py-4">
                 <ChatMessageList
@@ -1356,31 +1383,38 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
                 />
               </div>
             ) : (
-                  /* Empty state with contextual guidance - OS style */
-              <div className="h-full flex items-center justify-center">
-                <div className="text-center max-w-md os-panel p-space-8">
-                  <div className="w-16 h-16 bg-gradient-to-br from-poppy-primary-light to-poppy-secondary-light rounded-2xl flex items-center justify-center mx-auto mb-space-6 elevation-sm">
-                    <div className="text-2xl">
-                      {mode === 'draft' && '📝'}
-                      {mode === 'brainstorm' && '💡'}
-                      {mode === 'chat' && '💬'}
+              /* Empty state - warm and welcoming */
+              <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center max-w-lg">
+                  <div className="w-20 h-20 bg-gradient-to-br from-poppy/20 to-orange-100 rounded-3xl flex items-center justify-center mx-auto mb-6 transform transition-transform hover:scale-110">
+                    <div className="text-3xl">
+                      {mode === 'draft' && '✨'}
+                      {mode === 'brainstorm' && '🚀'}
+                      {mode === 'chat' && '👋'}
                       {mode === 'design' && '🎨'}
-                      {mode === 'feedback' && '🔍'}
+                      {mode === 'feedback' && '💬'}
                     </div>
                   </div>
-                  <div className="text-lg font-semibold mb-space-3 text-poppy-primary">
-                    {mode === 'draft' && 'Ready to draft your PRD'}
-                    {mode === 'brainstorm' && 'Let\'s brainstorm ideas'}
-                    {mode === 'chat' && 'Chat with Poppy'}
+                  <div className="text-2xl font-bold mb-3 text-gray-900">
+                    {mode === 'draft' && 'Let\'s create something amazing'}
+                    {mode === 'brainstorm' && 'Ready to explore ideas'}
+                    {mode === 'chat' && 'Hi! I\'m Poppy, your PM partner'}
                     {mode === 'design' && 'Design Studio'}
-                    {mode === 'feedback' && 'Search Customer Feedback'}
+                    {mode === 'feedback' && 'Let\'s find customer insights'}
                   </div>
-                  <div className="text-sm text-warm-neutral">
-                    {mode === 'draft' && 'Share your product idea, JTBD, and context to get started'}
-                    {mode === 'brainstorm' && 'Describe your initial thoughts or questions'}
-                    {mode === 'chat' && 'Ask me anything about product management'}
-                    {mode === 'design' && 'Create and iterate on your product designs'}
-                    {mode === 'feedback' && 'Describe a feature idea or pain point to find relevant customer feedback'}
+                  <div className="text-base text-gray-600 leading-relaxed">
+                    {mode === 'draft' && 'I\'ll guide you through creating a comprehensive PRD. Just share your product idea and I\'ll ask the right questions to help you think through every detail.'}
+                    {mode === 'brainstorm' && 'No idea is too wild! Share what you\'re thinking about and we\'ll explore it together. When you\'re ready, we can turn it into a PRD.'}
+                    {mode === 'chat' && 'I can help with roadmap planning, feature prioritization, stakeholder communication, or any product challenge you\'re facing.'}
+                    {mode === 'design' && 'Transform your ideas into interactive prototypes. Describe what you want to build and I\'ll help you visualize it.'}
+                    {mode === 'feedback' && 'I\'ll search through customer feedback to find insights relevant to your feature or pain point. Just describe what you\'re looking for.'}
+                  </div>
+                  <div className="mt-6 text-sm text-gray-500 italic">
+                    {mode === 'draft' && '💡 Tip: The more context you share, the better I can tailor the PRD to your needs'}
+                    {mode === 'brainstorm' && '💡 Tip: After 3 messages, you can convert our discussion into a structured PRD'}
+                    {mode === 'chat' && '💡 Tip: Try the different modes below for specialized workflows'}
+                    {mode === 'design' && '💡 Tip: You can also paste a PRD link to create designs from existing specs'}
+                    {mode === 'feedback' && '💡 Tip: I can help you reach out to specific customers with relevant feedback'}
                   </div>
                 </div>
               </div>
@@ -1388,25 +1422,22 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
             </div>
           </div>
           
-          {/* Fade overlay at top */}
-          <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white via-white/80 to-transparent pointer-events-none z-10" />
-          
-          {/* Fade overlay at bottom to prevent content from showing behind input */}
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-none z-10" />
         </div>
 
-        {/* Input at bottom - OS style */}
+        {/* Floating input at bottom with border separator */}
         <div 
-          className="fixed bottom-space-6 z-20"
+          className="fixed bottom-6 z-20"
           style={{
-            left: `${sidebarWidth}px`,
-            right: '0px',
-            paddingLeft: 'var(--space-6)',
-            paddingRight: 'var(--space-6)',
+            left: `${sidebarWidth + 24}px`,
+            right: '24px',
           }}
         >
           <div className="max-w-4xl mx-auto">
-            <div className="os-panel p-space-6 elevation-lg border-2 border-poppy-primary/10">
+            {/* Subtle border line above input */}
+            <div className="w-full h-px bg-gray-900/10 mb-4"></div>
+            <div className="os-panel p-space-6 elevation-lg border-2 border-poppy-primary/10 bg-white" style={{
+              boxShadow: '0 4px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)'
+            }}>
               <ChatInput
                 input={input}
                 loading={loading}
