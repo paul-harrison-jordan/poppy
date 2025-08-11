@@ -19,7 +19,7 @@ const WinniProactiveMessage: React.FC<WinniProactiveMessageProps> = ({
       <div className="flex-1">
         <div className="font-semibold text-winni-700 mb-1">Winni noticed this PRD is at risk</div>
         <p className="text-sm text-gray-600 mb-3">
-          The PRD "{prdTitle}" has some open questions that need to be addressed:
+          The PRD &quot;{prdTitle}&quot; has some open questions that need to be addressed:
         </p>
         <ul className="list-disc list-inside text-sm text-gray-600 mb-4">
           {openQuestions.map((question, index) => (
@@ -35,7 +35,7 @@ const WinniProactiveMessage: React.FC<WinniProactiveMessageProps> = ({
           }}
           className="bg-winni-600 text-white px-3 py-1 rounded hover:bg-winni-700 transition"
         >
-          Let's address these
+          Let&apos;s address these
         </button>
       </div>
     </div>

@@ -6,7 +6,8 @@
       "Bash(node:*)",
       "Bash(pnpm dev:*)",
       "Bash(npm run dev:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }

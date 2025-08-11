@@ -104,7 +104,7 @@ export function withValidation<T>(
   ) {
     return async (
       request: NextRequest,
-      context?: { params?: any; session?: TSession }
+      context?: { params?: Record<string, unknown>; session?: TSession }
     ): Promise<NextResponse> => {
       try {
         const validated = await validateRequest(request, bodySchema, querySchema);

@@ -207,8 +207,10 @@ Context: ${input.context ? JSON.stringify(input.context, null, 2) : 'Not provide
 
   private static async evaluateWithExternal(
     metricName: string,
-    input: { prompt?: string; context?: Record<string, unknown> },
-    output: { content?: string }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _input: { prompt?: string; context?: Record<string, unknown> },
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _output: { content?: string }
   ): Promise<number> {
     // Placeholder for external evaluators (e.g., grammar checkers, fact checkers)
     console.warn(`External evaluator not implemented for: ${metricName}`);

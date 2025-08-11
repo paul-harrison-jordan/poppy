@@ -1,5 +1,5 @@
 import { createServiceClient } from '@/utils/supabase/service';
-import type { EvalResult, EvalJob, EvalStatus } from './types';
+import type { EvalResult, EvalJob } from './types';
 import { QualityMetrics } from './QualityMetrics';
 
 export class EvalService {

@@ -1,5 +1,11 @@
 import { EvalService } from './EvalService';
 
+// Type for OpenAI API response
+type OpenAIResponse = {
+  choices: { message: { content?: string } }[];
+  usage?: { total_tokens: number };
+};
+
 export interface EvalContext {
   operation: string;
   model: string;
@@ -57,7 +63,7 @@ export async function withOpenAIEval<T>(
   operation: string,
   model: string,
   prompt: string,
-  openaiCall: () => Promise<{ choices: { message: { content?: string } }[]; usage?: { total_tokens: number } }>,
+  openaiCall: () => Promise<OpenAIResponse>,
   metadata?: { userId?: string; sessionId?: string }
 ): Promise<T> {
   return withEvaluation<T>(
@@ -86,7 +92,7 @@ export class EvaluatedOperations {
   static async generateContent(
     model: string,
     prompt: string,
-    openaiCall: () => Promise<any>,
+    openaiCall: () => Promise<OpenAIResponse>,
     metadata?: { userId?: string; sessionId?: string }
   ) {
     return withOpenAIEval(
@@ -101,7 +107,7 @@ export class EvaluatedOperations {
   static async brainstorm(
     model: string,
     prompt: string,
-    openaiCall: () => Promise<any>,
+    openaiCall: () => Promise<OpenAIResponse>,
     metadata?: { userId?: string; sessionId?: string }
   ) {
     return withOpenAIEval(
@@ -116,7 +122,7 @@ export class EvaluatedOperations {
   static async generateQuestions(
     model: string,
     prompt: string,
-    openaiCall: () => Promise<any>,
+    openaiCall: () => Promise<OpenAIResponse>,
     metadata?: { userId?: string; sessionId?: string }
   ) {
     return withOpenAIEval(
@@ -131,7 +137,7 @@ export class EvaluatedOperations {
   static async analyzeDocument(
     model: string,
     prompt: string,
-    openaiCall: () => Promise<any>,
+    openaiCall: () => Promise<OpenAIResponse>,
     metadata?: { userId?: string; sessionId?: string }
   ) {
     return withOpenAIEval(

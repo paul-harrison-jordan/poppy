@@ -26,6 +26,7 @@ export interface EvalResult {
     userId?: string;
     sessionId?: string;
     version?: string;
+    evalTime?: number;
   };
 }
 
