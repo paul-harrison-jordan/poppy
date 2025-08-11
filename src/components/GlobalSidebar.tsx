@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Users,
-  Bot
+  Bot,
+  Target
 } from 'lucide-react'
 
 interface GlobalSidebarProps {
@@ -59,6 +60,13 @@ export default function GlobalSidebar({ isCollapsed = false, onToggleCollapse }:
       icon: Bot,
       label: 'Agent Mode',
       description: 'Autonomous task execution',
+      actionable: true
+    },
+    {
+      path: '/competitive-analysis',
+      icon: Target,
+      label: 'Competitive Analysis',
+      description: 'Analyze competitor approaches',
       actionable: true
     },
   ]
