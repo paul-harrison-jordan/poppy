@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { motion } from "framer-motion";
-import { Settings, RefreshCw, BookOpen, LogOut, Bot } from "lucide-react";
+import { Settings, RefreshCw, BookOpen, LogOut, Bot, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Sidebar() {
@@ -25,6 +25,11 @@ export default function Sidebar() {
       href: "/key-terms",
       label: "Key Terms",
       icon: <BookOpen className="w-4 h-4" />,
+    },
+    {
+      href: "/competitive-intelligence",
+      label: "Competitive Intel",
+      icon: <TrendingUp className="w-4 h-4" />,
     },
     {
       href: "/agent-mode",
