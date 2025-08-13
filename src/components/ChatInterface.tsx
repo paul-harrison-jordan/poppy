@@ -10,6 +10,7 @@ import { usePRDFlow } from '@/hooks/usePRDFlow';
 import ChatMessageList from './ChatMessageList';
 import ChatInput from './ChatInput';
 import { getEnrichedPersonalContext } from '@/lib/utils/contextHelpers';
+import CompetitiveAnalysisResults from './CompetitiveAnalysisResults';
 
 // Lazy load heavy components
 const DesignSidebar = lazy(() => import('./DesignSidebar'));
@@ -26,7 +27,7 @@ export interface ChatMessage {
   className?: string;
 }
 
-type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'agent' | 'design' | 'feedback';
+type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'agent' | 'design' | 'feedback' | 'competitive';
 
 
 
@@ -40,7 +41,7 @@ export default function ChatInterface() {
   // Handle client-side initialization
   useEffect(() => {
     const savedMode = localStorage.getItem('currentChatMode') as ChatMode;
-    if (savedMode && ['chat', 'draft', 'brainstorm', 'agent', 'design', 'feedback'].includes(savedMode)) {
+    if (savedMode && ['chat', 'draft', 'brainstorm', 'agent', 'design', 'feedback', 'competitive'].includes(savedMode)) {
       setMode(savedMode);
     }
   }, []);
@@ -51,6 +52,9 @@ export default function ChatInterface() {
   const [showStartPrdButton, setShowStartPrdButton] = useState(false);
   const [, setCompletedPrdContent] = useState<string>('');
   const [demoUrl, setDemoUrl] = useState<string | null>(null);
+  const [competitiveUrls, setCompetitiveUrls] = useState<string[]>(['']);
+  const [showCompetitiveUrlInput, setShowCompetitiveUrlInput] = useState(false);
+  const [competitiveQuery, setCompetitiveQuery] = useState<string>('');
   const [isCreatingDesign, setIsCreatingDesign] = useState(false);
   const [v0ChatId, setV0ChatId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -78,6 +82,7 @@ export default function ChatInterface() {
           brainstorm: "Brainstorm solutions for user onboarding...",
           design: "Create a design for mobile checkout...",
           feedback: "Find customer feedback about search...",
+          competitive: "Analyze how Slack handles notifications...",
           chat: "Help me with roadmap planning..."
         };
         
@@ -615,8 +620,83 @@ export default function ChatInterface() {
   };
 
   const handleSafeModeChange = (newMode: ChatMode) => {
+    // Reset competitive mode UI when switching modes
+    if (newMode !== 'competitive') {
+      setShowCompetitiveUrlInput(false);
+      setCompetitiveQuery('');
+      setCompetitiveUrls(['']);
+    }
+    
     // For now, directly change mode - can add confirmation logic later if needed
     handleModeChange(newMode);
+  };
+
+  const handleCompetitiveAnalyze = async () => {
+    const validUrls = competitiveUrls.filter(url => url.trim() !== '');
+    
+    if (validUrls.length === 0 || !competitiveQuery) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `Analyzing ${validUrls.length} competitor help sites for insights on "${competitiveQuery}"...`
+      }]);
+
+      const response = await fetch("/api/competitive-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: competitiveQuery,
+          urls: validUrls
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Analysis failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      // Remove loading message
+      setMessages(prev => prev.filter(msg => typeof msg.content === 'string' && !msg.content.includes('Analyzing')));
+      
+      // Add styled competitive analysis results
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: (
+          <CompetitiveAnalysisResults 
+            query={competitiveQuery}
+            competitors={result.competitors || []}
+            summary={result.summary}
+            sourceCount={result.sourceCount || 0}
+            searchedUrls={result.searchedUrls || []}
+            onSearchOtherCompetitors={() => {
+              // Reset the competitive analysis UI and show suggestion message
+              setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: `Let's find alternative competitors for "${competitiveQuery}". Please provide different competitor help desk URLs, or I can suggest some common competitors in this space. What type of product/service are you building?`
+              }]);
+            }}
+          />
+        )
+      }]);
+
+      // Hide the URL input UI after successful analysis
+      setShowCompetitiveUrlInput(false);
+
+    } catch (error) {
+      console.error('Error in competitive analysis:', error);
+      setMessages(prev => prev.filter(msg => typeof msg.content === 'string' && !msg.content.includes('Analyzing')));
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "Sorry, I encountered an error while analyzing the competitor documentation. Please try again with valid help desk URLs."
+      }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGetEmailFromChat = async (customerMatch: Record<string, unknown>, index: number) => {
@@ -941,9 +1021,122 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
     setShowBounce(false);
   };
 
+  const handleCompetitorAnalysis = async (userQuery: string, competitorUrls: string[]) => {
+    console.log('Starting competitor analysis:', { userQuery, competitorUrls });
+    
+    try {
+      setLoading(true);
+      
+      // Add loading message
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: '🔍 Analyzing competitors (this may take a moment)...'
+      }]);
+
+      // Call the comprehensive analysis API
+      const response = await fetch('/api/analyze-competitors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userQuery,
+          competitorUrls,
+          username: session?.user?.name
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Analysis failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Analysis result:', result);
+      
+      // Create stylized result card
+      setMessages(prev => prev.slice(0, -1).concat([{
+        role: 'assistant',
+        content: `✅ **Competitive Analysis Complete**
+
+**Query:** ${result.query}
+**Search Strategy:** ${result.synthesizedQuery}
+**Pages Analyzed:** ${result.pagesAnalyzed}
+
+## Summary
+${result.summary}
+
+## Key Insights
+${result.insights.map((insight: string, index: number) => `${index + 1}. ${insight}`).join('\n')}
+
+## Educational References
+${result.references.slice(0, 10).map((ref: { title: string; url: string; snippet: string }) => 
+  `**[${ref.title}](${ref.url})**\n*${ref.snippet.substring(0, 150)}...*`
+).join('\n\n')}
+
+---
+*Analysis completed using ${result.pagesAnalyzed} pages from competitor help documentation*`
+      }]));
+
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      setMessages(prev => prev.slice(0, -1).concat([{
+        role: 'assistant',
+        content: `❌ **Analysis Failed**
+        
+${error instanceof Error ? error.message : 'Unknown error occurred'}
+
+Please try again with different URLs or check your internet connection.`
+      }]));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
+
+    // Check if user wants competitive analysis
+    const lowerInput = input.toLowerCase();
+    if (lowerInput.includes('analyze competitors') || lowerInput.includes('competitive analysis')) {
+      const userMessage: ChatMessage = { role: 'user', content: input };
+      setMessages(prev => [...prev, userMessage]);
+      
+      setInput('');
+      
+      // Ask for competitor URLs
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'I\'ll help you analyze competitors! Please provide competitor help desk URLs (e.g., https://help.zendesk.com, https://support.intercom.com) by typing them, one per line:'
+      }]);
+      return;
+    }
+
+    // Check if user is providing URLs for analysis
+    const urlPattern = /https?:\/\/[^\s]+/g;
+    const urls = input.match(urlPattern);
+    if (urls && urls.length > 0) {
+      const userMessage: ChatMessage = { role: 'user', content: input };
+      setMessages(prev => [...prev, userMessage]);
+      setInput('');
+      
+      // Look for the query in previous messages
+      const recentMessages = messages.slice(-5);
+      const queryMessage = recentMessages.find(msg => 
+        msg.role === 'user' && 
+        !msg.content.toString().match(urlPattern) &&
+        msg.content.toString().length > 10
+      );
+      
+      if (queryMessage) {
+        await handleCompetitorAnalysis(queryMessage.content.toString(), urls);
+        return;
+      } else {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: 'Please first tell me what product or feature you\'re building so I can analyze how competitors solve similar problems.'
+        }]);
+        return;
+      }
+    }
 
     try {
       const userMessage: ChatMessage = { role: 'user', content: input };
@@ -1214,6 +1407,15 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
             content: "Sorry, I encountered an error while searching for customer feedback. Please try again."
           }]);
         }
+      } else if (mode === 'competitive') {
+        // Competitive analysis mode - show URL input UI
+        setCompetitiveQuery(input);
+        setShowCompetitiveUrlInput(true);
+        
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `I&apos;ll help you research how competitors handle "${input}". Please add competitor help desk URLs below to analyze their documentation.`
+        }]);
       } else {
         // Regular chat mode
         const response = await fetch("/api/brainstorm", {
@@ -1448,6 +1650,7 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
                 currentTermIndex={prdFlow.currentTermIndex}
                 teamTerms={prdFlow.teamTerms}
                 competitorUrls={prdFlow.competitorUrls}
+                competitorAnalysis={prdFlow.competitorAnalysis}
                 showStartPrdButton={showStartPrdButton}
                 agenticMessages={agenticMessages}
                 showBounce={showBounce}
@@ -1457,6 +1660,10 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
                 onSummarizeAndSave={handleSummarizeAndSave}
                 onOpenAgentMode={openAgentMode}
                 onCompetitorUrlsChange={prdFlow.setCompetitorUrls}
+                competitiveUrls={competitiveUrls}
+                showCompetitiveUrlInput={showCompetitiveUrlInput}
+                onCompetitiveUrlsChange={setCompetitiveUrls}
+                onCompetitiveAnalyze={handleCompetitiveAnalyze}
               />
             </div>
           </div>

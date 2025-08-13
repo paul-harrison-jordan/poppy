@@ -3,6 +3,27 @@ import { Question, TeamTerm, MatchedContext } from '@/types/knowledge';
 import { collectStream } from '@/lib/collectStream';
 import { generateDocument } from '@/lib/services/documentGenerator';
 
+interface CompetitorAnalysis {
+  name: string;
+  summary: string;
+  ourEdge: string;
+  sourceUrl?: string;
+  features?: string[];
+  relevantArticles?: Array<{
+    title: string;
+    url: string;
+  }>;
+  insights?: Array<{
+    feature: string;
+    description: string;
+    customerBenefit: string;
+    implementationHints: string;
+    confidence: number;
+    sourceUrl: string;
+    keySection: string;
+  }>;
+}
+
 type DraftStep = 'initial' | 'vocabulary' | 'questions' | 'content';
 
 export function usePRDFlow() {
@@ -17,6 +38,7 @@ export function usePRDFlow() {
   const [currentTermIndex, setCurrentTermIndex] = useState<number>(-1);
   const [termDefinitions, setTermDefinitions] = useState<Record<string, string>>({});
   const [internalTerms, setInternalTerms] = useState<string[]>([]);
+  const [competitorAnalysis, setCompetitorAnalysis] = useState<CompetitorAnalysis[]>([]);
 
   const resetFlow = () => {
     setDraftStep('initial');
@@ -30,6 +52,7 @@ export function usePRDFlow() {
     setCurrentTermIndex(-1);
     setTermDefinitions({});
     setInternalTerms([]);
+    setCompetitorAnalysis([]);
   };
 
   const processInitialInput = async (input: string) => {
@@ -207,11 +230,61 @@ export function usePRDFlow() {
     return docData;
   };
 
+  const analyzeCompetitors = async (username?: string, query?: string) => {
+    // Use provided query or fall back to original query
+    const analysisQuery = query || originalQuery;
+    
+    if (!analysisQuery.trim()) {
+      return { competitors: [], error: 'Please provide a query to analyze' };
+    }
+
+    // Filter out empty competitor URLs
+    const validCompetitorUrls = competitorUrls.filter(url => url.trim() !== '');
+    
+    if (validCompetitorUrls.length === 0) {
+      return { competitors: [], error: 'Please provide competitor URLs to analyze' };
+    }
+
+    try {
+      // Build product context from available data
+      const productContext = {
+        productArea: analysisQuery,
+        userPersona: internalTerms.join(', '),
+        businessGoals: Object.values(questionAnswers).join(' '),
+        existingFeatures: Object.keys(termDefinitions)
+      };
+
+      const response = await fetch('/api/competitive-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: analysisQuery,
+          urls: validCompetitorUrls,
+          productContext,
+          username
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Analysis failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setCompetitorAnalysis(data.competitors || []);
+      return data;
+    } catch (error) {
+      console.error('Failed to analyze competitors:', error);
+      setCompetitorAnalysis([]);
+      return { competitors: [], error: error instanceof Error ? error.message : 'Analysis failed' };
+    }
+  };
+
   return {
     // State
     draftStep,
     originalQuery,
     competitorUrls,
+    competitorAnalysis,
     questions,
     currentQuestionIndex,
     questionAnswers,
@@ -230,6 +303,7 @@ export function usePRDFlow() {
     processQuestionInput,
     showNextQuestion,
     generateContent,
+    analyzeCompetitors,
     
     // Setters for external use
     setDraftStep,

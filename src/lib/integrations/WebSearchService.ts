@@ -576,6 +576,150 @@ export class WebSearchService {
     });
   }
 
+  // Help docs specific search functionality - only searches within the specified domain
+  async searchHelpDocs(baseUrl: string, queries: string[]): Promise<SearchResult[]> {
+    const allResults: SearchResult[] = [];
+    const targetDomain = new URL(baseUrl).hostname;
+    
+    console.log(`[WebSearchService] Searching only within domain: ${targetDomain}`);
+    
+    for (const query of queries) {
+      try {
+        // Force search to only look within the target domain
+        const response = await this.search({
+          query: query,
+          maxResults: 5,
+          timeRange: 'year',
+          domains: [targetDomain] // Restrict search to only this domain
+        });
+        
+        // Additional filter to ensure we only get results from the target domain
+        const filteredResults = response.results.filter(result => 
+          result.domain === targetDomain || 
+          result.url.includes(targetDomain)
+        );
+        
+        console.log(`[WebSearchService] Query "${query}" returned ${filteredResults.length} results from ${targetDomain}`);
+        allResults.push(...filteredResults);
+      } catch (error) {
+        console.error(`Failed to search for query "${query}" on domain ${targetDomain}:`, error);
+      }
+    }
+    
+    // Remove duplicates based on URL
+    const uniqueResults = allResults.filter((result, index, self) => 
+      index === self.findIndex(r => r.url === result.url)
+    );
+    
+    console.log(`[WebSearchService] Total unique results found for ${targetDomain}: ${uniqueResults.length}`);
+    return uniqueResults.slice(0, 10); // Limit to 10 most relevant
+  }
+
+  async analyzeSearchResults(
+    searchResults: SearchResult[]
+  ): Promise<{ insights: Array<{
+    feature: string;
+    description: string;
+    customerBenefit: string;
+    implementationHints: string;
+    confidence: number;
+    sourceUrl: string;
+    keySection: string;
+  }> }> {
+    const insights = searchResults.map((result, index) => {
+      // Extract key features from title and snippet
+      const content = `${result.title} ${result.snippet}`;
+      const feature = this.extractFeatureFromContent(content);
+      const keySection = this.extractKeySection(result.title, result.snippet);
+      
+      return {
+        feature: feature || `Feature ${index + 1}`,
+        description: result.snippet.substring(0, 200),
+        customerBenefit: this.extractBenefit(result.snippet),
+        implementationHints: this.extractImplementation(result.snippet),
+        confidence: result.relevanceScore || 0.8,
+        sourceUrl: result.url,
+        keySection: keySection
+      };
+    });
+
+    return { insights };
+  }
+
+  private extractFeatureFromContent(content: string): string {
+    // Look for feature indicators in the content
+    const featureKeywords = ['routing', 'automation', 'integration', 'dashboard', 'analytics', 'workflow', 'collaboration', 'notification', 'API'];
+    const lowerContent = content.toLowerCase();
+    
+    for (const keyword of featureKeywords) {
+      if (lowerContent.includes(keyword)) {
+        return keyword.charAt(0).toUpperCase() + keyword.slice(1);
+      }
+    }
+    
+    // Extract from title if possible
+    const titleMatch = content.match(/^([^-|]+)/);
+    if (titleMatch) {
+      return titleMatch[1].trim();
+    }
+    
+    return 'Core Feature';
+  }
+
+  private extractBenefit(snippet: string): string {
+    // Look for benefit indicators
+    const benefitPhrases = ['faster', 'improve', 'increase', 'reduce', 'optimize', 'streamline', 'enhance', 'boost'];
+    const sentences = snippet.split('.').map(s => s.trim());
+    
+    for (const sentence of sentences) {
+      const lowerSentence = sentence.toLowerCase();
+      if (benefitPhrases.some(phrase => lowerSentence.includes(phrase))) {
+        return sentence.length > 100 ? sentence.substring(0, 97) + '...' : sentence;
+      }
+    }
+    
+    return snippet.substring(0, 80) + '...';
+  }
+
+  private extractImplementation(snippet: string): string {
+    // Look for implementation hints
+    const implementationKeywords = ['setup', 'configure', 'install', 'create', 'build', 'integrate', 'connect'];
+    const sentences = snippet.split('.').map(s => s.trim());
+    
+    for (const sentence of sentences) {
+      const lowerSentence = sentence.toLowerCase();
+      if (implementationKeywords.some(keyword => lowerSentence.includes(keyword))) {
+        return sentence.length > 100 ? sentence.substring(0, 97) + '...' : sentence;
+      }
+    }
+    
+    return 'Implementation details available in documentation';
+  }
+
+  private extractKeySection(title: string, snippet: string): string {
+    // Identify what section of their help docs this is from
+    const content = `${title} ${snippet}`.toLowerCase();
+    
+    const sectionKeywords = {
+      'getting started': ['getting started', 'quick start', 'setup guide', 'first steps'],
+      'features': ['features', 'capabilities', 'what you can do', 'functionality'],
+      'integration': ['integration', 'api', 'connect', 'third-party', 'webhook'],
+      'workflow': ['workflow', 'automation', 'process', 'routing'],
+      'best practices': ['best practices', 'tips', 'recommendations', 'optimize'],
+      'troubleshooting': ['troubleshooting', 'common issues', 'problems', 'error'],
+      'pricing': ['pricing', 'plans', 'cost', 'billing'],
+      'security': ['security', 'permissions', 'access', 'authentication']
+    };
+    
+    for (const [section, keywords] of Object.entries(sectionKeywords)) {
+      if (keywords.some(keyword => content.includes(keyword))) {
+        return section;
+      }
+    }
+    
+    return 'documentation';
+  }
+
   // Admin methods
   async clearCache(): Promise<void> {
     await this.cache.clear();

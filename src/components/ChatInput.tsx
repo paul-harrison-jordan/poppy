@@ -1,8 +1,26 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Sparkles, FileText, Paintbrush, Bot, MessageSquare } from 'lucide-react';
+import { Sparkles, FileText, Paintbrush, Bot, MessageSquare, TrendingUp } from 'lucide-react';
+import CompetitorAnalysisCard from './CompetitorAnalysisCard';
 
-type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'agent' | 'design' | 'feedback';
+type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'agent' | 'design' | 'feedback' | 'competitive';
 type DraftStep = 'initial' | 'vocabulary' | 'questions' | 'content';
+
+interface CompetitorAnalysis {
+  name: string;
+  summary: string;
+  ourEdge: string;
+  sourceUrl?: string;
+  features?: string[];
+  insights?: Array<{
+    feature: string;
+    description: string;
+    customerBenefit: string;
+    implementationHints: string;
+    confidence: number;
+    sourceUrl: string;
+    keySection: string;
+  }>;
+}
 
 interface ChatInputProps {
   input: string;
@@ -14,18 +32,23 @@ interface ChatInputProps {
   currentTermIndex?: number;
   teamTerms?: Array<{ term: string }>;
   competitorUrls?: string[];
+  competitorAnalysis?: CompetitorAnalysis[];
   showStartPrdButton?: boolean;
   agenticMessages?: Array<{
     prdTitle: string;
     openQuestions: string[];
   }>;
   showBounce?: boolean;
+  competitiveUrls?: string[];
+  showCompetitiveUrlInput?: boolean;
   onInputChange: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   onModeChange: (mode: ChatMode) => void;
   onSummarizeAndSave?: () => void;
   onOpenAgentMode?: () => void;
   onCompetitorUrlsChange?: (urls: string[]) => void;
+  onCompetitiveUrlsChange?: (urls: string[]) => void;
+  onCompetitiveAnalyze?: () => void;
 }
 
 export default function ChatInput({
@@ -38,15 +61,20 @@ export default function ChatInput({
   currentTermIndex = -1,
   teamTerms = [],
   competitorUrls = [''],
+  competitorAnalysis = [],
   showStartPrdButton = false,
   agenticMessages = [],
   showBounce = false,
+  competitiveUrls = [''],
+  showCompetitiveUrlInput = false,
   onInputChange,
   onSubmit,
   onModeChange,
   onSummarizeAndSave,
   onOpenAgentMode,
-  onCompetitorUrlsChange
+  onCompetitorUrlsChange,
+  onCompetitiveUrlsChange,
+  onCompetitiveAnalyze
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [currentPlaceholder, setCurrentPlaceholder] = useState('');
@@ -88,6 +116,13 @@ export default function ChatInput({
           "Search for complaints about checkout process...",
           "Look for requests about mobile app features...",
           "Describe a feature or pain point to search..."
+        ];
+      case 'competitive':
+        return [
+          "Analyze how Slack handles workflow automation...",
+          "Research Notion's collaboration features...",
+          "Compare Asana's project management approach...",
+          "Enter a help docs URL and describe what to research..."
         ];
       default:
         return [
@@ -216,6 +251,21 @@ export default function ChatInput({
         <div className="text-center">
           <div className="font-medium">Feedback</div>
           <div className="text-xs opacity-75">Search customers</div>
+        </div>
+      </button>
+      <button
+        type="button"
+        onClick={() => onModeChange('competitive')}
+        className={`px-space-3 py-space-2 text-sm rounded-xl transition-smooth flex flex-col items-center gap-1 group ${
+          mode === 'competitive' 
+            ? 'bg-gradient-to-br from-poppy-primary to-poppy-primary/80 text-white elevation-sm' 
+            : 'text-warm-neutral hover:text-poppy-primary hover:bg-poppy-primary/5 border border-border hover:border-poppy-primary/30'
+        }`}
+      >
+        <TrendingUp className={`w-4 h-4 ${mode === 'competitive' ? '' : 'group-hover:scale-110 transition-transform'}`} />
+        <div className="text-center">
+          <div className="font-medium">Competitive</div>
+          <div className="text-xs opacity-75">Research rivals</div>
         </div>
       </button>
       {/* Agentic (Bot) button: show if agentic messages exist or in agent mode */}
@@ -351,14 +401,110 @@ export default function ChatInput({
                     + Add another competitor
                   </button>
                 )}
+                
+              </div>
+            )}
+            
+            {/* Competitive Analysis Results */}
+            {competitorAnalysis && competitorAnalysis.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <h4 className="text-sm font-medium text-gray-800">Analysis Results</h4>
+                {competitorAnalysis.map((competitor, index) => (
+                  <CompetitorAnalysisCard
+                    key={index}
+                    competitor={competitor}
+                    isExpanded={false}
+                  />
+                ))}
               </div>
             )}
           </div>
         )}
         
+        {/* Competitive URL Input Cards */}
+        {mode === 'competitive' && showCompetitiveUrlInput && (
+          <div className="mt-4 p-6 bg-white/70 rounded-xl border border-border space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-warm-neutral">Competitor Help Desk URLs</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onCompetitiveUrlsChange && competitiveUrls.length < 5) {
+                    onCompetitiveUrlsChange([...competitiveUrls, '']);
+                  }
+                }}
+                disabled={competitiveUrls.length >= 5}
+                className="px-3 py-1.5 text-sm bg-poppy-primary text-white rounded-lg hover:bg-poppy-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-smooth"
+              >
+                + Add URL
+              </button>
+            </div>
+            
+            <div className="grid gap-3">
+              {competitiveUrls.map((url, index) => (
+                <div key={index} className="bg-white rounded-lg border border-border p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-warm-neutral">
+                      Competitor {index + 1}
+                    </label>
+                    {competitiveUrls.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onCompetitiveUrlsChange) {
+                            const newUrls = competitiveUrls.filter((_, i) => i !== index);
+                            onCompetitiveUrlsChange(newUrls);
+                          }
+                        }}
+                        className="text-red-500 hover:text-red-700 p-1 transition-smooth"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="url"
+                    value={url}
+                    onChange={(e) => {
+                      if (onCompetitiveUrlsChange) {
+                        const newUrls = [...competitiveUrls];
+                        newUrls[index] = e.target.value;
+                        onCompetitiveUrlsChange(newUrls);
+                      }
+                    }}
+                    placeholder="https://help.competitor.com"
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-border focus:border-poppy-primary focus:outline-none focus:ring-2 focus:ring-poppy-primary/20 transition-smooth"
+                  />
+                  {url && url.startsWith('http') && (
+                    <div className="text-xs text-warm-neutral/70">
+                      Will search: {new URL(url).hostname}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-xs text-warm-neutral/70">
+                Add competitor help desk URLs to analyze their documentation
+              </p>
+              <button
+                type="button"
+                onClick={onCompetitiveAnalyze}
+                disabled={!competitiveUrls.some(url => url.trim() !== '')}
+                className="px-4 py-2 bg-poppy-primary text-white rounded-lg hover:bg-poppy-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-smooth font-medium"
+              >
+                Analyze Competitors
+              </button>
+            </div>
+          </div>
+        )}
+        
         {/* Mode selector - horizontal tabs */}
         <div className="flex items-center justify-between">
-          <div className="grid grid-cols-4 gap-2 flex-1 max-w-lg">
+          <div className="grid grid-cols-5 gap-2 flex-1 max-w-4xl">
             {renderModeButtons()}
           </div>
           
