@@ -44,6 +44,8 @@ export default function DraftForm() {
   const currentPage = pathname.split('/').pop() || '';
   const [title, setTitle] = useState('');
   const [query, setQuery] = useState('');
+  const [competitorUrls, setCompetitorUrls] = useState<string[]>(['']);
+  const [showCompetitorAnalysis, setShowCompetitorAnalysis] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [step, setStep] = useState<'initial' | 'vocabulary' | 'questions' | 'content'>('initial');
   const [, setLoadingState] = useState<LoadingState>({
@@ -194,7 +196,9 @@ export default function DraftForm() {
       setIsGeneratingQuestions(false);
       // Map matchedContext to string[] if needed
       const contextStrings = matchedContext.map(ctx => ctx.metadata?.NPS_VERBATIM || '').filter(Boolean);
-      const docData = await generateDocument(currentPage, title, query, questionAnswers, contextStrings);
+      // Filter out empty competitor URLs
+      const validCompetitorUrls = competitorUrls.filter(url => url.trim() !== '');
+      const docData = await generateDocument(currentPage, title, query, questionAnswers, contextStrings, validCompetitorUrls);
       if (docData && docData.url) {
         localStorage.removeItem("draftFormState");
         setIsGenerating(false);
@@ -210,6 +214,8 @@ export default function DraftForm() {
   const handleDraftAnother = () => {
     setTitle("");
     setQuery("");
+    setCompetitorUrls(['']);
+    setShowCompetitorAnalysis(false);
     setShowTitle(false);
     setShowPastWork(false);
     setQuestions([]);
@@ -276,6 +282,71 @@ export default function DraftForm() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </button>
+            </div>
+            
+            {/* Competitor Analysis Toggle */}
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => setShowCompetitorAnalysis(!showCompetitorAnalysis)}
+                className="text-sm text-poppy hover:text-poppy/80 flex items-center gap-2"
+              >
+                <svg className={`w-4 h-4 transition-transform ${showCompetitorAnalysis ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+                Analyze competitor solutions (optional)
+              </button>
+              
+              {showCompetitorAnalysis && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-3 space-y-2"
+                >
+                  <p className="text-xs text-gray-600">
+                    Add competitor help documentation URLs to see how they solve similar problems
+                  </p>
+                  {competitorUrls.map((url, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <input
+                        type="url"
+                        value={url}
+                        onChange={(e) => {
+                          const newUrls = [...competitorUrls];
+                          newUrls[index] = e.target.value;
+                          setCompetitorUrls(newUrls);
+                        }}
+                        placeholder="https://help.competitor.com"
+                        className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-poppy focus:outline-none focus:ring-1 focus:ring-poppy/20"
+                      />
+                      {competitorUrls.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newUrls = competitorUrls.filter((_, i) => i !== index);
+                            setCompetitorUrls(newUrls);
+                          }}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {competitorUrls.length < 3 && (
+                    <button
+                      type="button"
+                      onClick={() => setCompetitorUrls([...competitorUrls, ''])}
+                      className="text-xs text-poppy hover:text-poppy/80"
+                    >
+                      + Add another competitor
+                    </button>
+                  )}
+                </motion.div>
+              )}
             </div>
           </motion.form>
         </AnimatePresence>

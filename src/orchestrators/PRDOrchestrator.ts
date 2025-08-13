@@ -33,17 +33,31 @@ export class PRDOrchestrator {
 
   async generateAnalysisBundle(
     initialInput: string, 
-    pmProfile?: PMPreferenceProfile
+    pmProfile?: PMPreferenceProfile,
+    competitorUrls?: string[]
   ): Promise<AnalysisBundle> {
     console.log(`[PRDOrchestrator] Starting analysis bundle generation for: "${initialInput}"`);
+    if (competitorUrls && competitorUrls.length > 0) {
+      console.log(`[PRDOrchestrator] Will analyze competitor help docs: ${competitorUrls.join(', ')}`);
+    }
     const startTime = Date.now();
 
     try {
       // Phase 1: Parallel Analysis (fast)
       console.log(`[PRDOrchestrator] Phase 1: Running parallel analysis agents`);
-      const [jobsResult, competitiveResult, roadmapResult] = await Promise.all([
+      
+      // Use real help docs analysis if competitor URLs are provided
+      let competitiveResult;
+      if (competitorUrls && competitorUrls.length > 0) {
+        console.log(`[PRDOrchestrator] Analyzing ${competitorUrls.length} competitor help docs with real data`);
+        const competitiveAnalysis = await this.competitiveLandscaper.analyzeWithHelpDocs(initialInput, competitorUrls);
+        competitiveResult = { success: true, result: competitiveAnalysis };
+      } else {
+        competitiveResult = await this.competitiveLandscaper.execute({ jobs: initialInput });
+      }
+
+      const [jobsResult, roadmapResult] = await Promise.all([
         this.jobsExtractor.execute({ input: initialInput }),
-        this.competitiveLandscaper.execute({ jobs: initialInput }),
         this.roadmapPositioner.execute({ 
           currentRoadmap: JSON.stringify(pmProfile?.personal_context?.teamStrategy || []),
           featureIdea: initialInput 
@@ -55,7 +69,7 @@ export class PRDOrchestrator {
         throw new Error(`Jobs extraction failed: ${jobsResult.error}`);
       }
       if (!competitiveResult.success) {
-        throw new Error(`Competitive analysis failed: ${competitiveResult.error}`);
+        throw new Error(`Competitive analysis failed: ${competitiveResult.error || 'Unknown error'}`);
       }
       if (!roadmapResult.success) {
         throw new Error(`Roadmap positioning failed: ${roadmapResult.error}`);

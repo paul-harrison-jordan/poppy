@@ -10,7 +10,8 @@ export async function generateDocument(
   title: string,
   query: string,
   answers?: Record<string, string> | QuestionAnswer[],
-  matchedContext?: string[]
+  matchedContext?: string[],
+  competitorUrls?: string[]
 ) {
   // If we have answers, we're in content generation mode
   if (answers) {
@@ -47,7 +48,8 @@ export async function generateDocument(
         storedContext,
         matchedContext,
         questions,
-        questionAnswers
+        questionAnswers,
+        competitorUrls: competitorUrls?.filter(url => url.trim() !== '') || []
       })
     })
     const markdown = await collectStream(contentRes)

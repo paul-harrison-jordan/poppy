@@ -4,6 +4,7 @@ import type { ChatCompletionMessageParam } from 'openai/resources/chat/completio
 import { openai } from '../openai';
 import { terms } from '../constants/terms';
 import { PMPreferenceProfile } from '@/types/knowledge';
+import { CompetitiveLandscaperAgent } from '@/agents/competitiveLandscaper';
 
 export { terms };
 
@@ -41,10 +42,11 @@ export interface GenerateContentRequest {
   additionalContext: string;
   teamTerms: Record<string, string>;
   pmProfile?: PMPreferenceProfile;
+  competitorUrls?: string[];
 }
 
 export async function generateContent(opts: GenerateContentRequest) {
-  const { type, title, query, questions, questionAnswers, storedContext, additionalContext, teamTerms, pmProfile } = opts;
+  const { type, title, query, questions, questionAnswers, storedContext, additionalContext, teamTerms, pmProfile, competitorUrls } = opts;
   const pmProfileContext = pmProfile ? `
 
   PM Profile Context:
@@ -58,6 +60,37 @@ export async function generateContent(opts: GenerateContentRequest) {
   if (type === 'prd') {
     if (!storedContext) throw new Error('Stored context required for PRD generation');
     const ctx = JSON.parse(storedContext);
+    
+    // Get competitive analysis if competitor URLs provided
+    let competitiveAnalysisText = '';
+    if (competitorUrls && competitorUrls.length > 0) {
+      try {
+        console.log('Analyzing competitor help docs:', competitorUrls);
+        const competitiveAgent = new CompetitiveLandscaperAgent();
+        const competitiveResult = await competitiveAgent.analyzeWithHelpDocs(query, competitorUrls);
+        
+        competitiveAnalysisText = `
+
+COMPETITIVE ANALYSIS (Based on actual help documentation):
+${competitiveResult.competitors.map(comp => `
+${comp.name}:
+- Solution: ${comp.summary}
+- Key Features: ${comp.features?.join(', ') || 'Not specified'}
+- Our Differentiation Opportunity: ${comp.ourEdge}
+- Source: ${comp.sourceUrl || 'Help documentation'}
+`).join('\n')}
+
+Searched URLs: ${competitiveResult.searchedUrls?.join(', ') || competitorUrls.join(', ')}
+`;
+      } catch (error) {
+        console.error('Competitive analysis failed:', error);
+        competitiveAnalysisText = `
+
+COMPETITIVE ANALYSIS: Failed to analyze competitor documentation (${error instanceof Error ? error.message : 'Unknown error'})
+`;
+      }
+    }
+
     const stream = await openai.chat.completions.create({
       model: 'o3',
       stream: true,
@@ -70,7 +103,7 @@ I've also included a list of key terms that my team has defined for our product.
 
 I've included instructions for how to think and write PRDs like a product manager with" ${ctx.examplesOfHowYouThink} "I've also included background on how to think like my product team" ${ctx.pillarGoalsKeyTermsBackground} "I've included an example document to demonstrate my personal philosophy on how we should approach building a product to cross sell to existing users" ${ctx.howYouThinkAboutProduct} "I've included a doc that outlines the strategic goals of the my product team for the rest of the year" ${ctx.teamStrategy} I've included example text from work that my team has already done that I want for you to use as additional context for relevant features and terms" ${additionalContext} "I've asked you to write a PRD for the following question" ${query} "I've also included a list of questions and answers about the PRD to provide additional clarity around how we should approach the PRD." ${
     questionAnswers && Array.isArray(questionAnswers) ? questionAnswers.map(qa => `Q: ${qa.question}${qa.reasoning ? ` (${qa.reasoning})` : ''}\nA: ${qa.answer}`).join('\n\n') : questions.join('\n')
-  } "When I ask you to write a doc, I want you to evaluate the Job to be Done statement I provide from each perspective (Product Manager, My product team, and Building a product that grows with its users) before beginning to write the PRD. Once done with that step, I want you to write the document with a focus on narrow scope, highly detailed breakdowns of which feature will support which part of the JTBD, and an open questions section that interrogates the JTBD from each of your perspectives (my product team, Product Manager, my philosophy) our edits should be returned in markdown format`,
+  }${competitiveAnalysisText} "When I ask you to write a doc, I want you to evaluate the Job to be Done statement I provide from each perspective (Product Manager, My product team, and Building a product that grows with its users) before beginning to write the PRD. Once done with that step, I want you to write the document with a focus on narrow scope, highly detailed breakdowns of which feature will support which part of the JTBD, and an open questions section that interrogates the JTBD from each of your perspectives (my product team, Product Manager, my philosophy)${competitiveAnalysisText ? ' Include a competitive analysis section that references the actual competitor research provided above and explains how our solution will differentiate.' : ''} our edits should be returned in markdown format`,
         },
       ],
     });
