@@ -8,6 +8,7 @@ type DraftStep = 'initial' | 'vocabulary' | 'questions' | 'content';
 export function usePRDFlow() {
   const [draftStep, setDraftStep] = useState<DraftStep>('initial');
   const [originalQuery, setOriginalQuery] = useState<string>('');
+  const [competitorUrls, setCompetitorUrls] = useState<string[]>(['']);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(-1);
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
@@ -20,6 +21,7 @@ export function usePRDFlow() {
   const resetFlow = () => {
     setDraftStep('initial');
     setOriginalQuery('');
+    setCompetitorUrls(['']);
     setQuestions([]);
     setCurrentQuestionIndex(-1);
     setQuestionAnswers({});
@@ -186,11 +188,16 @@ export function usePRDFlow() {
       };
     });
 
+    // Filter out empty competitor URLs
+    const validCompetitorUrls = competitorUrls.filter(url => url.trim() !== '');
+
     const docData = await generateDocument(
       'prd',
       'Draft PRD',
       originalQuery,
-      questionAnswersWithReasoning
+      questionAnswersWithReasoning,
+      undefined, // matchedContext (passed as undefined for now)
+      validCompetitorUrls
     );
 
     if (!docData.url) {
@@ -204,6 +211,7 @@ export function usePRDFlow() {
     // State
     draftStep,
     originalQuery,
+    competitorUrls,
     questions,
     currentQuestionIndex,
     questionAnswers,
@@ -226,6 +234,7 @@ export function usePRDFlow() {
     // Setters for external use
     setDraftStep,
     setOriginalQuery,
+    setCompetitorUrls,
     setQuestions,
     setCurrentQuestionIndex,
     setQuestionAnswers,

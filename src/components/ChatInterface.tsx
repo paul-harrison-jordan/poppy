@@ -1447,6 +1447,7 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
                 questions={prdFlow.questions}
                 currentTermIndex={prdFlow.currentTermIndex}
                 teamTerms={prdFlow.teamTerms}
+                competitorUrls={prdFlow.competitorUrls}
                 showStartPrdButton={showStartPrdButton}
                 agenticMessages={agenticMessages}
                 showBounce={showBounce}
@@ -1455,6 +1456,7 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
                 onModeChange={handleSafeModeChange}
                 onSummarizeAndSave={handleSummarizeAndSave}
                 onOpenAgentMode={openAgentMode}
+                onCompetitorUrlsChange={prdFlow.setCompetitorUrls}
               />
             </div>
           </div>

@@ -13,6 +13,7 @@ interface ChatInputProps {
   questions?: Array<{ text: string }>;
   currentTermIndex?: number;
   teamTerms?: Array<{ term: string }>;
+  competitorUrls?: string[];
   showStartPrdButton?: boolean;
   agenticMessages?: Array<{
     prdTitle: string;
@@ -24,6 +25,7 @@ interface ChatInputProps {
   onModeChange: (mode: ChatMode) => void;
   onSummarizeAndSave?: () => void;
   onOpenAgentMode?: () => void;
+  onCompetitorUrlsChange?: (urls: string[]) => void;
 }
 
 export default function ChatInput({
@@ -35,6 +37,7 @@ export default function ChatInput({
   questions = [],
   currentTermIndex = -1,
   teamTerms = [],
+  competitorUrls = [''],
   showStartPrdButton = false,
   agenticMessages = [],
   showBounce = false,
@@ -42,11 +45,13 @@ export default function ChatInput({
   onSubmit,
   onModeChange,
   onSummarizeAndSave,
-  onOpenAgentMode
+  onOpenAgentMode,
+  onCompetitorUrlsChange
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [currentPlaceholder, setCurrentPlaceholder] = useState('');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [showCompetitorAnalysis, setShowCompetitorAnalysis] = useState(false);
 
   // Animated placeholders based on mode
   const getPlaceholders = useCallback(() => {
@@ -274,6 +279,82 @@ export default function ChatInput({
             )}
           </button>
         </div>
+        
+        {/* Competitor Analysis Input - Only show in draft mode initial step */}
+        {mode === 'draft' && draftStep === 'initial' && (
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => setShowCompetitorAnalysis(!showCompetitorAnalysis)}
+              className="text-sm text-poppy-primary hover:text-poppy-primary/80 flex items-center gap-2 transition-smooth"
+            >
+              <svg 
+                className={`w-4 h-4 transition-transform ${showCompetitorAnalysis ? 'rotate-90' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              Analyze competitor solutions (optional)
+            </button>
+            
+            {showCompetitorAnalysis && (
+              <div className="mt-3 space-y-3 p-4 bg-white/50 rounded-xl border border-border">
+                <p className="text-xs text-warm-neutral">
+                  Add competitor help documentation URLs to see how they solve similar problems
+                </p>
+                {competitorUrls.map((url, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <input
+                      type="url"
+                      value={url}
+                      onChange={(e) => {
+                        if (onCompetitorUrlsChange) {
+                          const newUrls = [...competitorUrls];
+                          newUrls[index] = e.target.value;
+                          onCompetitorUrlsChange(newUrls);
+                        }
+                      }}
+                      placeholder="https://help.competitor.com"
+                      className="flex-1 px-3 py-2 text-sm rounded-lg border border-border focus:border-poppy-primary focus:outline-none focus:ring-1 focus:ring-poppy-primary/20 transition-smooth"
+                    />
+                    {competitorUrls.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onCompetitorUrlsChange) {
+                            const newUrls = competitorUrls.filter((_, i) => i !== index);
+                            onCompetitorUrlsChange(newUrls);
+                          }
+                        }}
+                        className="text-red-500 hover:text-red-700 p-1 transition-smooth"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {competitorUrls.length < 3 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onCompetitorUrlsChange) {
+                        onCompetitorUrlsChange([...competitorUrls, '']);
+                      }
+                    }}
+                    className="text-xs text-poppy-primary hover:text-poppy-primary/80 transition-smooth"
+                  >
+                    + Add another competitor
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Mode selector - horizontal tabs */}
         <div className="flex items-center justify-between">
