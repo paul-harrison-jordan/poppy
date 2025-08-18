@@ -326,6 +326,24 @@ export default function FeatureDetailView({ feature: initialFeature }: FeatureDe
     }
   }
 
+  const handleUpdateV0Link = async (v0Link: string) => {
+    try {
+      const response = await fetch(`/api/roadmap/prd/${feature.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 'v0-link': v0Link })
+      })
+
+      if (response.ok) {
+        const updatedFeature = await response.json()
+        setFeature(updatedFeature)
+      }
+    } catch (error) {
+      console.error('Error updating V0 link:', error)
+      alert('Failed to update V0 link')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-poppy-primary-light/5 to-white">
       <div className="max-w-7xl mx-auto p-6">
@@ -606,7 +624,39 @@ export default function FeatureDetailView({ feature: initialFeature }: FeatureDe
                   <div className="text-center py-24 bg-gray-50">
                     <Palette className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                     <p className="text-gray-600 mb-2">No design mockup linked yet</p>
-                    <p className="text-sm text-gray-500">Add a V0 link to showcase your designs</p>
+                    <p className="text-sm text-gray-500 mb-6">Create AI-powered design mockups for your feature</p>
+                    <div className="flex items-center justify-center gap-3">
+                      <Button
+                        onClick={() => {
+                          // Navigate to auto-design generation
+                          window.location.href = `/roadmap/feature/${feature.id}/design`;
+                        }}
+                        disabled={!feature['drive-link']}
+                        className="bg-poppy-primary hover:bg-poppy-primary-hover text-white"
+                      >
+                        <Palette className="w-4 h-4 mr-2" />
+                        🚀 Create Design
+                      </Button>
+                      <span className="text-sm text-gray-400">or</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          const v0Link = prompt('Enter V0 design link:');
+                          if (v0Link) {
+                            handleUpdateV0Link(v0Link);
+                          }
+                        }}
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Add V0 Link
+                      </Button>
+                    </div>
+                    {!feature['drive-link'] && (
+                      <p className="text-xs text-red-500 mt-3">
+                        💡 Add a PRD document first to enable AI design generation
+                      </p>
+                    )}
                   </div>
                 )}
               </CardContent>

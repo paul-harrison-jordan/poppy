@@ -110,25 +110,14 @@ export default function StrategyForm() {
     setIsGeneratingQuestions(true)
     const storedContext = localStorage.getItem("personalContext")
     try {
-      // 1. Get embedding for the query
-      const embedRes = await fetch("/api/embed-request", {
+      // Get matched context from vector store using assistant search
+      const searchQuery = `${title} ${query}`;
+      const matchRes = await fetch("/api/assistant-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, query }),
+        body: JSON.stringify({ query: searchQuery }),
       })
-      if (!embedRes.ok) throw new Error("Failed to get embedding")
-      const { queryEmbedding } = await embedRes.json()
-      if (!queryEmbedding || !Array.isArray(queryEmbedding)) throw new Error("Invalid embedding response")
-
-      const embedding = queryEmbedding[0].embedding
-
-      // 2. Get matched context from Pinecone
-      const matchRes = await fetch("/api/match-embeds", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(embedding),
-      })
-      if (!matchRes.ok) throw new Error("Failed to match embeddings")
+      if (!matchRes.ok) throw new Error("Failed to search vector store")
       const { matchedContext } = await matchRes.json()
       if (!matchedContext || !Array.isArray(matchedContext)) throw new Error("Invalid matched context response")
 

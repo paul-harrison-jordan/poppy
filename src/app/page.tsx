@@ -12,21 +12,23 @@ export default function Home() {
   const router = useRouter();
   const [isDesignMode, setIsDesignMode] = useState(false);
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Check onboarding status
   useEffect(() => {
     const checkOnboardingStatus = () => {
-      const personalContext = localStorage.getItem('personalContext');
-      const syncedDocs = localStorage.getItem('syncedDocs');
-      const onboardingMarker = localStorage.getItem('onboardingComplete');
-      
-      // Check if user has completed onboarding
-      if (onboardingMarker !== 'true') {
-        let needsOnboarding = true;
+      try {
+        const personalContext = localStorage.getItem('personalContext');
+        const syncedDocs = localStorage.getItem('syncedDocs');
+        const onboardingMarker = localStorage.getItem('onboardingComplete');
         
-        if (personalContext && syncedDocs) {
-          const context = JSON.parse(personalContext);
-          const docs = JSON.parse(syncedDocs);
+        // Check if user has completed onboarding
+        if (onboardingMarker !== 'true') {
+          let needsOnboarding = true;
+          
+          if (personalContext && syncedDocs) {
+            const context = JSON.parse(personalContext);
+            const docs = JSON.parse(syncedDocs);
           
           // Check if all required fields are filled
           const contextComplete = context.teamStrategy && 
@@ -44,52 +46,63 @@ export default function Home() {
       }
       
       setIsCheckingOnboarding(false);
+      setIsInitialized(true);
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+        setIsCheckingOnboarding(false);
+        setIsInitialized(true);
+      }
     };
 
-    if (session?.user) {
+    if (session?.user && status !== 'loading') {
       checkOnboardingStatus();
     } else if (status !== 'loading') {
       // If there's no session and we're not loading, we don't need to check onboarding
       setIsCheckingOnboarding(false);
+      setIsInitialized(true);
     }
   }, [session?.user, status, router]);
 
   useEffect(() => {
-    const initializePinecone = async () => {
-      if (session?.user) {
+    const initializeVectorStore = async () => {
+      if (session?.user && !isCheckingOnboarding) {
         try {
-          // Add a timeout to prevent hanging
+          // Initialize vector store in background, don't block UI
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // Reduced timeout
           
-          const response = await fetch('/api/init-pinecone', {
+          fetch('/api/init-vector-store', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             signal: controller.signal
+          }).then(response => {
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+              console.warn('Failed to initialize vector store, but continuing...');
+            }
+          }).catch(error => {
+            clearTimeout(timeoutId);
+            if (error instanceof Error && error.name === 'AbortError') {
+              console.warn('Vector store initialization timed out, but continuing...');
+            } else {
+              console.warn('Error initializing vector store, but continuing...', error);
+            }
           });
-          
-          clearTimeout(timeoutId);
-          
-          if (!response.ok) {
-            console.warn('Failed to initialize Pinecone index, but continuing...');
-          }
         } catch (error) {
-          if (error instanceof Error && error.name === 'AbortError') {
-            console.warn('Pinecone initialization timed out, but continuing...');
-          } else {
-            console.warn('Error initializing Pinecone index, but continuing...', error);
-          }
+          // Silently fail, don't block the UI
+          console.warn('Vector store initialization failed, but continuing...', error);
         }
       }
     };
     
-    // Don't block the UI, initialize in background
-    if (session?.user) {
-      initializePinecone();
+    // Only initialize after onboarding check is complete and page is rendered
+    if (session?.user && !isCheckingOnboarding && isInitialized) {
+      // Use setTimeout to defer this until after render to prevent blocking
+      setTimeout(initializeVectorStore, 500);
     }
-  }, [session?.user]); // Include the full user object
+  }, [session?.user, isCheckingOnboarding, isInitialized]);
 
   // Listen for design mode changes
   useEffect(() => {
@@ -120,7 +133,7 @@ export default function Home() {
     };
   }, []);
 
-  if (status === 'loading' || isCheckingOnboarding) {
+  if (status === 'loading' || isCheckingOnboarding || !isInitialized) {
     return (
       <div className="min-h-screen bg-neutral/80 flex items-center justify-center">
         <div className="text-primary animate-pulse font-sans">Loading...</div>

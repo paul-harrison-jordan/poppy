@@ -14,7 +14,7 @@ export default function DraftPrdPage() {
     const initializePinecone = async () => {
       if (session?.user) {
         try {
-          const response = await fetch('/api/init-pinecone', {
+          const response = await fetch('/api/init-vector-store', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

@@ -59,20 +59,11 @@ export function usePRDFlow() {
     // Store the original query
     setOriginalQuery(input);
     
-    // First, embed the request
-    const embedResponse = await fetch("/api/embed-request", {
+    // Search context using OpenAI assistant search
+    const matchResponse = await fetch("/api/assistant-search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: input }),
-    });
-    const embedResponseJson = await embedResponse.json();
-    const embedding = embedResponseJson.queryEmbedding[0].embedding;
-
-    // Then match context
-    const matchResponse = await fetch("/api/match-embeds", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ embedding }),
+      body: JSON.stringify({ query: input }),
     });
     const { matchedContext } = await matchResponse.json();
     setMatchedContext(matchedContext);

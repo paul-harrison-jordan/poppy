@@ -2,6 +2,30 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from 'v0-sdk';
 import { getAuthServerSession } from '@/lib/auth';
 
+// Wrapper function with timeout and retry logic
+async function withTimeout<T>(
+  promise: Promise<T>, 
+  timeoutMs: number = 120000, // 2 minutes
+  retries: number = 2
+): Promise<T> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await Promise.race([
+        promise,
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms (attempt ${attempt})`)), timeoutMs)
+        )
+      ]);
+    } catch (error) {
+      if (attempt === retries) throw error;
+      
+      console.log(`Attempt ${attempt} failed, retrying...`, error);
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s before retry
+    }
+  }
+  throw new Error('All retry attempts exhausted');
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getAuthServerSession();
@@ -52,16 +76,21 @@ ${prdContent.substring(0, 2000)}${prdContent.length > 2000 ? '...' : ''}`;
     if (chatId) {
       // Continue existing chat using the new SDK method
       console.log('Continuing v0 chat:', chatId);
-      result = await v0Client.chats.sendMessage({
-        chatId: chatId,
-        message: combinedMessage
-      });
+      result = await withTimeout(
+        v0Client.chats.sendMessage({
+          chatId: chatId,
+          message: combinedMessage
+        }),
+        120000, // 2 minutes timeout
+        2 // 2 retries
+      );
     } else {
       // Create new chat with enhanced system prompt for better designs
       console.log('Creating new v0 chat with design-focused system prompt');
-      result = await v0Client.chats.create({
-        message: combinedMessage,
-        system: `You are an expert React and Next.js developer with a focus on creating exceptional user experiences. 
+      result = await withTimeout(
+        v0Client.chats.create({
+          message: combinedMessage,
+          system: `You are an expert React and Next.js developer with a focus on creating exceptional user experiences. 
 
 When creating designs:
 1. Prioritize user experience and intuitive interactions
@@ -70,10 +99,13 @@ When creating designs:
 4. Implement accessibility best practices
 5. Focus on the core user workflow and value proposition
 6. Use semantic HTML and proper component structure
-7. Consider mobile-first responsive design
+7. Focus on desktop SaaS application design.
 
 Create clean, production-ready code that follows React best practices.`,
-      });
+        }),
+        120000, // 2 minutes timeout
+        2 // 2 retries
+      );
     }
 
     console.log('V0 chat result:', {
@@ -93,9 +125,29 @@ Create clean, production-ready code that follows React best practices.`,
   } catch (error) {
     console.error('V0 SDK error:', error);
     
+    // Provide specific error messages for common issues
+    let errorMessage = 'Failed to create v0 chat';
+    let statusCode = 500;
+    
+    if (error instanceof Error) {
+      if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
+        errorMessage = 'V0 design generation timed out. This can happen with complex designs. Please try again or simplify your request.';
+        statusCode = 408; // Request Timeout
+      } else if (error.message.includes('ECONNRESET') || error.message.includes('fetch failed')) {
+        errorMessage = 'Connection to V0 service was interrupted. Please try again.';
+        statusCode = 503; // Service Unavailable
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to create v0 chat', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      { 
+        error: errorMessage, 
+        details: error instanceof Error ? error.message : 'Unknown error',
+        retryable: statusCode === 408 || statusCode === 503
+      },
+      { status: statusCode }
     );
   }
 }

@@ -13,12 +13,7 @@ interface GoogleDoc {
   name: string;
 }
 
-interface PineconeEmbedding {
-  id: string;
-  values: number[];
-  sparseValues?: unknown;
-  metadata?: Record<string, unknown>;
-}
+// Removed PineconeEmbedding interface - no longer needed with OpenAI vector stores
 
 interface DriveIds {
   folderId?: string;
@@ -112,7 +107,7 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
             console.log(`Processing batch ${batchNumber} of ${batches.length}`);
             
             try {
-              const embedResponse = await fetch('/api/embed-feedback', {
+              const embedResponse = await fetch('/api/embed-feedback-openai', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -169,59 +164,39 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
 
         const syncPromises = fetchedDocs.map(async (doc: { id: string; name: string }) => {
           try {
-            const response = await fetch('/api/chunk-docs', {
+            const response = await fetch('/api/get-google-doc-content', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
-                documentId: doc.id,
-                documentName: doc.name 
+                docId: doc.id
               }),
             });
 
             if (!response.ok) {
-              console.error(`Failed to sync document: ${doc.name}`);
+              console.error(`Failed to fetch content for document: ${doc.name}`);
               return null;
             }
 
-            const chunksResponse = await response.json();
-            const chunks = chunksResponse.chunks;
+            const docContent = await response.json();
+            const fullContent = docContent.content || docContent.text || '';
 
-            // Process chunks individually to avoid timeouts
-            const embeddedChunksPromises = chunks.map(async (chunk: string) => {
-              const embeddedChunk = await fetch('/api/embed-chunks', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chunks: [chunk], documentId: doc.id }),
-              });
+            if (!fullContent.trim()) {
+              console.error(`Document ${doc.name} appears to be empty`);
+              return null;
+            }
 
-              if (!embeddedChunk.ok) {
-                console.error(`Failed to embed chunk for document: ${doc.id}`);
-                return null;
-              }
-
-              const embeddedChunkResponse = await embeddedChunk.json();
-              return embeddedChunkResponse.formattedEmbeddings[0];
-            });
-
-            const embeddedChunksResults = await Promise.all(embeddedChunksPromises);
-            const formattedEmbeddings = embeddedChunksResults.filter((result): result is PineconeEmbedding => result !== null);
-
-            const sanitizedEmbeddings = formattedEmbeddings.map((embedding: PineconeEmbedding) => {
-              const { id, values, sparseValues, metadata } = embedding;
-              return { id, values, sparseValues, metadata };
-            });
-
-            const pineconeUpsert = await fetch('/api/pinecone-upsert', {
+            const vectorStoreUpload = await fetch('/api/vector-store-upload', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
-                vectors: sanitizedEmbeddings,
-                documentId: doc.id 
+                content: fullContent,
+                documentId: doc.id,
+                documentTitle: doc.name 
               }),
             });
 
-            if (!pineconeUpsert.ok) {
-              console.error(`Failed to upsert to Pinecone: ${doc.id}`);
+            if (!vectorStoreUpload.ok) {
+              console.error(`Failed to upload to vector store: ${doc.id}`);
               return null;
             }
 

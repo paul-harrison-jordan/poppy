@@ -9,7 +9,11 @@
       "Bash(rm:*)",
       "Bash(npm run build:*)",
       "Bash(git push:*)",
-      "Bash(pnpm lint:*)"
+      "Bash(pnpm lint:*)",
+      "Bash(grep:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(curl:*)",
+      "Bash(pnpm remove:*)"
     ],
     "deny": []
   }

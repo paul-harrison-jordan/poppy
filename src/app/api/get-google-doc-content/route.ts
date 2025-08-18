@@ -52,13 +52,17 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
       throw accessError;
     }
 
-    // Fetch document content as HTML
+    // Fetch document content as plain text
     const contentResponse = await drive.files.export({
       fileId: docId,
-      mimeType: 'text/html',
+      mimeType: 'text/plain',
     });
 
-    return NextResponse.json({ content: contentResponse.data });
+    const textContent = contentResponse.data as string;
+
+    return NextResponse.json({ 
+      content: textContent
+    });
   } catch (error: unknown) {
     console.error('Error fetching Google Doc content:', error);
     

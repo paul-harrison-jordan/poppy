@@ -14,18 +14,7 @@ interface PRD {
   id?: string;
 }
 
-interface PineconeEmbedding {
-  id: string;
-  values: number[];
-  sparseValues?: {
-    indices: number[];
-    values: number[];
-  };
-  metadata: {
-    text: string;
-    documentId: string;
-  };
-}
+// Removed PineconeEmbedding interface - no longer needed with OpenAI vector stores
 
 export default function SyncPage() {
   const { data: session, status } = useSession();
@@ -85,42 +74,21 @@ export default function SyncPage() {
       const chunksData = await chunkResponse.json();
       const chunks = chunksData.chunks;
 
-      // Process chunks individually to avoid timeouts
-      const embeddedChunksPromises = chunks.map(async (chunk: string) => {
-        const embeddedChunk = await fetch('/api/embed-chunks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chunks: [chunk], documentId: docId }),
-        });
+      // Prepare content for upload (no embedding needed)
 
-        if (!embeddedChunk.ok) {
-          throw new Error('Failed to embed chunk');
-        }
-
-        const embeddedChunkResponse = await embeddedChunk.json();
-        return embeddedChunkResponse.formattedEmbeddings[0];
-      });
-
-      const embeddedChunksResults = await Promise.all(embeddedChunksPromises);
-      const formattedEmbeddings = embeddedChunksResults.filter((result): result is PineconeEmbedding => result !== null);
-
-      const sanitizedEmbeddings = formattedEmbeddings.map((embedding: PineconeEmbedding) => {
-        const { id, values, sparseValues, metadata } = embedding;
-        return { id, values, sparseValues, metadata };
-      });
-
-      // Resync the document
-      const resyncResponse = await fetch('/api/resync-doc', {
+      // Upload to vector store
+      const resyncResponse = await fetch('/api/vector-store-upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
+          content: chunks.join('\n\n'),
           documentId: docId,
-          formattedEmbeddings: sanitizedEmbeddings 
+          documentTitle: `Document ${docId}`
         }),
       });
 
       if (!resyncResponse.ok) {
-        throw new Error('Failed to resync document');
+        throw new Error('Failed to upload to vector store');
       }
 
       // Refresh the list of synced documents

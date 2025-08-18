@@ -31,7 +31,7 @@ interface SyncItem {
   id: string;
   name: string;
   type: 'folder' | 'document';
-  status: 'pending' | 'chunking' | 'embedding' | 'upserting' | 'completed' | 'error';
+  status: 'pending' | 'fetching' | 'uploading' | 'completed' | 'error';
   progress: number;
   message?: string;
   documents?: SyncItem[];
@@ -173,61 +173,45 @@ export default function SyncConfirmationModal({
       const syncPromises = allDocumentsToSync.map(async (doc) => {
         const startTime = performance.now();
         try {
-          // Update UI: Chunking phase
-          updateSyncProgress(doc.id, 'chunking', 10, `Chunking ${doc.name}...`, !!doc.parentFolderId, doc.parentFolderId);
+          // Update UI: Fetching phase
+          updateSyncProgress(doc.id, 'fetching', 10, `Fetching content for ${doc.name}...`, !!doc.parentFolderId, doc.parentFolderId);
           
-          // Step 1: Chunk the document
-          const chunkResponse = await fetch('/api/chunk-docs', {
+          // Step 1: Get full document content
+          const docResponse = await fetch('/api/get-google-doc-content', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
+              docId: doc.id
+            }),
+          });
+
+          if (!docResponse.ok) {
+            throw new Error(`Failed to fetch content for ${doc.name}`);
+          }
+
+          const docContent = await docResponse.json();
+          const fullContent = docContent.content || docContent.text || '';
+          
+          if (!fullContent.trim()) {
+            throw new Error(`Document ${doc.name} appears to be empty`);
+          }
+
+          // Update UI: Uploading phase
+          updateSyncProgress(doc.id, 'uploading', 80, `Uploading to vector store...`, !!doc.parentFolderId, doc.parentFolderId);
+
+          // Step 3: Upload to vector store
+          const upsertResponse = await fetch('/api/vector-store-upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              content: fullContent,
               documentId: doc.id,
-              documentName: doc.name 
-            }),
-          });
-
-          if (!chunkResponse.ok) {
-            throw new Error(`Failed to chunk document: ${doc.name}`);
-          }
-
-          const chunksData = await chunkResponse.json();
-          const chunks = chunksData.chunks;
-
-          // Update UI: Embedding phase
-          updateSyncProgress(doc.id, 'embedding', 40, `Embedding ${chunks.length} chunks...`, !!doc.parentFolderId, doc.parentFolderId);
-
-          // Step 2: Embed all chunks in a single batch call (MAJOR PERFORMANCE IMPROVEMENT)
-          const embedResponse = await fetch('/api/embed-chunks', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              chunks: chunks, // Pass ALL chunks in one request
-              documentId: doc.id 
-            }),
-          });
-
-          if (!embedResponse.ok) {
-            throw new Error(`Failed to embed chunks for document: ${doc.name}`);
-          }
-
-          const embedData = await embedResponse.json();
-          const formattedEmbeddings = embedData.formattedEmbeddings;
-
-          // Update UI: Upserting phase
-          updateSyncProgress(doc.id, 'upserting', 80, `Saving ${formattedEmbeddings.length} vectors...`, !!doc.parentFolderId, doc.parentFolderId);
-
-          // Step 3: Upsert to Pinecone
-          const upsertResponse = await fetch('/api/pinecone-upsert', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              vectors: formattedEmbeddings,
-              documentId: doc.id 
+              documentTitle: doc.name
             }),
           });
 
           if (!upsertResponse.ok) {
-            throw new Error(`Failed to upsert to Pinecone: ${doc.id}`);
+            throw new Error(`Failed to upload to vector store: ${doc.id}`);
           }
 
           // Update UI: Completed
@@ -237,12 +221,12 @@ export default function SyncConfirmationModal({
             doc.id, 
             'completed', 
             100, 
-            `✅ Synced ${chunks.length} chunks in ${duration}s`, 
+            `✅ Synced in ${duration}s`, 
             !!doc.parentFolderId, 
             doc.parentFolderId
           );
           
-          console.log(`✅ ${doc.name}: ${chunks.length} chunks synced in ${duration}s`);
+          console.log(`✅ ${doc.name}: synced in ${duration}s`);
 
           // Store in localStorage (same as /sync page)
           const storedPrds = localStorage.getItem('prds');
@@ -346,9 +330,8 @@ export default function SyncConfirmationModal({
     switch (status) {
       case 'pending':
         return <div className="w-2 h-2 bg-gray-400 rounded-full"></div>;
-      case 'chunking':
-      case 'embedding':
-      case 'upserting':
+      case 'fetching':
+      case 'uploading':
         return <Loader2 className="w-4 h-4 animate-spin text-poppy-primary" />;
       case 'completed':
         return <Check className="w-4 h-4 text-sprout-success" />;
@@ -363,12 +346,10 @@ export default function SyncConfirmationModal({
     switch (status) {
       case 'pending':
         return 'Waiting...';
-      case 'chunking':
-        return 'Chunking content';
-      case 'embedding':
-        return 'Creating embeddings';
-      case 'upserting':
-        return 'Saving to database';
+      case 'fetching':
+        return 'Fetching content';
+      case 'uploading':
+        return 'Uploading to vector store';
       case 'completed':
         return 'Completed';
       case 'error':
@@ -398,8 +379,8 @@ export default function SyncConfirmationModal({
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
                   {isSyncing 
-                    ? `Processing ${totalItems} items: chunking, embedding, and storing in Pinecone`
-                    : `Ready to sync ${totalItems} items to your Pinecone knowledge base`
+                    ? `Processing ${totalItems} items: uploading to OpenAI vector store`
+                    : `Ready to sync ${totalItems} items to your OpenAI vector store`
                   }
                 </p>
               </div>

@@ -58,18 +58,7 @@ interface GoogleDriveItem {
   syncMessage?: string;
 }
 
-interface PineconeEmbedding {
-  id: string;
-  values: number[];
-  sparseValues?: {
-    indices: number[];
-    values: number[];
-  };
-  metadata: {
-    text: string;
-    documentId: string;
-  };
-}
+// Removed PineconeEmbedding interface - no longer needed with OpenAI vector stores
 
 interface OnboardingProgress {
   teamStrategy: boolean;
@@ -294,19 +283,8 @@ export default function OnboardingChatInterface({ testMode = false }: Onboarding
       if (fetchedDocs && fetchedDocs.length > 0) {
         const doc = fetchedDocs[0];
         
-        // Chunk the document
-        const chunkResponse = await fetch('/api/chunk-docs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            documentId: doc.id,
-            documentName: doc.name 
-          }),
-        });
-
-        if (!chunkResponse.ok) {
-          throw new Error('Failed to chunk document');
-        }
+        // For onboarding, we just need to mark the document as available
+        // The actual upload to vector store will happen when user chooses to sync
 
         // Update local storage only if not in test mode
         if (!testMode) {
@@ -438,68 +416,43 @@ export default function OnboardingChatInterface({ testMode = false }: Onboarding
         // Sync documents with complete workflow tracking
         const syncPromises = documents.map(async (doc) => {
           try {
-            // Step 1: Fetch document details (already have it, but following workflow)
-            updateSyncStatus(doc.id, 'syncing', 'Fetching document...');
+            // Step 1: Fetch full document content directly
+            updateSyncStatus(doc.id, 'syncing', 'Fetching document content...');
             
-            // Step 2: Chunk the document
-            updateSyncStatus(doc.id, 'syncing', 'Chunking document...');
-            const chunkResponse = await fetch('/api/chunk-docs', {
+            const docResponse = await fetch('/api/get-google-doc-content', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
-                documentId: doc.id,
-                documentName: doc.name 
+                docId: doc.id
               }),
             });
             
-            if (!chunkResponse.ok) {
-              throw new Error(`Failed to chunk ${doc.name}`);
+            if (!docResponse.ok) {
+              throw new Error(`Failed to fetch content for ${doc.name}`);
             }
             
-            const chunksResponse = await chunkResponse.json();
-            const chunks = chunksResponse.chunks;
+            const docContent = await docResponse.json();
+            const fullContent = docContent.content || docContent.text || '';
             
-            // Step 3: Embed chunks
-            updateSyncStatus(doc.id, 'syncing', 'Embedding chunks...');
+            if (!fullContent.trim()) {
+              throw new Error(`Document ${doc.name} appears to be empty`);
+            }
             
-            // Process chunks individually to avoid timeouts
-            const embeddedChunksPromises = chunks.map(async (chunk: string) => {
-              const embeddedChunk = await fetch('/api/embed-chunks', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chunks: [chunk], documentId: doc.id }),
-              });
-
-              if (!embeddedChunk.ok) {
-                throw new Error(`Failed to embed chunk for document: ${doc.id}`);
-              }
-
-              const embeddedChunkResponse = await embeddedChunk.json();
-              return embeddedChunkResponse.formattedEmbeddings[0];
-            });
-
-            const embeddedChunksResults = await Promise.all(embeddedChunksPromises);
-            const formattedEmbeddings = embeddedChunksResults.filter((result): result is PineconeEmbedding => result !== null);
-
-            const sanitizedEmbeddings = formattedEmbeddings.map((embedding: PineconeEmbedding) => {
-              const { id, values, sparseValues, metadata } = embedding;
-              return { id, values, sparseValues, metadata };
-            });
+            // Step 4: Save to vector store
+            updateSyncStatus(doc.id, 'syncing', 'Saving to vector store...');
             
-            // Step 4: Save to Pinecone
-            updateSyncStatus(doc.id, 'syncing', 'Saving to Pinecone...');
-            
-            const pineconeUpsert = await fetch('/api/pinecone-upsert', {
+            const vectorStoreUpload = await fetch('/api/vector-store-upload', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
-                vectors: sanitizedEmbeddings,
-                documentId: doc.id 
+                content: fullContent,
+                documentId: doc.id,
+                documentTitle: doc.name
               }),
             });
 
-            if (!pineconeUpsert.ok) {
-              throw new Error(`Failed to upsert to Pinecone: ${doc.id}`);
+            if (!vectorStoreUpload.ok) {
+              throw new Error(`Failed to upload to vector store: ${doc.id}`);
             }
             
             updateSyncStatus(doc.id, 'completed');
@@ -536,62 +489,42 @@ export default function OnboardingChatInterface({ testMode = false }: Onboarding
             // Process each document in the folder with complete workflow and individual status tracking
             const folderSyncPromises = (folderDocs || []).map(async (doc: GoogleDriveItem) => {
               try {
-                // Step 2: Chunk document
-                handleFolderDocumentStatusUpdate(folder.id, doc.id, 'syncing', 'Chunking document...');
-                const chunkResponse = await fetch('/api/chunk-docs', {
+                // Step 2: Fetch full document content directly
+                handleFolderDocumentStatusUpdate(folder.id, doc.id, 'syncing', 'Fetching document content...');
+                
+                const docResponse = await fetch('/api/get-google-doc-content', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ 
-                    documentId: doc.id,
-                    documentName: doc.name 
+                    documentId: doc.id
                   }),
                 });
                 
-                if (!chunkResponse.ok) {
-                  throw new Error(`Failed to chunk ${doc.name}`);
+                if (!docResponse.ok) {
+                  throw new Error(`Failed to fetch content for ${doc.name}`);
                 }
                 
-                const chunksResponse = await chunkResponse.json();
-                const chunks = chunksResponse.chunks;
+                const docContent = await docResponse.json();
+                const fullContent = docContent.content || docContent.text || '';
                 
-                // Step 3: Embed chunks
-                handleFolderDocumentStatusUpdate(folder.id, doc.id, 'syncing', 'Embedding chunks...');
-                const embeddedChunksPromises = chunks.map(async (chunk: string) => {
-                  const embeddedChunk = await fetch('/api/embed-chunks', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chunks: [chunk], documentId: doc.id }),
-                  });
-
-                  if (!embeddedChunk.ok) {
-                    throw new Error(`Failed to embed chunk`);
-                  }
-
-                  const embeddedChunkResponse = await embeddedChunk.json();
-                  return embeddedChunkResponse.formattedEmbeddings[0];
-                });
-
-                const embeddedChunksResults = await Promise.all(embeddedChunksPromises);
-                const formattedEmbeddings = embeddedChunksResults.filter((result): result is PineconeEmbedding => result !== null);
-
-                const sanitizedEmbeddings = formattedEmbeddings.map((embedding: PineconeEmbedding) => {
-                  const { id, values, sparseValues, metadata } = embedding;
-                  return { id, values, sparseValues, metadata };
-                });
+                if (!fullContent.trim()) {
+                  throw new Error(`Document ${doc.name} appears to be empty`);
+                }
                 
-                // Step 4: Save to Pinecone
-                handleFolderDocumentStatusUpdate(folder.id, doc.id, 'syncing', 'Saving to Pinecone...');
-                const pineconeUpsert = await fetch('/api/pinecone-upsert', {
+                // Step 4: Save to vector store
+                handleFolderDocumentStatusUpdate(folder.id, doc.id, 'syncing', 'Saving to vector store...');
+                const vectorStoreUpload = await fetch('/api/vector-store-upload', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ 
-                    vectors: sanitizedEmbeddings,
-                    documentId: doc.id 
+                    content: fullContent,
+                    documentId: doc.id,
+                    documentTitle: doc.name
                   }),
                 });
 
-                if (!pineconeUpsert.ok) {
-                  throw new Error(`Failed to save to Pinecone`);
+                if (!vectorStoreUpload.ok) {
+                  throw new Error(`Failed to save to vector store`);
                 }
                 
                 // Mark document as completed

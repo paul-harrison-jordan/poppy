@@ -49,11 +49,19 @@ export const GET = withAuth<NextResponse, Session, [Request]>(async (session, re
     let query = '';
     
     if (itemType === 'documents') {
-      // Fetch only documents owned by the user
-      query = `mimeType='application/vnd.google-apps.document' and 'me' in owners and trashed=false`;
+      // Fetch only documents, optionally within a specific folder
+      if (folderId && folderId !== 'root') {
+        query = `'${folderId}' in parents and mimeType='application/vnd.google-apps.document' and trashed=false`;
+      } else {
+        query = `mimeType='application/vnd.google-apps.document' and 'me' in owners and trashed=false`;
+      }
     } else if (itemType === 'folders') {
-      // Fetch only folders owned by the user
-      query = `mimeType='application/vnd.google-apps.folder' and 'me' in owners and trashed=false`;
+      // Fetch only folders, optionally within a specific folder  
+      if (folderId && folderId !== 'root') {
+        query = `'${folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+      } else {
+        query = `mimeType='application/vnd.google-apps.folder' and 'me' in owners and trashed=false`;
+      }
     } else if (searchQuery) {
       // Search across accessible files, prioritizing owned
       query = `name contains '${searchQuery.replace(/'/g, "\\'")}' and (mimeType='application/vnd.google-apps.document' or mimeType='application/vnd.google-apps.folder') and trashed=false`;

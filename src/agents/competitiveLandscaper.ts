@@ -1,7 +1,7 @@
 import { LLMAgent } from './LLMAgent';
 import { WebSearchService } from '@/lib/integrations/WebSearchService';
 import { embedChunks } from '@/app/embed';
-import { getUserIndex } from '@/lib/pinecone';
+import { getUserVectorStore, searchVectorStore } from '@/lib/openai-vector';
 
 export interface Competitor {
   name: string;
@@ -477,34 +477,30 @@ Search query:`;
         productContext?.businessGoals
       ].filter(Boolean).join(' ');
 
-      // Generate embedding for the context query
-      const embeddings = await embedChunks([contextQuery]);
-      const queryVector = embeddings[0].embedding;
-
-      // Format username for Pinecone index
+      // Format username for vector store
       const formattedUsername = username
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, '-')
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
 
-      // Query user's Pinecone index for relevant context
-      const index = getUserIndex(formattedUsername);
-      const queryResponse = await index.namespace('ns1').query({
-        vector: queryVector,
-        topK: 5,
-        includeMetadata: true
-      });
+      // Query user's vector store for relevant context
+      const { assistantId, vectorStoreId } = await getUserVectorStore(formattedUsername);
+      const results = await searchVectorStore(
+        assistantId,
+        vectorStoreId,
+        contextQuery,
+        5
+      );
 
-      if (!queryResponse?.matches) {
+      if (!results || results.length === 0) {
         console.warn(`[${this.name}] No contextual matches found for user ${username}`);
         return [];
       }
 
       // Extract text from matched context
-      const contextualInsights = queryResponse.matches
-        .filter(match => match.score && match.score > 0.7) // Only high-relevance matches
-        .map(match => match.metadata?.text)
+      const contextualInsights = results
+        .map(result => result.content)
         .filter(Boolean) as string[];
 
       console.log(`[${this.name}] Retrieved ${contextualInsights.length} contextual insights from Pinecone for enhanced search queries`);

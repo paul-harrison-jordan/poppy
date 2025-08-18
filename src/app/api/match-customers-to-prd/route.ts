@@ -2,11 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { openai } from '@/lib/openai';
-import { Pinecone } from '@pinecone-database/pinecone';
+import { searchVectorStore, createFeedbackVectorStore } from '@/lib/openai-vector';
 
-const pc = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY!,
-});
+let feedbackVectorStoreId: string | null = null;
+let feedbackAssistantId: string | null = null;
+
+async function getFeedbackStore() {
+  if (!feedbackVectorStoreId) {
+    feedbackVectorStoreId = await createFeedbackVectorStore();
+    
+    const assistant = await openai.beta.assistants.create({
+      name: 'Feedback Assistant',
+      instructions: 'You are a helpful assistant that searches through customer feedback.',
+      model: 'gpt-4o',
+      tools: [{ type: 'file_search' }],
+      tool_resources: {
+        file_search: {
+          vector_store_ids: [feedbackVectorStoreId]
+        }
+      }
+    });
+    
+    feedbackAssistantId = assistant.id;
+  }
+  
+  return { feedbackVectorStoreId, feedbackAssistantId };
+}
 
 interface CustomerFeedback {
   gmv: string;
@@ -36,41 +57,36 @@ export async function POST(request: NextRequest) {
       summary: prdSummary.substring(0, 100) + '...'
     });
 
-    // Create embedding for the PRD summary
-    const embedding = await openai.embeddings.create({
-      model: "text-embedding-3-small",
-      input: prdSummary,
-    });
+    // Get feedback store and search for matches
+    const { feedbackAssistantId, feedbackVectorStoreId } = await getFeedbackStore();
+    
+    if (!feedbackAssistantId || !feedbackVectorStoreId) {
+      return NextResponse.json({ error: 'Feedback store not initialized' }, { status: 500 });
+    }
 
-    // Query Pinecone feedback index for similar feedback
-    const index = pc.index('feedback');
-    const queryResponse = await index.namespace('feedback').query({
-      vector: embedding.data[0].embedding,
-      topK: 10,
-      includeMetadata: true
-    });
+    const results = await searchVectorStore(
+      feedbackAssistantId,
+      feedbackVectorStoreId,
+      prdSummary,
+      10
+    );
 
-    if (!queryResponse?.matches || queryResponse.matches.length === 0) {
+    if (!results || results.length === 0) {
       console.log('No customer feedback matches found');
       return NextResponse.json({ matches: [] });
     }
 
-    // Process matches and extract the required fields
-    const customerFeedback: CustomerFeedback[] = queryResponse.matches
-      .map(match => {
-        const metadata = match.metadata as Record<string, unknown>;
-        return {
-          gmv: (metadata.GMV as string) || '',
-          klaviyo_account_id: (metadata.KLAVIYO_ACCOUNT_ID as string) || '',
-          nps_score_raw: (metadata.NPS_SCORE_RAW as string) || '',
-          nps_verbatim: (metadata.NPS_VERBATIM as string) || '',
-          survey_end_date: (metadata.SURVEY_END_DATE as string) || '',
-          match_score: match.score || 0,
-          row_number: (metadata.row_number as number) || 0
-        };
-      })
-      // Filter out any matches without essential data
-      .filter(feedback => feedback.nps_verbatim && feedback.klaviyo_account_id);
+    // For now, return a simplified response since the new format doesn't have structured metadata
+    // In the future, you may want to parse the content to extract structured feedback data
+    const customerFeedback: CustomerFeedback[] = results.map((result, index) => ({
+      gmv: '',  // Would need to parse from content
+      klaviyo_account_id: `match-${index}`,
+      nps_score_raw: '',  // Would need to parse from content
+      nps_verbatim: result.content,
+      survey_end_date: '',  // Would need to parse from content
+      match_score: 0.8, // Static score since we don't have the numerical score
+      row_number: index + 1
+    }));
 
     console.log(`Found ${customerFeedback.length} customer feedback matches`);
 
