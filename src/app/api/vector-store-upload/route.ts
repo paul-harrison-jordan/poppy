@@ -5,7 +5,7 @@ import { getUserVectorStore, uploadDocumentToVectorStore, openai } from '@/lib/o
 
 export const POST = withAuth<NextResponse, Session, [Request]>(async (session, request) => {
   try {
-    const { content, documentId, documentTitle } = await request.json();
+    const { content, documentId } = await request.json();
     
     if (!content || !documentId) {
       return NextResponse.json(

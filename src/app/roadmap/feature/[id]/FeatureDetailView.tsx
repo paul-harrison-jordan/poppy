@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -81,13 +81,31 @@ export default function FeatureDetailView({ feature: initialFeature }: FeatureDe
     assigned_engineer: feature.roadmap?.assigned_engineer || 'unassigned'
   })
 
+  // Design generation state
+  const [generating, setGenerating] = useState(false)
+  const [autoGenerating, setAutoGenerating] = useState(false)
+  const [designPrompt, setDesignPrompt] = useState('')
+  const [v0Result, setV0Result] = useState<{
+    chatId?: string
+    chatUrl?: string
+    demoUrl?: string
+    status?: string
+    isComplete?: boolean
+  } | null>(null)
+  const [lastError, setLastError] = useState<string | null>(null)
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
+  
+  // Refs for design generation
+  const startPollingRef = useRef<((chatId: string) => void) | null>(null)
+  const autoGenerationAttempted = useRef<string | null>(null)
+
   // Calculate overall progress
   const calculateOverallProgress = () => {
     let completedSteps = 0
     const totalSteps = 3 // PRD, Design, Decomposition
     
     if (feature['drive-link']) completedSteps++
-    if (feature['v0-link']) completedSteps++
+    if (feature['v0-link'] || v0Result?.demoUrl) completedSteps++
     if (phases.length > 0) completedSteps++ // Mark as complete when phases are generated
     
     return Math.round((completedSteps / totalSteps) * 100)
@@ -143,6 +161,7 @@ export default function FeatureDetailView({ feature: initialFeature }: FeatureDe
 
     fetchEngineers()
   }, [])
+
 
   const handleDecompose = async () => {
     if (!feature['drive-link']) {
@@ -326,7 +345,7 @@ export default function FeatureDetailView({ feature: initialFeature }: FeatureDe
     }
   }
 
-  const handleUpdateV0Link = async (v0Link: string) => {
+  const handleUpdateV0Link = useCallback(async (v0Link: string) => {
     try {
       const response = await fetch(`/api/roadmap/prd/${feature.id}`, {
         method: 'PATCH',
@@ -342,7 +361,330 @@ export default function FeatureDetailView({ feature: initialFeature }: FeatureDe
       console.error('Error updating V0 link:', error)
       alert('Failed to update V0 link')
     }
+  }, [feature.id])
+
+  // Design generation functions - must be defined before useEffects that use them
+  const generatePromptFromPRD = useCallback((feature: Feature, prdText: string): string => {
+    const title = feature.title || `Feature #${feature.id}`
+    const description = feature.description || ''
+    
+    if (!prdText.trim()) {
+      return `Create a modern, professional SaaS interface for "${title}".
+
+${description ? `Description: ${description}` : ''}
+
+Design Guidelines:
+• Clean, modern interface with intuitive navigation
+• Professional SaaS application aesthetic  
+• Clear visual hierarchy and consistent spacing
+• Accessible design with proper contrast and typography
+• Responsive layout optimized for desktop use
+• Include relevant interactive elements and clear CTAs
+
+Please create a complete, functional interface that demonstrates the core user experience.`
+    }
+    
+    // Extract key information from PRD
+    const prdLines = prdText.split('\n').filter(line => line.trim())
+    const objectives = prdLines.filter(line => 
+      line.toLowerCase().includes('objective') || 
+      line.toLowerCase().includes('goal') ||
+      line.toLowerCase().includes('purpose')
+    ).slice(0, 2)
+    
+    const userStories = prdLines.filter(line => 
+      line.toLowerCase().includes('user') || 
+      line.toLowerCase().includes('customer') ||
+      line.toLowerCase().includes('as a')
+    ).slice(0, 3)
+
+    const requirements = prdLines.filter(line => 
+      line.toLowerCase().includes('requirement') || 
+      line.toLowerCase().includes('must') ||
+      line.toLowerCase().includes('should')
+    ).slice(0, 3)
+
+    return `Create a modern, professional SaaS interface for "${title}".
+
+${description ? `Feature Overview: ${description}` : ''}
+
+${objectives.length > 0 ? `Key Objectives:\n${objectives.map(obj => `• ${obj.trim()}`).join('\n')}\n` : ''}
+
+${userStories.length > 0 ? `User Stories:\n${userStories.map(story => `• ${story.trim()}`).join('\n')}\n` : ''}
+
+${requirements.length > 0 ? `Key Requirements:\n${requirements.map(req => `• ${req.trim()}`).join('\n')}\n` : ''}
+
+Design Guidelines:
+• Clean, modern interface with intuitive navigation
+• Professional SaaS application aesthetic
+• Clear visual hierarchy and consistent spacing
+• Accessible design with proper contrast and typography
+• Responsive layout optimized for desktop use
+• Include relevant interactive elements and clear CTAs
+• Focus on the primary user workflow
+
+Please create a complete, functional interface that demonstrates the core user experience.`
+  }, [])
+
+  const startAsyncGeneration = useCallback(async (prompt: string, chatId?: string): Promise<{ chatId: string; chatUrl?: string; demoUrl?: string; status?: string }> => {
+    try {
+      console.log('Starting V0 generation directly from client...')
+      
+      const apiKey = process.env.NEXT_PUBLIC_V0_API_KEY || localStorage.getItem('v0_api_key')
+      if (!apiKey) {
+        throw new Error('V0 API key not found. Please set NEXT_PUBLIC_V0_API_KEY or configure it in Settings.')
+      }
+
+      const { createClient } = await import('v0-sdk')
+      const v0Client = createClient({ apiKey })
+      
+      let result;
+      
+      if (chatId) {
+        console.log('Sending message to existing V0 chat:', chatId)
+        result = await v0Client.chats.sendMessage({
+          chatId,
+          message: prompt
+        })
+      } else {
+        console.log('Creating new V0 chat')
+        result = await v0Client.chats.create({
+          message: prompt,
+          system: `You are an expert React/Next.js developer focused on exceptional UX.
+
+Create modern, professional SaaS interfaces with:
+• Intuitive navigation and clear visual hierarchy
+• Modern responsive design with Tailwind CSS
+• Accessibility best practices
+• Desktop-optimized layouts
+• Clean, production-ready code
+
+Focus on core user workflow and value proposition.`,
+          modelConfiguration: {
+            modelId: 'v0-1.5-lg',
+            imageGenerations: true,
+            thinking: true
+          }
+        })
+      }
+
+      console.log('V0 generation started:', result.id)
+      
+      startPollingRef.current?.(result.id)
+      
+      return {
+        chatId: result.id,
+        chatUrl: result.url,
+        demoUrl: result.demo,
+        status: 'creating'
+      }
+
+    } catch (error) {
+      console.error('Failed to start V0 generation:', error)
+      throw error
+    }
+  }, [])
+
+  const startPolling = useCallback((chatId: string) => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval)
+    }
+
+    const poll = async () => {
+      try {
+        const apiKey = process.env.NEXT_PUBLIC_V0_API_KEY || localStorage.getItem('v0_api_key')
+        if (!apiKey) {
+          throw new Error('V0 API key not found. Please configure it in Settings.')
+        }
+
+        const { createClient } = await import('v0-sdk')
+        const v0Client = createClient({ apiKey })
+        
+        const chat = await v0Client.chats.getById(chatId)
+        
+        console.log('Direct V0 status check:', chat)
+
+        const isComplete = chat.url && chat.demo
+        const isError = false
+        
+        const status = {
+          chatId: chat.id,
+          chatUrl: chat.url,
+          demoUrl: chat.demo,
+          isComplete,
+          isError
+        }
+
+        setV0Result(prev => ({
+          ...prev,
+          ...status
+        }))
+
+        if (isComplete) {
+          if (pollingInterval) {
+            clearInterval(pollingInterval)
+            setPollingInterval(null)
+          }
+          
+          setGenerating(false)
+          setAutoGenerating(false)
+          setLastError(null)
+          
+          if (status.demoUrl) {
+            await handleUpdateV0Link(status.demoUrl)
+          }
+          
+          localStorage.setItem(`design_result_${feature.id}`, JSON.stringify(status))
+        }
+
+      } catch (error) {
+        console.error('V0 status check error:', error)
+        setLastError(`Status check error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+    }
+
+    poll()
+    const interval = setInterval(poll, 3000)
+    setPollingInterval(interval)
+  }, [pollingInterval, feature.id, handleUpdateV0Link])
+
+  startPollingRef.current = startPolling
+
+  // Manual design generation
+  const handleGenerateDesign = async () => {
+    if (!designPrompt.trim()) {
+      alert('Please enter a design prompt')
+      return
+    }
+
+    setGenerating(true)
+    setLastError(null)
+    
+    try {
+      await startAsyncGeneration(designPrompt, v0Result?.chatId)
+    } catch (error) {
+      console.error('Error generating design:', error)
+      setLastError(`Failed to start generation: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setGenerating(false)
+      
+      // Check if we have a previous result to work with
+      const storedResult = localStorage.getItem(`design_result_${feature.id}`)
+      if (storedResult) {
+        try {
+          const parsed = JSON.parse(storedResult)
+          if (parsed.chatUrl) {
+            setV0Result(parsed)
+            setLastError(`Failed to start new generation. You can continue with previous result.`)
+          }
+        } catch {}
+      }
+    }
   }
+
+  // useEffects that depend on the functions above - must come after function definitions
+  
+  // Auto-generate design when feature and PRD are loaded
+  useEffect(() => {
+    const autoGenerateDesign = async () => {
+      // Check if we've already attempted auto-generation for this feature
+      if (autoGenerationAttempted.current === feature?.id?.toString()) {
+        console.log('Auto-generation already attempted for feature:', feature.id)
+        return
+      }
+
+      // Guards to prevent loops
+      if (!feature?.['drive-link'] || 
+          autoGenerating || 
+          v0Result?.chatId || 
+          feature['v0-link'] ||
+          generating) {
+        console.log('Skipping auto-generation:', { 
+          hasDriveLink: !!feature?.['drive-link'],
+          autoGenerating, 
+          hasV0Result: !!v0Result?.chatId,
+          hasV0Link: !!feature['v0-link'],
+          generating
+        })
+        return
+      }
+
+      console.log('Starting auto-generation for feature:', feature.id)
+      autoGenerationAttempted.current = feature.id.toString()
+      setAutoGenerating(true)
+      
+      try {
+        // Step 1: Fetch PRD content
+        const docIdMatch = feature['drive-link'].match(/\/d\/([a-zA-Z0-9-_]+)/)
+        if (!docIdMatch) {
+          throw new Error('Invalid Google Doc link format')
+        }
+
+        const prdResponse = await fetch('/api/get-google-doc-content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ docId: docIdMatch[1] })
+        })
+
+        if (!prdResponse.ok) {
+          throw new Error('Failed to fetch PRD content')
+        }
+
+        const prdData = await prdResponse.json()
+        const fetchedPrdContent = prdData.content || ''
+
+        // Step 2: Generate intelligent design prompt from PRD
+        const generatedPrompt = generatePromptFromPRD(feature, fetchedPrdContent)
+        setDesignPrompt(generatedPrompt)
+
+        // Step 3: Start direct V0 design generation
+        setGenerating(true)
+        
+        const result = await startAsyncGeneration(generatedPrompt)
+        setV0Result(result)
+
+      } catch (error) {
+        console.error('Error in auto-generation:', error)
+        // Set a fallback prompt so user can manually try
+        const fallbackPrompt = `Create a modern, professional SaaS interface for "${feature.title || `Feature #${feature.id}`}".`
+        setDesignPrompt(fallbackPrompt)
+      } finally {
+        setAutoGenerating(false)
+        setGenerating(false)
+      }
+    }
+
+    autoGenerateDesign()
+  }, [feature, autoGenerating, v0Result, generating, generatePromptFromPRD, startAsyncGeneration])
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval)
+      }
+    }
+  }, [pollingInterval])
+
+  // Check for existing design results in localStorage
+  useEffect(() => {
+    const storedResult = localStorage.getItem(`design_result_${feature.id}`)
+    if (storedResult && !v0Result) {
+      try {
+        const parsed = JSON.parse(storedResult)
+        setV0Result(parsed)
+        console.log('Restored previous design result from localStorage')
+        
+        // If we have a chatId but generation isn't complete, resume polling
+        if (parsed.chatId && !parsed.isComplete && !parsed.demoUrl) {
+          console.log('Resuming polling for incomplete generation')
+          setGenerating(true)
+          startPollingRef.current?.(parsed.chatId)
+        }
+      } catch (parseError) {
+        console.warn('Failed to parse stored design result:', parseError)
+      }
+    }
+  }, [feature.id, v0Result])
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-poppy-primary-light/5 to-white">
@@ -541,7 +883,7 @@ export default function FeatureDetailView({ feature: initialFeature }: FeatureDe
             >
               <Palette className="w-4 h-4" />
               Design Mockups
-              {feature['v0-link'] && <CheckCircle2 className="w-3 h-3 ml-1" />}
+              {(feature['v0-link'] || v0Result?.demoUrl) && <CheckCircle2 className="w-3 h-3 ml-1" />}
             </TabsTrigger>
             <TabsTrigger 
               value="decomposition" 
@@ -600,22 +942,59 @@ export default function FeatureDetailView({ feature: initialFeature }: FeatureDe
                   <div className="flex items-center gap-2">
                     <Palette className="w-5 h-5 text-poppy-primary" />
                     Design Mockups
+                    {(autoGenerating || generating) && (
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    )}
                   </div>
-                  {feature['v0-link'] && (
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={feature['v0-link']} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Open in V0
-                      </a>
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {v0Result?.chatUrl && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={v0Result.chatUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Edit in V0
+                        </a>
+                      </Button>
+                    )}
+                    {(feature['v0-link'] || v0Result?.demoUrl) && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={feature['v0-link'] || v0Result?.demoUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Open Design
+                        </a>
+                      </Button>
+                    )}
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                {feature['v0-link'] ? (
+                {/* Generation Status */}
+                {(autoGenerating || generating) && (
+                  <div className="bg-blue-50 border-b border-blue-200 p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                      <span className="font-medium text-blue-800">
+                        {v0Result?.status === 'generating' ? '🎨 Crafting design...' : 
+                         v0Result?.status === 'processing' ? '⚡ Processing...' :
+                         autoGenerating ? '🤖 Analyzing PRD...' :
+                         '🚀 Generating...'}
+                      </span>
+                    </div>
+                    <div className="text-sm text-blue-600">
+                      AI is creating your interface directly - no timeouts!
+                    </div>
+                    {lastError && (
+                      <div className="mt-2 p-2 bg-yellow-100 border border-yellow-200 rounded text-sm text-yellow-800">
+                        {lastError}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Design Result */}
+                {(feature['v0-link'] || v0Result?.demoUrl) ? (
                   <div className="w-full h-[700px] bg-gray-50">
                     <iframe
-                      src={feature['v0-link']}
+                      src={feature['v0-link'] || v0Result?.demoUrl}
                       className="w-full h-full"
                       title="Design Mockup"
                     />
@@ -623,39 +1002,67 @@ export default function FeatureDetailView({ feature: initialFeature }: FeatureDe
                 ) : (
                   <div className="text-center py-24 bg-gray-50">
                     <Palette className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <p className="text-gray-600 mb-2">No design mockup linked yet</p>
-                    <p className="text-sm text-gray-500 mb-6">Create AI-powered design mockups for your feature</p>
-                    <div className="flex items-center justify-center gap-3">
-                      <Button
-                        onClick={() => {
-                          // Navigate to auto-design generation
-                          window.location.href = `/roadmap/feature/${feature.id}/design`;
-                        }}
-                        disabled={!feature['drive-link']}
-                        className="bg-poppy-primary hover:bg-poppy-primary-hover text-white"
-                      >
-                        <Palette className="w-4 h-4 mr-2" />
-                        🚀 Create Design
-                      </Button>
-                      <span className="text-sm text-gray-400">or</span>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          const v0Link = prompt('Enter V0 design link:');
-                          if (v0Link) {
-                            handleUpdateV0Link(v0Link);
-                          }
-                        }}
-                      >
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Add V0 Link
-                      </Button>
-                    </div>
+                    <p className="text-gray-600 mb-2">
+                      {(autoGenerating || generating) ? 'Creating your design...' : 'Ready to create your design'}
+                    </p>
+                    <p className="text-sm text-gray-500 mb-6">
+                      {(autoGenerating || generating) 
+                        ? 'AI is analyzing your PRD and generating a beautiful interface'
+                        : 'AI will analyze your PRD and generate a professional interface'
+                      }
+                    </p>
+                    
+                    {!autoGenerating && !generating && (
+                      <div className="flex items-center justify-center gap-3">
+                        <Button
+                          onClick={handleGenerateDesign}
+                          disabled={!feature['drive-link'] || !designPrompt.trim()}
+                          className="bg-poppy-primary hover:bg-poppy-primary-hover text-white"
+                        >
+                          <Palette className="w-4 h-4 mr-2" />
+                          🚀 Generate Design
+                        </Button>
+                        <span className="text-sm text-gray-400">or</span>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            const v0Link = prompt('Enter V0 design link:');
+                            if (v0Link) {
+                              handleUpdateV0Link(v0Link);
+                            }
+                          }}
+                        >
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Add V0 Link
+                        </Button>
+                      </div>
+                    )}
+                    
                     {!feature['drive-link'] && (
                       <p className="text-xs text-red-500 mt-3">
                         💡 Add a PRD document first to enable AI design generation
                       </p>
+                    )}
+
+                    {/* Error Recovery */}
+                    {lastError && !generating && !autoGenerating && (
+                      <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-red-600">⚠️</span>
+                          <span className="font-medium text-red-800 text-sm">Error</span>
+                        </div>
+                        <p className="text-sm text-red-700 mb-3">{lastError}</p>
+                        <Button
+                          size="sm"
+                          onClick={handleGenerateDesign}
+                          variant="outline"
+                          className="border-red-300 text-red-700 hover:bg-red-50"
+                          disabled={!designPrompt.trim()}
+                        >
+                          Try Again
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )}

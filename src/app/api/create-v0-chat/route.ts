@@ -2,30 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from 'v0-sdk';
 import { getAuthServerSession } from '@/lib/auth';
 
-// Wrapper function with timeout and retry logic
-async function withTimeout<T>(
-  promise: Promise<T>, 
-  timeoutMs: number = 120000, // 2 minutes
-  retries: number = 2
-): Promise<T> {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      return await Promise.race([
-        promise,
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms (attempt ${attempt})`)), timeoutMs)
-        )
-      ]);
-    } catch (error) {
-      if (attempt === retries) throw error;
-      
-      console.log(`Attempt ${attempt} failed, retrying...`, error);
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s before retry
-    }
-  }
-  throw new Error('All retry attempts exhausted');
-}
-
 export async function POST(request: NextRequest) {
   try {
     const session = await getAuthServerSession();
@@ -76,21 +52,17 @@ ${prdContent.substring(0, 2000)}${prdContent.length > 2000 ? '...' : ''}`;
     if (chatId) {
       // Continue existing chat using the new SDK method
       console.log('Continuing v0 chat:', chatId);
-      result = await withTimeout(
-        v0Client.chats.sendMessage({
-          chatId: chatId,
-          message: combinedMessage
-        }),
-        120000, // 2 minutes timeout
-        2 // 2 retries
-      );
+      result = await v0Client.chats.sendMessage({
+        chatId: chatId,
+        message: combinedMessage,
+        async: true // Start async generation
+      });
     } else {
       // Create new chat with enhanced system prompt for better designs
       console.log('Creating new v0 chat with design-focused system prompt');
-      result = await withTimeout(
-        v0Client.chats.create({
-          message: combinedMessage,
-          system: `You are an expert React and Next.js developer with a focus on creating exceptional user experiences. 
+      result = await v0Client.chats.create({
+        message: combinedMessage,
+        system: `You are an expert React and Next.js developer with a focus on creating exceptional user experiences. 
 
 When creating designs:
 1. Prioritize user experience and intuitive interactions
@@ -102,10 +74,13 @@ When creating designs:
 7. Focus on desktop SaaS application design.
 
 Create clean, production-ready code that follows React best practices.`,
-        }),
-        120000, // 2 minutes timeout
-        2 // 2 retries
-      );
+        modelConfiguration: {
+          modelId: 'v0-1.5-lg',
+          imageGenerations: true,
+          thinking: true,
+        },
+        async: true // Don't wait for generation to complete
+      });
     }
 
     console.log('V0 chat result:', {
