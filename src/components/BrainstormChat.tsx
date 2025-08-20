@@ -49,10 +49,14 @@ export default function BrainstormChat() {
         setMessages(prev => [...prev, { role: 'assistant', content: "Thinking..." }]);
 
         // Get matched context from vector store using assistant search
+        const cachedVectorStoreId = localStorage.getItem('vectorStoreId');
         const matchRes = await fetch("/api/assistant-search", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query: input }),
+            body: JSON.stringify({ 
+              query: input,
+              vectorStoreId: cachedVectorStoreId 
+            }),
           })
           if (!matchRes.ok) throw new Error("Failed to search vector store")
           const { matchedContext } = await matchRes.json()

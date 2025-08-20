@@ -112,10 +112,14 @@ export default function StrategyForm() {
     try {
       // Get matched context from vector store using assistant search
       const searchQuery = `${title} ${query}`;
+      const cachedVectorStoreId = localStorage.getItem('vectorStoreId');
       const matchRes = await fetch("/api/assistant-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: searchQuery }),
+        body: JSON.stringify({ 
+          query: searchQuery,
+          vectorStoreId: cachedVectorStoreId 
+        }),
       })
       if (!matchRes.ok) throw new Error("Failed to search vector store")
       const { matchedContext } = await matchRes.json()

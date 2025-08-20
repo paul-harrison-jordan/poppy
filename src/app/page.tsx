@@ -77,9 +77,21 @@ export default function Home() {
               'Content-Type': 'application/json',
             },
             signal: controller.signal
-          }).then(response => {
+          }).then(async response => {
             clearTimeout(timeoutId);
-            if (!response.ok) {
+            if (response.ok) {
+              try {
+                const data = await response.json();
+                // Store vector store information in localStorage
+                if (data.vectorStoreId && data.assistantId) {
+                  localStorage.setItem('vectorStoreId', data.vectorStoreId);
+                  localStorage.setItem('assistantId', data.assistantId);
+                  console.log('Vector store initialized and cached:', data.vectorStoreId);
+                }
+              } catch (error) {
+                console.warn('Failed to parse vector store response:', error);
+              }
+            } else {
               console.warn('Failed to initialize vector store, but continuing...');
             }
           }).catch(error => {

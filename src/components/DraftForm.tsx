@@ -94,10 +94,14 @@ export default function DraftForm() {
       });
 
       // Get matched context from vector store using assistant search
+      const cachedVectorStoreId = localStorage.getItem('vectorStoreId');
       const matchResponse = await fetch("/api/assistant-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ 
+          query,
+          vectorStoreId: cachedVectorStoreId 
+        }),
       });
       const { matchedContext } = await matchResponse.json();
       setMatchedContext(matchedContext);

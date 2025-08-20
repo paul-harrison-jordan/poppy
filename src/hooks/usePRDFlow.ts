@@ -60,10 +60,14 @@ export function usePRDFlow() {
     setOriginalQuery(input);
     
     // Search context using OpenAI assistant search
+    const cachedVectorStoreId = localStorage.getItem('vectorStoreId');
     const matchResponse = await fetch("/api/assistant-search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: input }),
+      body: JSON.stringify({ 
+        query: input,
+        vectorStoreId: cachedVectorStoreId 
+      }),
     });
     const { matchedContext } = await matchResponse.json();
     setMatchedContext(matchedContext);

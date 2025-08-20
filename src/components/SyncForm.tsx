@@ -144,13 +144,17 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
               return null;
             }
 
+            // Get cached vector store ID for faster uploads
+            const cachedVectorStoreId = localStorage.getItem('vectorStoreId');
+            
             const vectorStoreUpload = await fetch('/api/vector-store-upload', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
                 content: fullContent,
                 documentId: doc.id,
-                documentTitle: doc.name 
+                documentTitle: doc.name,
+                vectorStoreId: cachedVectorStoreId 
               }),
             });
 

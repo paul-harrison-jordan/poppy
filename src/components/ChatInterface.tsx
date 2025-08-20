@@ -1266,10 +1266,14 @@ Please try again with different URLs or check your internet connection.`
         await handleDraftMode(input);
       } else if (mode === 'brainstorm') {
         // Get matched context from vector store using assistant search
+        const cachedVectorStoreId = localStorage.getItem('vectorStoreId');
         const matchRes = await fetch("/api/assistant-search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: input }),
+          body: JSON.stringify({ 
+            query: input,
+            vectorStoreId: cachedVectorStoreId 
+          }),
         });
 
         if (!matchRes.ok) throw new Error("Failed to search vector store");

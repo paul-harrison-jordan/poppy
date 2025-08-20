@@ -77,13 +77,16 @@ export default function SyncPage() {
       // Prepare content for upload (no embedding needed)
 
       // Upload to vector store
+      const cachedVectorStoreId = localStorage.getItem('vectorStoreId');
+      
       const resyncResponse = await fetch('/api/vector-store-upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           content: chunks.join('\n\n'),
           documentId: docId,
-          documentTitle: `Document ${docId}`
+          documentTitle: `Document ${docId}`,
+          vectorStoreId: cachedVectorStoreId
         }),
       });
 

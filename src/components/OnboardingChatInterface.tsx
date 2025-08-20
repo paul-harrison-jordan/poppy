@@ -441,13 +441,16 @@ export default function OnboardingChatInterface({ testMode = false }: Onboarding
             // Step 4: Save to vector store
             updateSyncStatus(doc.id, 'syncing', 'Saving to vector store...');
             
+            const cachedVectorStoreId = localStorage.getItem('vectorStoreId');
+            
             const vectorStoreUpload = await fetch('/api/vector-store-upload', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
                 content: fullContent,
                 documentId: doc.id,
-                documentTitle: doc.name
+                documentTitle: doc.name,
+                vectorStoreId: cachedVectorStoreId
               }),
             });
 
@@ -513,13 +516,17 @@ export default function OnboardingChatInterface({ testMode = false }: Onboarding
                 
                 // Step 4: Save to vector store
                 handleFolderDocumentStatusUpdate(folder.id, doc.id, 'syncing', 'Saving to vector store...');
+                
+                const cachedVectorStoreId = localStorage.getItem('vectorStoreId');
+                
                 const vectorStoreUpload = await fetch('/api/vector-store-upload', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ 
                     content: fullContent,
                     documentId: doc.id,
-                    documentTitle: doc.name
+                    documentTitle: doc.name,
+                    vectorStoreId: cachedVectorStoreId
                   }),
                 });
 

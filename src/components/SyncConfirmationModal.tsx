@@ -200,13 +200,16 @@ export default function SyncConfirmationModal({
           updateSyncProgress(doc.id, 'uploading', 80, `Uploading to vector store...`, !!doc.parentFolderId, doc.parentFolderId);
 
           // Step 3: Upload to vector store
+          const cachedVectorStoreId = localStorage.getItem('vectorStoreId');
+          
           const upsertResponse = await fetch('/api/vector-store-upload', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
               content: fullContent,
               documentId: doc.id,
-              documentTitle: doc.name
+              documentTitle: doc.name,
+              vectorStoreId: cachedVectorStoreId
             }),
           });
 
