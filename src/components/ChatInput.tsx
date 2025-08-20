@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Sparkles, FileText, Paintbrush, Bot, MessageSquare, TrendingUp } from 'lucide-react';
 import CompetitorAnalysisCard from './CompetitorAnalysisCard';
 
-type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'agent' | 'design' | 'feedback' | 'competitive';
+type ChatMode = 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback' | 'competitive';
 type DraftStep = 'initial' | 'vocabulary' | 'questions' | 'content';
 
 interface CompetitorAnalysis {
@@ -96,12 +96,12 @@ export default function ChatInput({
           "Document requirements for analytics dashboard...",
           "Share your product idea and context..."
         ];
-      case 'brainstorm':
+      case 'techdoc':
         return [
-          "Brainstorm solutions for user onboarding...",
-          "Explore ideas for improving retention...",
-          "What pain points should we solve first?",
-          "How might we increase engagement?"
+          "Create documentation for checkout flow...",
+          "Document API integration requirements...",
+          "Generate user guide from PRD...",
+          "Transform PRD into technical docs..."
         ];
       case 'design':
         return [
@@ -195,17 +195,17 @@ export default function ChatInput({
     <>
       <button
         type="button"
-        onClick={() => onModeChange('brainstorm')}
+        onClick={() => onModeChange('techdoc')}
         className={`px-space-3 py-space-2 text-sm rounded-xl transition-smooth flex flex-col items-center gap-1 group ${
-          mode === 'brainstorm' 
+          mode === 'techdoc' 
             ? 'bg-gradient-to-br from-poppy-primary to-poppy-primary/80 text-white elevation-sm' 
             : 'text-warm-neutral hover:text-poppy-primary hover:bg-poppy-primary/5 border border-border hover:border-poppy-primary/30'
         }`}
       >
-        <Sparkles className={`w-4 h-4 ${mode === 'brainstorm' ? '' : 'group-hover:scale-110 transition-transform'}`} />
+        <FileText className={`w-4 h-4 ${mode === 'techdoc' ? '' : 'group-hover:scale-110 transition-transform'}`} />
         <div className="text-center">
-          <div className="font-medium">Brainstorm</div>
-          <div className="text-xs opacity-75">Explore ideas</div>
+          <div className="font-medium">Tech Docs</div>
+          <div className="text-xs opacity-75">PRD → Docs</div>
         </div>
       </button>
       <button
@@ -532,8 +532,8 @@ export default function ChatInput({
         </div>
       </form>
 
-      {/* Show PRD button in brainstorm mode */}
-      {showStartPrdButton && mode === 'brainstorm' && onSummarizeAndSave && (
+      {/* Show PRD button in draft mode */}
+      {showStartPrdButton && mode === 'draft' && onSummarizeAndSave && (
         <div className="fixed bottom-space-6 right-space-6 z-50">
           <button
             type="button"

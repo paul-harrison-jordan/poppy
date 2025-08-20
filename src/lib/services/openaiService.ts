@@ -33,7 +33,7 @@ export interface QuestionAnswer {
 }
 
 export interface GenerateContentRequest {
-  type: 'prd' | 'brand-messaging';
+  type: 'prd' | 'brand-messaging' | 'tech-doc';
   title: string;
   query: string;
   questions: string[];
@@ -43,10 +43,25 @@ export interface GenerateContentRequest {
   teamTerms: Record<string, string>;
   pmProfile?: PMPreferenceProfile;
   competitorUrls?: string[];
+  // Tech doc specific fields
+  prdContent?: string;
+  prdUrl?: string;
+  styleGuide?: {
+    commonPhrases: string[];
+    structurePattern: string[];
+    toneIndicators: string[];
+  };
+  helpExamples?: Array<{
+    title: string;
+    structure: string;
+    navigation: string[];
+    limitations: string[];
+    sample: string;
+  }>;
 }
 
 export async function generateContent(opts: GenerateContentRequest) {
-  const { type, title, query, questions, questionAnswers, storedContext, additionalContext, teamTerms, pmProfile, competitorUrls } = opts;
+  const { type, title, query, questions, questionAnswers, storedContext, additionalContext, teamTerms, pmProfile, competitorUrls, prdContent, styleGuide, helpExamples } = opts;
   const pmProfileContext = pmProfile ? `
 
   PM Profile Context:
@@ -106,6 +121,121 @@ I've included instructions for how to think and write PRDs like a product manage
   }${competitiveAnalysisText} "When I ask you to write a doc, I want you to evaluate the Job to be Done statement I provide from each perspective (Product Manager, My product team, and Building a product that grows with its users) before beginning to write the PRD. Once done with that step, I want you to write the document with a focus on narrow scope, highly detailed breakdowns of which feature will support which part of the JTBD, and an open questions section that interrogates the JTBD from each of your perspectives (my product team, Product Manager, my philosophy)${competitiveAnalysisText ? ' Include a competitive analysis section that references the actual competitor research provided above and explains how our solution will differentiate.' : ''} our edits should be returned in markdown format`,
         },
       ],
+    });
+    return streamTextResponse(stream);
+  }
+
+  // Tech documentation generation
+  if (type === 'tech-doc') {
+    if (!prdContent || !styleGuide || !helpExamples) {
+      throw new Error('PRD content, style guide, and help examples are required for tech doc generation');
+    }
+
+    // Format Q&A for context
+    const qaContext = questionAnswers && Array.isArray(questionAnswers) 
+      ? questionAnswers.map(qa => `Q: ${qa.question}${qa.reasoning ? ` (${qa.reasoning})` : ''}\nA: ${qa.answer}`).join('\n\n')
+      : questions.join('\n');
+
+    const stream = await openai.chat.completions.create({
+      model: 'o3',
+      stream: true,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a technical documentation writer specializing in Klaviyo platform documentation. Write clear, user-friendly documentation that matches Klaviyo's style guide.`
+        },
+        {
+          role: 'user',
+          content: `You are a technical documentation expert. Create comprehensive technical documentation based on the following PRD and matching Klaviyo's documentation style.
+
+PRD CONTENT:
+${prdContent}
+
+USER CONTEXT (from Q&A):
+${qaContext}
+
+RELEVANT KNOWLEDGE BASE CONTEXT:
+${additionalContext || 'No additional context available'}
+
+TEAM TERMS AND DEFINITIONS:
+${Object.entries(teamTerms).map(([key, value]) => `- ${key}: ${value}`).join('\n')}
+
+KLAVIYO STYLE GUIDE (from scraped articles):
+- Common phrases: ${styleGuide.commonPhrases.slice(0, 5).join(', ')}
+- Structure patterns: ${styleGuide.structurePattern.join(', ')}
+- Tone: ${styleGuide.toneIndicators.join(', ')}
+
+REFERENCE DOCUMENTATION STRUCTURE:
+${JSON.stringify(helpExamples, null, 2)}
+
+Follow this Klaviyo technical writing template and guidelines:
+
+---
+
+# Klaviyo Help Center Article Prompt (Impact‑Driven, PM‑Ready)
+
+> **System / Role**  
+> You are a lead Klaviyo technical writer. Produce a **single help article** for the Klaviyo Help Center that matches house style and information architecture. Optimize for customer impact: **time‑to‑value, deliverability, list growth, revenue per recipient (RPR), and support‑ticket deflection**. Write in **second person**, **active voice**, with clear, concise sentences. Use **Klaviyo UI labels verbatim**.
+
+> **Audience**  
+> Practitioners (marketers, lifecycle managers, customer service leaders) and admins comfortable with Klaviyo basics; not necessarily experts.
+
+## Output specification (produce all of the following)
+
+### Article body (use these exact section headings)
+
+1) **You will learn**  
+   2–4 sentences stating what the reader will accomplish and the business impact (e.g., faster setup, higher deliverability, more sign‑ups). Use plain language.
+
+2) **Before you begin**  
+   - List prerequisites (integrations connected, data present, sender numbers verified/registered, permissions/roles, flags enabled).  
+   - Call out regional/channel availability and plan limits (if any).  
+   - If setup is restricted, state the roles that can perform it (e.g., **Owners, Admins, and Managers** for certain SMS setups).  
+   - Time to complete (estimate).
+
+3) **Overview** *(optional if brief)*  
+   - What the feature does and when to use it vs. adjacent features (e.g., **campaigns vs. flows**).  
+   - How it improves key metrics (tie capabilities to outcomes).
+
+4) **Set it up** *(step‑by‑step)*  
+   - Numbered steps with **exact UI paths** and **exact button/field names**.  
+   - For each step, include the **expected outcome** and **success criteria**.  
+   - Where useful, include short, bolded callouts like **Note**, **Tip**, **Warning**.
+
+5) **Best practices**  
+   - 3–7 bullets tied to **impact** (e.g., exit‑intent popups for list growth; send to engaged segments for deliverability; multi‑step forms for SMS consent).  
+   - If SMS is involved, include consent collection and double opt‑in guidance at a high level.
+
+6) **Measure success**  
+   - Tell readers where to see results in Klaviyo (reporting pages/dashboards).  
+   - Map setup choices to **metrics** (RPR, sign‑up conversion, open/click, unsubscribes, complaint rate).  
+   - Provide a short checklist: **If metric is low, do X** (3–5 items).
+
+7) **Troubleshooting**  
+   - Use concise diagnosis blocks: **Symptom → Likely cause → Fix**.  
+   - Include common checks such as message status (Draft/Manual/Live), configuration completeness, permissions, and flow change history.  
+   - Reference deeper guides by title where applicable.
+
+8) **FAQ** *(3–6 Q&A)*  
+   - Prioritize eligibility, limits, and behavior clarifications.
+
+9) **Next steps**  
+    - Suggest adjacent tasks (e.g., enable a welcome flow, configure targeting, A/B test content/cadence).  
+    - Include **Additional resources** (Help Center and Academy items by title) that deepen understanding.
+
+## Writing & formatting rules (house‑style alignment)
+
+- **Voice & POV:** Direct, practical, **"you"**; name the UI precisely; avoid passive constructions.  
+- **Headings:** Use the exact section names above; keep H2/H3 hierarchy shallow; avoid unnecessary nesting.  
+- **Sentences & lists:** Prefer short sentences and scannable bulleted steps.  
+- **UI paths:** Use \`>\` between levels (e.g., *Audience > Lists & segments*).  
+- **Callouts:** Use **Note / Tip / Warning** where they minimize risk or clarify behavior.  
+- **Cross‑references:** Include 3–6 internal cross‑references by **article title**.  
+- **Metrics language:** Tie setup choices to outcomes (e.g., "Using exit‑intent popups increases first‑session opt‑ins; monitor sign‑up conversion and RPR").  
+
+Format the output in Markdown suitable for a technical documentation page following this structure exactly.`
+        }
+      ]
     });
     return streamTextResponse(stream);
   }

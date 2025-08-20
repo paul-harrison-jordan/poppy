@@ -14,6 +14,7 @@ import CompetitiveAnalysisResults from './CompetitiveAnalysisResults';
 
 // Lazy load heavy components
 const DesignSidebar = lazy(() => import('./DesignSidebar'));
+const TechDocWizard = lazy(() => import('./TechDocWizard'));
 
 declare global {
   interface Window {
@@ -27,7 +28,7 @@ export interface ChatMessage {
   className?: string;
 }
 
-type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'agent' | 'design' | 'feedback' | 'competitive';
+type ChatMode = 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback' | 'competitive';
 
 
 
@@ -41,7 +42,7 @@ export default function ChatInterface() {
   // Handle client-side initialization
   useEffect(() => {
     const savedMode = localStorage.getItem('currentChatMode') as ChatMode;
-    if (savedMode && ['chat', 'draft', 'brainstorm', 'agent', 'design', 'feedback', 'competitive'].includes(savedMode)) {
+    if (savedMode && ['chat', 'draft', 'techdoc', 'agent', 'design', 'feedback', 'competitive'].includes(savedMode)) {
       setMode(savedMode);
     }
   }, []);
@@ -79,7 +80,7 @@ export default function ChatInterface() {
         setTypingDemo(true);
         const demoTexts = {
           draft: "Draft a PRD for user authentication...",
-          brainstorm: "Brainstorm solutions for user onboarding...",
+          techdoc: "Create technical documentation for checkout flow...",
           design: "Create a design for mobile checkout...",
           feedback: "Find customer feedback about search...",
           competitive: "Analyze how Slack handles notifications...",
@@ -309,20 +310,10 @@ export default function ChatInterface() {
     console.log('Input state changed to:', input);
   }, [input]);
 
-  // Add useEffect to show Start PRD button after 3 messages in brainstorm mode
+  // Remove Start PRD button logic as tech doc mode doesn't need it
   useEffect(() => {
-    if (mode === 'brainstorm') {
-      const userMessages = messages.filter(msg => msg.role === 'user');
-      console.log('Brainstorm Message count:', {
-        total: messages.length,
-        user: userMessages.length,
-        showButton: userMessages.length >= 3
-      });
-      setShowStartPrdButton(userMessages.length >= 3);
-    } else {
-      setShowStartPrdButton(false);
-    }
-  }, [messages, mode]);
+    setShowStartPrdButton(false);
+  }, [mode]);
 
   // Effect to log demoUrl changes
   useEffect(() => {
@@ -535,9 +526,9 @@ export default function ChatInterface() {
     }
   };
 
-  // Summarize and save as PRD for brainstorm mode
+  // Summarize and save as PRD - removed as tech doc mode handles this differently
   const handleSummarizeAndSave = async () => {
-    if (!messages.length || mode !== 'brainstorm') return;
+    if (!messages.length) return;
     try {
       setLoading(true);
       setMessages(prev => [...prev, { 
@@ -1264,7 +1255,7 @@ Please try again with different URLs or check your internet connection.`
         }
       } else if (mode === 'draft') {
         await handleDraftMode(input);
-      } else if (mode === 'brainstorm') {
+      } else if (mode === 'chat') {
         // Get matched context from vector store using assistant search
         const cachedVectorStoreId = localStorage.getItem('vectorStoreId');
         const matchRes = await fetch("/api/assistant-search", {
@@ -1561,6 +1552,17 @@ Please try again with different URLs or check your internet connection.`
           )}
         </div>
       </div>
+    ) : mode === ('techdoc' as ChatMode) ? (
+      // Tech Doc mode: Full-screen wizard interface
+      <div className="flex h-screen w-full bg-gray-50">
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-full w-full">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-poppy"></div>
+          </div>
+        }>
+          <TechDocWizard />
+        </Suspense>
+      </div>
     ) : (
       // Centered overlay chat interface
       <div className="flex flex-col h-screen relative">
@@ -1583,7 +1585,7 @@ Please try again with different URLs or check your internet connection.`
                   <div className="w-20 h-20 bg-gradient-to-br from-poppy/20 to-orange-100 rounded-3xl flex items-center justify-center mx-auto mb-6 transform transition-transform hover:scale-110">
                     <div className="text-3xl">
                       {mode === 'draft' && '✨'}
-                      {mode === 'brainstorm' && '🚀'}
+                      {mode === 'techdoc' && '📚'}
                       {mode === 'chat' && '👋'}
                       {mode === 'design' && '🎨'}
                       {mode === 'feedback' && '💬'}
@@ -1591,21 +1593,21 @@ Please try again with different URLs or check your internet connection.`
                   </div>
                   <div className="text-2xl font-bold mb-3 text-gray-900">
                     {mode === 'draft' && 'Let\'s create something amazing'}
-                    {mode === 'brainstorm' && 'Ready to explore ideas'}
+                    {mode === 'techdoc' && 'Transform PRDs into Documentation'}
                     {mode === 'chat' && 'Hi! I\'m Poppy, your PM partner'}
                     {mode === 'design' && 'Design Studio'}
                     {mode === 'feedback' && 'Let\'s find customer insights'}
                   </div>
                   <div className="text-base text-gray-600 leading-relaxed">
                     {mode === 'draft' && 'I\'ll guide you through creating a comprehensive PRD. Just share your product idea and I\'ll ask the right questions to help you think through every detail.'}
-                    {mode === 'brainstorm' && 'No idea is too wild! Share what you\'re thinking about and we\'ll explore it together. When you\'re ready, we can turn it into a PRD.'}
+                    {mode === 'techdoc' && 'Select a PRD and I\'ll help you create comprehensive technical documentation that matches Klaviyo\'s style guide.'}
                     {mode === 'chat' && 'I can help with roadmap planning, feature prioritization, stakeholder communication, or any product challenge you\'re facing.'}
                     {mode === 'design' && 'Transform your ideas into interactive prototypes. Describe what you want to build and I\'ll help you visualize it.'}
                     {mode === 'feedback' && 'I\'ll search through customer feedback to find insights relevant to your feature or pain point. Just describe what you\'re looking for.'}
                   </div>
                   <div className="mt-6 text-sm text-gray-500 italic">
                     {mode === 'draft' && '💡 Tip: The more context you share, the better I can tailor the PRD to your needs'}
-                    {mode === 'brainstorm' && '💡 Tip: After 3 messages, you can convert our discussion into a structured PRD'}
+                    {mode === 'techdoc' && '💡 Tip: Have 2-3 Klaviyo help articles ready to ensure the documentation matches their style'}
                     {mode === 'chat' && '💡 Tip: Try the different modes below for specialized workflows'}
                     {mode === 'design' && '💡 Tip: You can also paste a PRD link to create designs from existing specs'}
                     {mode === 'feedback' && '💡 Tip: I can help you reach out to specific customers with relevant feedback'}

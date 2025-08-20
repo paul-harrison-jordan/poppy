@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { url, title } = await request.json();
+    const { url, title, docType = 'prd' } = await request.json();
     
     if (!url) {
       return NextResponse.json({ error: 'Missing required field: url' }, { status: 400 });
@@ -20,20 +20,34 @@ export async function POST(request: NextRequest) {
     // Use service client for database operations
     const supabase = createServiceClient();
 
+    const documentData = {
+      'drive-link': url,
+      'user': session.user.email,
+      'title': title || (docType === 'tech-doc' ? 'Untitled Tech Doc' : 'Untitled PRD'),
+      'last_updated_by': session.user.email
+    };
+
+    // Add type-specific fields
+    if (docType === 'tech-doc') {
+      Object.assign(documentData, {
+        'v0-link': '',
+        'status': 'documentation',
+        'description': 'Technical documentation',
+        'priority_order': 999 // Put tech docs at end
+      });
+    } else {
+      // Default PRD fields
+      Object.assign(documentData, {
+        'v0-link': '',
+        'status': 'planned',
+        'description': '',
+        'priority_order': 0
+      });
+    }
+
     const { data, error } = await supabase
       .from('prds')
-      .insert([
-        {
-          'drive-link': url,
-          'v0-link': '',
-          'user': session.user.email,
-          'title': title || 'Untitled PRD',
-          'status': 'planned',
-          'description': '',
-          'priority_order': 0,
-          'last_updated_by': session.user.email
-        }
-      ])
+      .insert([documentData])
       .select();
     
     if (error) {
@@ -46,8 +60,8 @@ export async function POST(request: NextRequest) {
 
     console.log('PRD saved to database successfully:', data);
     
-    // Trigger automatic customer matching for the new PRD
-    if (data && data[0]) {
+    // Trigger automatic customer matching for new PRDs only (not tech docs)
+    if (data && data[0] && docType === 'prd') {
       try {
         // Get PRD content from Google Drive to match customers
         const docId = url.match(/\/d\/([a-zA-Z0-9-_]+)/)?.[1];

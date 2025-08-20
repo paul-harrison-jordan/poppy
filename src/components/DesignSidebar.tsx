@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Paintbrush } from 'lucide-react';
 
-type ChatMode = 'chat' | 'draft' | 'brainstorm' | 'agent' | 'design';
+type ChatMode = 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback' | 'competitive';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -40,7 +40,7 @@ export default function DesignSidebar({
             <span className="font-semibold text-poppy-primary">Design Studio</span>
           </div>
           <button
-            onClick={() => onModeChange('brainstorm')}
+            onClick={() => onModeChange('draft')}
             className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-white/50 text-poppy-primary/70 hover:text-poppy-primary transition-colors"
             title="Exit Design Studio"
           >
