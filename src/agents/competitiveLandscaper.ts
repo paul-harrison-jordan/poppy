@@ -80,7 +80,7 @@ Return JSON: {
     username?: string
   ): Promise<CompetitiveLandscapeResult> {
     try {
-      // Retrieve relevant context from Pinecone for enhanced search queries
+      // Retrieve relevant context for enhanced search queries
       let contextualInsights: string[] = [];
       if (username) {
         try {
@@ -136,8 +136,7 @@ Return JSON: {
               name: competitorName,
               url: url,
               insights: [],
-              relevantArticles: [],
-              noResultsFound: true
+              relevantArticles: []
             });
             continue;
           }
@@ -170,8 +169,7 @@ Return JSON: {
             name: competitorName,
             url: url,
             insights: [],
-            relevantArticles: [],
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
+            relevantArticles: []
           });
         }
       }
@@ -503,7 +501,7 @@ Search query:`;
         .map(result => result.content)
         .filter(Boolean) as string[];
 
-      console.log(`[${this.name}] Retrieved ${contextualInsights.length} contextual insights from Pinecone for enhanced search queries`);
+      console.log(`[${this.name}] Retrieved ${contextualInsights.length} contextual insights for enhanced search queries`);
       if (contextualInsights.length > 0) {
         console.log(`[${this.name}] Sample contextual insights:`, contextualInsights.slice(0, 2));
       }

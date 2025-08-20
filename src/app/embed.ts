@@ -1,7 +1,5 @@
 import type OpenAI from "openai";
-import { openai } from "@/lib/openai";
-import { enhanceChunks } from "./chunk";
-import { nanoid } from "nanoid"; 
+import { openai } from "@/lib/openai"; 
 
 /** Alias the SDK’s item type */
 type OpenAIEmbedding = OpenAI.Embeddings.Embedding;
@@ -27,22 +25,3 @@ export async function embedChunks(
   }
 }
 
-/** Helper for Pinecone’s expected shape */
-export interface PineconeVector {
-  id: string;
-  values: number[];
-  metadata: { text: string };
-}
-export async function buildPineconeRecords(
-  rawChunks: string[],
-  documentId: string
-): Promise<PineconeVector[]> {
-  const enhanced = await enhanceChunks(rawChunks);     // string[]
-  const vectors  = await embedChunks(enhanced);        // OpenAIEmbedding[]
-
-  return enhanced.map((chunk, i) => ({
-    id: `${documentId}#${nanoid()}`,
-    values: vectors[i].embedding,
-    metadata: { text: chunk, documentId }
-  }));
-}

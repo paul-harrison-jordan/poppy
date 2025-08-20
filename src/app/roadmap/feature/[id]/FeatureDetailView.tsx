@@ -500,19 +500,20 @@ Focus on core user workflow and value proposition.`,
         const { createClient } = await import('v0-sdk')
         const v0Client = createClient({ apiKey })
         
-        const chat = await v0Client.chats.getById(chatId)
+        const chat = await v0Client.chats.getById({ chatId })
         
         console.log('Direct V0 status check:', chat)
 
-        const isComplete = chat.url && chat.demo
+        const isComplete = !!(chat.url && chat.demo)
         const isError = false
         
         const status = {
           chatId: chat.id,
           chatUrl: chat.url,
           demoUrl: chat.demo,
-          isComplete,
-          isError
+          isComplete: isComplete,
+          isError: isError,
+          status: isComplete ? 'completed' : 'pending'
         }
 
         setV0Result(prev => ({

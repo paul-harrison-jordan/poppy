@@ -88,51 +88,10 @@ export default function SyncForm({ onComplete }: SyncFormProps) {
         const formattedRows = formatRows(sheetData);
         console.log('Formatted rows:', formattedRows);
         
-        // Process rows in batches of 100
-        const batchSize = 100;
-        const batches = [];
-        for (let i = 0; i < formattedRows.length; i += batchSize) {
-          batches.push(formattedRows.slice(i, i + batchSize));
-        }
-
-        console.log(`Processing ${batches.length} batches of up to ${batchSize} rows each`);
+        // Feedback embedding temporarily disabled - vector store integration removed
+        console.log(`Skipping feedback embedding for ${formattedRows.length} rows`);
         
-        // Process batches with concurrency limit
-        const concurrencyLimit = 100; // Process 3 batches at a time
-        const results = [];
-        
-        for (let i = 0; i < batches.length; i += concurrencyLimit) {
-          const batchPromises = batches.slice(i, i + concurrencyLimit).map(async (batch, index) => {
-            const batchNumber = i + index + 1;
-            console.log(`Processing batch ${batchNumber} of ${batches.length}`);
-            
-            try {
-              const embedResponse = await fetch('/api/embed-feedback-openai', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ rows: batch }),
-              });
-
-              if (!embedResponse.ok) {
-                throw new Error(`Failed to embed feedback batch ${batchNumber}`);
-              }
-
-              const embedResult = await embedResponse.json();
-              console.log(`Batch ${batchNumber} embedded:`, embedResult);
-              return embedResult;
-            } catch (error) {
-              console.error(`Error processing batch ${batchNumber}:`, error);
-              throw error;
-            }
-          });
-
-          const batchResults = await Promise.all(batchPromises);
-          results.push(...batchResults);
-        }
-
-        console.log('All batches processed successfully');
+        console.log('Sheet processed successfully');
         setShowToast(true);
         if (onComplete) {
           onComplete();

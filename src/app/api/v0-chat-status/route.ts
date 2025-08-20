@@ -37,18 +37,17 @@ export async function POST(request: NextRequest) {
     
     console.log('V0 chat status:', {
       id: chat.id,
-      status: chat.status,
       hasDemo: !!chat.demo,
       url: chat.url
     });
 
-    // Determine if generation is complete
-    const isComplete = chat.status === 'completed' || chat.status === 'error';
-    const isError = chat.status === 'error';
+    // Determine if generation is complete based on demo existence
+    const isComplete = !!chat.demo;
+    const isError = false; // No error status available in current SDK
 
     return NextResponse.json({
       chatId: chat.id,
-      status: chat.status,
+      status: isComplete ? 'completed' : 'pending',
       isComplete,
       isError,
       chatUrl: chat.url,

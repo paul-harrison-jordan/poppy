@@ -54,9 +54,9 @@ export default function Home() {
       }
     };
 
-    if (session?.user && status !== 'loading') {
+    if (status === 'authenticated' && session?.user) {
       checkOnboardingStatus();
-    } else if (status !== 'loading') {
+    } else if (status === 'unauthenticated') {
       // If there's no session and we're not loading, we don't need to check onboarding
       setIsCheckingOnboarding(false);
       setIsInitialized(true);

@@ -54,8 +54,7 @@ ${prdContent.substring(0, 2000)}${prdContent.length > 2000 ? '...' : ''}`;
       console.log('Continuing v0 chat:', chatId);
       result = await v0Client.chats.sendMessage({
         chatId: chatId,
-        message: combinedMessage,
-        async: true // Start async generation
+        message: combinedMessage
       });
     } else {
       // Create new chat with enhanced system prompt for better designs
@@ -78,8 +77,7 @@ Create clean, production-ready code that follows React best practices.`,
           modelId: 'v0-1.5-lg',
           imageGenerations: true,
           thinking: true,
-        },
-        async: true // Don't wait for generation to complete
+        }
       });
     }
 

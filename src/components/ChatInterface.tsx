@@ -1122,11 +1122,12 @@ Please try again with different URLs or check your internet connection.`
       const recentMessages = messages.slice(-5);
       const queryMessage = recentMessages.find(msg => 
         msg.role === 'user' && 
+        msg.content &&
         !msg.content.toString().match(urlPattern) &&
         msg.content.toString().length > 10
       );
       
-      if (queryMessage) {
+      if (queryMessage && queryMessage.content) {
         await handleCompetitorAnalysis(queryMessage.content.toString(), urls);
         return;
       } else {
