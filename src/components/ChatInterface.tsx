@@ -1553,16 +1553,14 @@ Please try again with different URLs or check your internet connection.`
         </div>
       </div>
     ) : mode === ('techdoc' as ChatMode) ? (
-      // Tech Doc mode: Full-screen wizard interface
-      <div className="flex h-screen w-full bg-gray-50">
-        <Suspense fallback={
-          <div className="flex items-center justify-center h-full w-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-poppy"></div>
-          </div>
-        }>
-          <TechDocWizard />
-        </Suspense>
-      </div>
+      // Tech Doc mode: Integrated chat-like interface
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-full w-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-poppy"></div>
+        </div>
+      }>
+        <TechDocWizard onModeChange={setMode} />
+      </Suspense>
     ) : (
       // Centered overlay chat interface
       <div className="flex flex-col h-screen relative">

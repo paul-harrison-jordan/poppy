@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { FileText, Check, Loader2, ChevronRight, ChevronLeft, Plus, X, ExternalLink } from 'lucide-react';
+import { FileText, Check, Loader2, ChevronRight, ChevronLeft, Plus, X, ExternalLink, Home, Search } from 'lucide-react';
 
 interface GoogleDriveDocument {
   id: string;
@@ -24,15 +24,24 @@ interface HelpArticlePreview {
 
 type WizardStep = 'select-prd' | 'questions' | 'help-docs' | 'generating' | 'complete';
 
-export default function TechDocWizard() {
+interface TechDocWizardProps {
+  onModeChange?: (mode: 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback' | 'competitive') => void;
+}
+
+export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {}) {
   const [currentStep, setCurrentStep] = useState<WizardStep>('select-prd');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // PRD Selection State
   const [documents, setDocuments] = useState<GoogleDriveDocument[]>([]);
+  const [filteredDocuments, setFilteredDocuments] = useState<GoogleDriveDocument[]>([]);
   const [selectedPrd, setSelectedPrd] = useState<GoogleDriveDocument | null>(null);
   const [prdContent, setPrdContent] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const documentsPerPage = 10;
   
   // Questions State
   const [questions, setQuestions] = useState<TechDocQuestion[]>([]);
@@ -54,6 +63,45 @@ export default function TechDocWizard() {
       fetchPRDs();
     }
   }, [currentStep]);
+
+  // Filter and paginate documents when search or page changes
+  useEffect(() => {
+    let filtered = documents;
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = documents.filter(doc => 
+        doc.name.toLowerCase().includes(query)
+      );
+    }
+    
+    // Calculate pagination
+    const totalPages = Math.ceil(filtered.length / documentsPerPage);
+    setTotalPages(totalPages);
+    
+    // Reset to page 1 if current page is beyond available pages
+    const safePage = currentPage > totalPages ? 1 : currentPage;
+    if (safePage !== currentPage) {
+      setCurrentPage(safePage);
+    }
+    
+    // Apply pagination
+    const startIndex = (safePage - 1) * documentsPerPage;
+    const endIndex = startIndex + documentsPerPage;
+    const paginatedDocs = filtered.slice(startIndex, endIndex);
+    
+    setFilteredDocuments(paginatedDocs);
+  }, [documents, searchQuery, currentPage, documentsPerPage]);
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   const fetchPRDs = async () => {
     setLoading(true);
@@ -330,159 +378,281 @@ export default function TechDocWizard() {
     }
   };
 
-  const getStepProgress = () => {
-    switch (currentStep) {
-      case 'select-prd': return 20;
-      case 'questions': return 40;
-      case 'help-docs': return 60;
-      case 'generating': return 80;
-      case 'complete': return 100;
-      default: return 0;
-    }
-  };
 
   const currentQuestion = questions[currentQuestionIndex];
   const currentAnswer = currentQuestion ? answers[currentQuestion.id] || '' : '';
 
+  const handleGoHome = () => {
+    localStorage.setItem('currentChatMode', 'draft');
+    onModeChange?.('draft');
+    // Dispatch event for other components listening to mode changes
+    window.dispatchEvent(new CustomEvent('chatModeChange'));
+  };
+
   return (
-    <div className="flex flex-col flex-1 min-h-0 w-full max-w-5xl mx-auto font-sans">
-      {/* Header */}
-      <div className="text-center mb-6">
-        <h1 className="text-5xl font-semibold text-primary tracking-tight">
-          Technical Documentation <span className="text-poppy">Wizard</span>
-        </h1>
-        <p className="text-lg text-primary/80 mt-2">
-          Transform your PRD into comprehensive technical documentation
-        </p>
+    <div className="flex flex-col h-screen relative bg-gradient-to-br from-gray-50 via-white to-gray-100">
+      {/* Home Button - Fixed Position */}
+      <div className="absolute top-6 left-6 z-20">
+        <button
+          onClick={handleGoHome}
+          className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full text-gray-700 hover:bg-white hover:shadow-md transition-all duration-200 font-medium text-sm"
+        >
+          <Home className="w-4 h-4" />
+          Home
+        </button>
       </div>
 
-      {/* Progress Bar */}
-      <div className="mb-8">
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
-            className="bg-gradient-to-r from-poppy to-orange-500 h-2 rounded-full transition-all duration-500"
-            style={{ width: `${getStepProgress()}%` }}
-          />
-        </div>
-        <div className="flex justify-between mt-2 text-sm text-gray-600">
-          <span className={currentStep === 'select-prd' ? 'text-poppy font-semibold' : ''}>
-            Select PRD
-          </span>
-          <span className={currentStep === 'questions' ? 'text-poppy font-semibold' : ''}>
-            Answer Questions
-          </span>
-          <span className={currentStep === 'help-docs' ? 'text-poppy font-semibold' : ''}>
-            Reference Docs
-          </span>
-          <span className={currentStep === 'generating' ? 'text-poppy font-semibold' : ''}>
-            Generate
-          </span>
-          <span className={currentStep === 'complete' ? 'text-poppy font-semibold' : ''}>
-            Complete
-          </span>
-        </div>
-      </div>
+      {/* Messages area - Chat-like layout */}
+      <div className="flex-1 overflow-y-auto relative flex flex-col" style={{ paddingBottom: '80px' }}>
+        <div className="flex-1 flex flex-col justify-end px-6">
+          <div className="w-full max-w-4xl mx-auto">
+            <div className="py-8">
+              {/* Header Message Block */}
+              <div className="mb-8 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-100 via-yellow-100 to-orange-200 rounded-full mb-4 shadow-lg">
+                  <FileText className="w-8 h-8 text-poppy" />
+                </div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  Technical Documentation Wizard
+                </h1>
+                <p className="text-gray-600 max-w-2xl mx-auto">
+                  Transform your PRD into comprehensive technical documentation with AI assistance
+                </p>
+              </div>
 
-      {/* Step Content */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        {/* Step 1: Select PRD */}
-        {currentStep === 'select-prd' && (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-              Select a PRD to document
-            </h2>
-            
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-poppy" />
-              </div>
-            ) : error ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-                {error}
-              </div>
-            ) : (
-              <div className="grid gap-3">
-                {documents.map(doc => (
-                  <button
-                    key={doc.id}
-                    onClick={() => handlePrdSelect(doc)}
-                    className="flex items-center justify-between p-4 bg-white border-2 border-gray-200 rounded-lg hover:border-poppy hover:shadow-md transition-all text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-gray-500" />
-                      <div>
-                        <div className="font-medium text-gray-900">{doc.name}</div>
-                        {doc.modifiedTime && (
-                          <div className="text-sm text-gray-500">
-                            Modified: {new Date(doc.modifiedTime).toLocaleDateString()}
-                          </div>
+              {/* Progress Indicator - Chat-like */}
+              <div className="mb-8">
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  {['select-prd', 'questions', 'help-docs', 'generating', 'complete'].map((step, index) => {
+                    const isActive = step === currentStep;
+                    const isCompleted = ['select-prd', 'questions', 'help-docs', 'generating', 'complete'].indexOf(currentStep) > index;
+                    
+                    return (
+                      <div key={step} className="flex items-center">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-medium text-sm transition-all ${
+                          isActive ? 'bg-poppy text-white shadow-lg' : 
+                          isCompleted ? 'bg-green-100 text-green-700' : 
+                          'bg-gray-100 text-gray-500'
+                        }`}>
+                          {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
+                        </div>
+                        {index < 4 && (
+                          <div className={`w-12 h-1 mx-1 rounded-full transition-all ${
+                            isCompleted ? 'bg-green-200' : 'bg-gray-200'
+                          }`} />
                         )}
                       </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </button>
-                ))}
+                    );
+                  })}
+                </div>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* Step 2: Answer Questions */}
-        {currentStep === 'questions' && currentQuestion && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-semibold text-gray-900">
-                Question {currentQuestionIndex + 1} of {questions.length}
-              </h2>
-              <span className="text-sm text-gray-500">
-                {selectedPrd?.name}
-              </span>
-            </div>
+              {/* Step Content - Chat-like Message Blocks */}
+              <div className="space-y-6">
+                {/* Step 1: Select PRD */}
+                {currentStep === 'select-prd' && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <h2 className="text-xl font-semibold text-gray-900">
+                        Select a PRD to document
+                      </h2>
+                    </div>
+                    
+                    {loading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="flex items-center gap-3 text-gray-600">
+                          <Loader2 className="w-5 h-5 animate-spin text-poppy" />
+                          <span>Loading your PRDs...</span>
+                        </div>
+                      </div>
+                    ) : error ? (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+                        <div className="flex items-center gap-2">
+                          <X className="w-4 h-4" />
+                          {error}
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Search Bar */}
+                        <div className="mb-4">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                              type="text"
+                              placeholder="Search PRDs by name..."
+                              value={searchQuery}
+                              onChange={(e) => handleSearchChange(e.target.value)}
+                              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-poppy focus:border-transparent"
+                            />
+                          </div>
+                          {searchQuery && (
+                            <p className="text-sm text-gray-500 mt-2">
+                              {documents.filter(doc => doc.name.toLowerCase().includes(searchQuery.toLowerCase())).length} results found
+                            </p>
+                          )}
+                        </div>
 
-            <div className="bg-white border-2 border-gray-200 rounded-lg p-6">
-              <label className="block text-lg font-medium text-gray-900 mb-4">
-                {currentQuestion.text}
-              </label>
-              <textarea
-                value={currentAnswer}
-                onChange={(e) => handleQuestionAnswer(e.target.value)}
-                placeholder={currentQuestion.placeholder}
-                className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-poppy focus:border-transparent resize-none"
-              />
-            </div>
+                        {/* Document List */}
+                        <div className="space-y-2 mb-4">
+                          {filteredDocuments.length > 0 ? (
+                            filteredDocuments.map(doc => (
+                              <button
+                                key={doc.id}
+                                onClick={() => handlePrdSelect(doc)}
+                                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-all text-left group"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center group-hover:bg-poppy group-hover:text-white transition-all">
+                                    <FileText className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <div className="font-medium text-gray-900">{doc.name}</div>
+                                    {doc.modifiedTime && (
+                                      <div className="text-sm text-gray-500">
+                                        Modified: {new Date(doc.modifiedTime).toLocaleDateString()}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-poppy transition-colors" />
+                              </button>
+                            ))
+                          ) : (
+                            <div className="text-center py-8 text-gray-500">
+                              <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                              <p>{searchQuery ? 'No PRDs match your search' : 'No PRDs found'}</p>
+                            </div>
+                          )}
+                        </div>
 
-            <div className="flex justify-between">
-              <button
-                onClick={handlePreviousQuestion}
-                disabled={currentQuestionIndex === 0}
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Previous
-              </button>
-              <button
-                onClick={handleNextQuestion}
-                disabled={!currentAnswer.trim()}
-                className="flex items-center gap-2 px-6 py-2 bg-poppy text-white rounded-lg hover:bg-poppy/90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {currentQuestionIndex === questions.length - 1 ? 'Continue' : 'Next'}
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                          <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+                            <div className="text-sm text-gray-600">
+                              Page {currentPage} of {totalPages}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              >
+                                Previous
+                              </button>
+                              
+                              {/* Page Numbers */}
+                              <div className="flex items-center gap-1">
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                  let pageNum;
+                                  if (totalPages <= 5) {
+                                    pageNum = i + 1;
+                                  } else if (currentPage <= 3) {
+                                    pageNum = i + 1;
+                                  } else if (currentPage >= totalPages - 2) {
+                                    pageNum = totalPages - 4 + i;
+                                  } else {
+                                    pageNum = currentPage - 2 + i;
+                                  }
+                                  
+                                  return (
+                                    <button
+                                      key={pageNum}
+                                      onClick={() => handlePageChange(pageNum)}
+                                      className={`px-3 py-1 text-sm rounded transition-colors ${
+                                        pageNum === currentPage
+                                          ? 'bg-poppy text-white'
+                                          : 'border border-gray-300 hover:bg-gray-50'
+                                      }`}
+                                    >
+                                      {pageNum}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              
+                              <button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
 
-        {/* Step 3: Help Documentation URLs */}
-        {currentStep === 'help-docs' && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                Add Klaviyo Help Articles for Style Reference
-              </h2>
-              <p className="text-gray-600">
-                Provide 2-3 help articles that show how Klaviyo documents similar features
-              </p>
-            </div>
+                {/* Step 2: Answer Questions */}
+                {currentStep === 'questions' && currentQuestion && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                        <span className="text-purple-600 font-semibold text-sm">{currentQuestionIndex + 1}</span>
+                      </div>
+                      <div className="flex-1">
+                        <h2 className="text-xl font-semibold text-gray-900">
+                          Question {currentQuestionIndex + 1} of {questions.length}
+                        </h2>
+                        <p className="text-sm text-gray-500">{selectedPrd?.name}</p>
+                      </div>
+                    </div>
+
+                    <div className="mb-6">
+                      <label className="block text-lg font-medium text-gray-900 mb-4">
+                        {currentQuestion.text}
+                      </label>
+                      <textarea
+                        value={currentAnswer}
+                        onChange={(e) => handleQuestionAnswer(e.target.value)}
+                        placeholder={currentQuestion.placeholder}
+                        className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-poppy focus:border-transparent resize-none"
+                      />
+                    </div>
+
+                    <div className="flex justify-between">
+                      <button
+                        onClick={handlePreviousQuestion}
+                        disabled={currentQuestionIndex === 0}
+                        className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Previous
+                      </button>
+                      <button
+                        onClick={handleNextQuestion}
+                        disabled={!currentAnswer.trim()}
+                        className="flex items-center gap-2 px-6 py-2 bg-poppy text-white rounded-lg hover:bg-poppy/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                      >
+                        {currentQuestionIndex === questions.length - 1 ? 'Continue' : 'Next'}
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 3: Help Documentation URLs */}
+                {currentStep === 'help-docs' && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                        <ExternalLink className="w-4 h-4 text-orange-600" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-semibold text-gray-900">
+                          Add Reference Documentation
+                        </h2>
+                        <p className="text-sm text-gray-600">
+                          Provide 2-3 help articles that show how similar features are documented
+                        </p>
+                      </div>
+                    </div>
 
             <div className="space-y-3">
               {helpUrls.map((url, index) => (
@@ -528,99 +698,111 @@ export default function TechDocWizard() {
               </div>
             )}
 
-            <div className="flex justify-between items-center">
-              <button
-                onClick={addUrlField}
-                className="flex items-center gap-2 text-poppy hover:text-poppy/80"
-              >
-                <Plus className="w-4 h-4" />
-                Add another URL
-              </button>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setCurrentStep('questions')}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-900"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={validateHelpUrls}
-                  disabled={validatingUrls || !helpUrls.some(url => url.trim())}
-                  className="px-6 py-2 bg-poppy text-white rounded-lg hover:bg-poppy/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {validatingUrls ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Validating...
-                    </>
-                  ) : (
-                    'Generate Documentation'
-                  )}
-                </button>
+                    <div className="flex justify-between items-center">
+                      <button
+                        onClick={addUrlField}
+                        className="flex items-center gap-2 text-poppy hover:text-poppy/80 transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add another URL
+                      </button>
+                      
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => setCurrentStep('questions')}
+                          className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
+                        >
+                          Back
+                        </button>
+                        <button
+                          onClick={validateHelpUrls}
+                          disabled={validatingUrls || !helpUrls.some(url => url.trim())}
+                          className="px-6 py-2 bg-poppy text-white rounded-lg hover:bg-poppy/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all shadow-sm"
+                        >
+                          {validatingUrls ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Validating...
+                            </>
+                          ) : (
+                            'Generate Documentation'
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 4: Generating */}
+                {currentStep === 'generating' && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                    <div className="flex flex-col items-center justify-center space-y-6">
+                      <div className="w-16 h-16 bg-gradient-to-br from-orange-100 via-yellow-100 to-orange-200 rounded-full flex items-center justify-center">
+                        <Loader2 className="w-8 h-8 animate-spin text-poppy" />
+                      </div>
+                      <div className="text-center">
+                        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                          Generating Technical Documentation
+                        </h2>
+                        <p className="text-gray-600">
+                          Analyzing PRD and reference documentation...
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 5: Complete */}
+                {currentStep === 'complete' && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                    <div className="flex flex-col items-center justify-center space-y-6">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                        <Check className="w-8 h-8 text-green-600" />
+                      </div>
+                      <div className="text-center">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                          Documentation Complete!
+                        </h2>
+                        <p className="text-gray-600 mb-6">
+                          Your technical documentation has been created and saved to Google Docs
+                        </p>
+                        <div className="space-y-4">
+                          <a
+                            href={generatedDocUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-poppy text-white rounded-lg hover:bg-poppy/90 transition-all shadow-sm"
+                          >
+                            <ExternalLink className="w-5 h-5" />
+                            View Documentation
+                          </a>
+                          <div className="text-sm text-gray-500">
+                            {generatedDocTitle}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setCurrentStep('select-prd');
+                            setSelectedPrd(null);
+                            setQuestions([]);
+                            setAnswers({});
+                            setHelpUrls(['', '', '']);
+                            setHelpPreviews([]);
+                            setSearchQuery('');
+                            setCurrentPage(1);
+                          }}
+                          className="mt-6 text-poppy hover:text-poppy/80 transition-colors"
+                        >
+                          Create Another Documentation
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        )}
-
-        {/* Step 4: Generating */}
-        {currentStep === 'generating' && (
-          <div className="flex flex-col items-center justify-center py-12 space-y-6">
-            <Loader2 className="w-12 h-12 animate-spin text-poppy" />
-            <div className="text-center">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                Generating Technical Documentation
-              </h2>
-              <p className="text-gray-600">
-                Analyzing PRD and reference documentation...
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Step 5: Complete */}
-        {currentStep === 'complete' && (
-          <div className="flex flex-col items-center justify-center py-12 space-y-6">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
-              <Check className="w-10 h-10 text-green-600" />
-            </div>
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                Documentation Complete!
-              </h2>
-              <p className="text-gray-600 mb-6">
-                Your technical documentation has been created and saved to Google Docs
-              </p>
-              <div className="space-y-3">
-                <a
-                  href={generatedDocUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-poppy text-white rounded-lg hover:bg-poppy/90"
-                >
-                  <ExternalLink className="w-5 h-5" />
-                  View Documentation
-                </a>
-                <div className="text-sm text-gray-500">
-                  {generatedDocTitle}
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setCurrentStep('select-prd');
-                  setSelectedPrd(null);
-                  setQuestions([]);
-                  setAnswers({});
-                  setHelpUrls(['', '', '']);
-                  setHelpPreviews([]);
-                }}
-                className="mt-6 text-poppy hover:text-poppy/80"
-              >
-                Create Another Documentation
-              </button>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
