@@ -61,7 +61,10 @@ export interface GenerateContentRequest {
 }
 
 export async function generateContent(opts: GenerateContentRequest) {
-  const { type, title, query, questions, questionAnswers, storedContext, additionalContext, teamTerms, pmProfile, competitorUrls, prdContent, styleGuide, helpExamples } = opts;
+  const { type, title, query, questions, questionAnswers, storedContext, additionalContext, pmProfile, competitorUrls, prdContent, styleGuide, helpExamples } = opts;
+  
+  // Ensure teamTerms is always an object to prevent undefined errors
+  const teamTerms = opts.teamTerms || {};
   const pmProfileContext = pmProfile ? `
 
   PM Profile Context:
@@ -114,7 +117,7 @@ COMPETITIVE ANALYSIS: Failed to analyze competitor documentation (${error instan
           role: 'user',
           content:`I have  included a list of key terms that you may need to use to generate your response. Use this as background information to help you understand the rest of the prompt. ${Object.keys(terms).join(', ')}
 
-I've also included a list of key terms that my team has defined for our product. Use this as background information to help you understand the rest of the prompt. ${Object.keys(teamTerms).join(', ')}${pmProfileContext}
+I've also included a list of key terms that my team has defined for our product. Use this as background information to help you understand the rest of the prompt. ${teamTerms && Object.keys(teamTerms).length > 0 ? Object.keys(teamTerms).join(', ') : 'No custom team terms defined'}${pmProfileContext}
 
 I've included instructions for how to think and write PRDs like a product manager with" ${ctx.examplesOfHowYouThink} "I've also included background on how to think like my product team" ${ctx.pillarGoalsKeyTermsBackground} "I've included an example document to demonstrate my personal philosophy on how we should approach building a product to cross sell to existing users" ${ctx.howYouThinkAboutProduct} "I've included a doc that outlines the strategic goals of the my product team for the rest of the year" ${ctx.teamStrategy} I've included example text from work that my team has already done that I want for you to use as additional context for relevant features and terms" ${additionalContext} "I've asked you to write a PRD for the following question" ${query} "I've also included a list of questions and answers about the PRD to provide additional clarity around how we should approach the PRD." ${
     questionAnswers && Array.isArray(questionAnswers) ? questionAnswers.map(qa => `Q: ${qa.question}${qa.reasoning ? ` (${qa.reasoning})` : ''}\nA: ${qa.answer}`).join('\n\n') : questions.join('\n')
@@ -250,8 +253,8 @@ Format the output in Markdown suitable for a technical documentation page follow
         content: `You are a brand messaging expert who helps create comprehensive brand messaging documents. Your role is to analyze the provided information and create a well-structured messaging document that aligns with the organization's goals and vision.
 
 You have access to the following context:
-- Team terms and definitions: ${Object.keys(teamTerms).join(', ')}
-- Additional context from previous work: ${additionalContext}
+- Team terms and definitions: ${teamTerms && Object.keys(teamTerms).length > 0 ? Object.keys(teamTerms).join(', ') : 'No custom team terms defined'}
+- Additional context from previous work: ${additionalContext || 'No additional context provided'}
 
 Your task is to create a comprehensive brand messaging document that includes:
 1. Executive Summary

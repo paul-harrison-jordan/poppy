@@ -217,7 +217,8 @@ export async function getUserVectorStore(username: string): Promise<UserVectorSt
 export async function uploadDocumentToVectorStore(
   vectorStoreId: string,
   content: string,
-  fileName: string
+  fileName: string,
+  useChunking: boolean = true
 ): Promise<string> {
   try {
     // Check if API key is available
@@ -232,7 +233,15 @@ export async function uploadDocumentToVectorStore(
       return `placeholder-file-${Date.now()}`;
     }
 
-    // Create a file from the content
+    // Import chunking function dynamically to avoid circular dependency
+    if (useChunking && content.length > 4000) {
+      const { uploadChunkedDocument } = await import('./openai-search-simple');
+      const fileIds = await uploadChunkedDocument(vectorStoreId, content, fileName);
+      // Return first file ID as primary reference
+      return fileIds[0] || `placeholder-file-${Date.now()}`;
+    }
+
+    // For smaller documents, upload as single file
     const file = new File([content], fileName, { type: 'text/plain' });
     
     // Upload file to OpenAI

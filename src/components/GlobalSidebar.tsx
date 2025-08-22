@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Users,
   Bot,
-  Target
+  Target,
+  Flower2
 } from 'lucide-react'
 
 interface GlobalSidebarProps {
@@ -67,6 +68,13 @@ export default function GlobalSidebar({ isCollapsed = false, onToggleCollapse }:
       icon: Target,
       label: 'Competitive Analysis',
       description: 'Analyze competitor approaches',
+      actionable: true
+    },
+    {
+      path: '/petals',
+      icon: Flower2,
+      label: 'Petals',
+      description: 'Improve PRD documentation',
       actionable: true
     },
   ]

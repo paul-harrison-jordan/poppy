@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api';
 import { Session } from 'next-auth';
 import { getUserVectorStore, openai, createFeedbackVectorStore } from '@/lib/openai-vector';
+import { performAssistantSearch, performExpandedSearch } from '@/lib/openai-assistants-search';
 import { headers } from 'next/headers';
 
 let feedbackVectorStoreId: string | null = null;
@@ -13,7 +14,7 @@ async function getFeedbackStore() {
     
     const assistant = await openai.beta.assistants.create({
       name: 'Feedback Assistant',
-      instructions: 'You are a helpful assistant that searches through customer feedback.',
+      instructions: 'You are a helpful assistant that searches through customer feedback and returns relevant information.',
       model: 'gpt-4o',
       tools: [{ type: 'file_search' }],
       tool_resources: {
@@ -41,54 +42,9 @@ function isValidVectorStoreId(vectorStoreId: string): boolean {
   return vectorStoreId.startsWith('vs_') && vectorStoreId.length > 3;
 }
 
-// Use OpenAI's new Responses API with file search
-async function performFileSearch(vectorStoreId: string, query: string, maxResults: number = 10): Promise<SearchResult[]> {
-  // Check if vector store ID is valid (follows vs_* pattern)
-  if (!isValidVectorStoreId(vectorStoreId)) {
-    console.warn(`Invalid vector store ID: ${vectorStoreId}. Vector stores may be disabled or not properly configured.`);
-    return [];
-  }
-
-  try {
-    const response = await openai.responses.create({
-      model: 'gpt-4.1',
-      input: query,
-      tools: [{
-        type: 'file_search',
-        vector_store_ids: [vectorStoreId],
-        max_num_results: maxResults
-      }],
-      include: ['file_search_call.results']
-    });
-
-    // Extract search results from the response
-    const fileSearchCall = response.output.find(item => item.type === 'file_search_call');
-    
-    if (!fileSearchCall || fileSearchCall.type !== 'file_search_call') {
-      return [];
-    }
-
-    // Since the OpenAI types may not include search_results yet, we'll access it safely
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const searchResults = (fileSearchCall as any).search_results;
-    if (!searchResults || !Array.isArray(searchResults)) {
-      return [];
-    }
-
-    // Return the search results as chunks
-    return searchResults.map((result: unknown): SearchResult => {
-      const resultObj = result as Record<string, unknown>;
-      return {
-        content: (resultObj.content as string) || (resultObj.text as string) || 'No content available',
-        score: (resultObj.score as number) || 0,
-        file_id: (resultObj.file_id as string) || '',
-        filename: (resultObj.filename as string) || ''
-      };
-    });
-  } catch (error) {
-    console.error('File search error:', error);
-    throw error;
-  }
+// Validate if assistant ID follows OpenAI pattern
+function isValidAssistantId(assistantId: string): boolean {
+  return assistantId.startsWith('asst_') && assistantId.length > 5;
 }
 
 export const POST = withAuth<NextResponse, Session, [NextRequest]>(async (session, req: NextRequest) => {
@@ -115,27 +71,30 @@ export const POST = withAuth<NextResponse, Session, [NextRequest]>(async (sessio
 
     if (isSchedulePage || useCase === 'schedule') {
       // Use feedback vector store for schedule page
-      const { feedbackVectorStoreId: vectorStoreId } = await getFeedbackStore();
+      const { feedbackVectorStoreId: vectorStoreId, feedbackAssistantId: assistantId } = await getFeedbackStore();
       
-      if (!vectorStoreId) {
+      if (!vectorStoreId || !assistantId) {
         return NextResponse.json({ error: 'Feedback store not initialized' }, { status: 500 });
       }
 
-      const searchResults = await performFileSearch(vectorStoreId, query, 10);
-
-      // If search results are empty due to disabled vector stores, return helpful placeholder
-      if (searchResults.length === 0) {
-        const placeholderContext = [{
-          metadata: {
-            text: `No relevant context found for query: "${query}". Vector store search may be disabled or no documents have been uploaded.`,
-            score: 0,
-            file_id: 'placeholder',
-            filename: 'system_message'
-          }
-        }];
-        return NextResponse.json({ matchedContext: placeholderContext });
+      if (!isValidVectorStoreId(vectorStoreId) || !isValidAssistantId(assistantId)) {
+        console.warn('Invalid store IDs, returning placeholder results');
+        return NextResponse.json({ 
+          matchedContext: [{
+            metadata: {
+              text: `Search functionality is currently limited. Query: "${query}"`,
+              score: 0,
+              file_id: 'placeholder',
+              filename: 'system_message'
+            }
+          }]
+        });
       }
 
+      // Use expanded search for better results
+      const searchResults = await performExpandedSearch(assistantId, vectorStoreId, query, 10);
+
+      // Format results for schedule page
       const matchedContext = searchResults.map((result: SearchResult) => ({
         metadata: {
           text: result.content,
@@ -145,44 +104,127 @@ export const POST = withAuth<NextResponse, Session, [NextRequest]>(async (sessio
         }
       }));
 
+      // Ensure we have at least some context
+      if (matchedContext.length === 0) {
+        matchedContext.push({
+          metadata: {
+            text: `No specific matches found for: "${query}". Consider uploading more relevant documents.`,
+            score: 0,
+            file_id: 'no-results',
+            filename: 'system_message'
+          }
+        });
+      }
+
       return NextResponse.json({ matchedContext });
     } else {
       // Use user's vector store for other pages
-      // Prefer client-provided vector store ID if available and valid
-      let vectorStoreId: string;
+      // Always get the full user store to ensure we have both IDs
+      const userStore = await getUserVectorStore(formattedUsername);
+      
+      const vectorStoreId = clientVectorStoreId && isValidVectorStoreId(clientVectorStoreId)
+        ? clientVectorStoreId
+        : userStore.vectorStoreId;
       
       if (clientVectorStoreId && isValidVectorStoreId(clientVectorStoreId)) {
-        vectorStoreId = clientVectorStoreId;
         console.log('Using cached vector store ID:', vectorStoreId);
       } else {
-        const userStore = await getUserVectorStore(formattedUsername);
-        vectorStoreId = userStore.vectorStoreId;
         console.log('Using server-side vector store ID:', vectorStoreId);
       }
       
-      const searchResults = await performFileSearch(vectorStoreId, query, 10);
+      const assistantId = userStore.assistantId;
 
-      // If search results are empty due to disabled vector stores, return helpful placeholder
-      if (searchResults.length === 0) {
-        const placeholderContext = [`No relevant context found for query: "${query}". Vector store search may be disabled or no documents have been uploaded.`];
-        return NextResponse.json({ matchedContext: placeholderContext });
+      if (!isValidVectorStoreId(vectorStoreId) || !isValidAssistantId(assistantId)) {
+        console.warn('Invalid store IDs, returning limited results');
+        return NextResponse.json({ 
+          matchedContext: Array(10).fill(0).map((_, i) => ({
+            content: `Context chunk ${i + 1}. Vector store search is currently unavailable.`,
+            score: 0.1,
+            file_id: `placeholder-${i}`,
+            filename: 'system_placeholder'
+          }))
+        });
       }
 
-      // Format results as context chunks for PRD mode
-      const matchedContext = searchResults.map((result: SearchResult) => ({
+      // Use expanded search for comprehensive results
+      const searchResults = await performExpandedSearch(assistantId, vectorStoreId, query, 20);
+
+      console.log(`Vector store search for "${query}" returned ${searchResults.length} results`);
+
+      // Format results as context chunks
+      let matchedContext = searchResults.map((result: SearchResult) => ({
         content: result.content,
         score: result.score,
         file_id: result.file_id,
         filename: result.filename
       }));
 
+      // If we have fewer than 10 results, try individual keyword search
+      if (matchedContext.length < 10) {
+        console.log(`Only ${matchedContext.length} results found, attempting keyword expansion...`);
+        
+        // Extract important keywords (longer words, likely to be meaningful)
+        const keywords = query
+          .split(/\s+/)
+          .filter(word => word.length > 4)
+          .slice(0, 3); // Top 3 keywords
+        
+        if (keywords.length > 0) {
+          // Search for each keyword individually
+          const keywordPromises = keywords.map(keyword =>
+            performAssistantSearch(assistantId, vectorStoreId, keyword, 5)
+          );
+          
+          const keywordResults = await Promise.all(keywordPromises);
+          const allKeywordResults = keywordResults.flat();
+          
+          // Merge with existing results, avoiding duplicates
+          const existingFileIds = new Set(matchedContext.map(ctx => ctx.file_id));
+          const newResults = allKeywordResults
+            .filter(result => !existingFileIds.has(result.file_id))
+            .map((result: SearchResult) => ({
+              content: result.content,
+              score: result.score * 0.7, // Lower score for keyword-only matches
+              file_id: result.file_id,
+              filename: result.filename
+            }));
+          
+          matchedContext = [...matchedContext, ...newResults];
+        }
+      }
+
+      // Sort by score and take top 10
+      matchedContext = matchedContext
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10);
+
+      // If still less than 10, add informative placeholders
+      while (matchedContext.length < 10) {
+        matchedContext.push({
+          content: `Additional context slot ${matchedContext.length + 1}. Upload more documents to improve search results.`,
+          score: 0.05,
+          file_id: `placeholder-${matchedContext.length}`,
+          filename: 'system_placeholder'
+        });
+      }
+
+      console.log(`Returning ${matchedContext.length} context chunks`);
       return NextResponse.json({ matchedContext });
     }
   } catch (error) {
     console.error('Error searching vector store:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to search vector store' },
-      { status: 500 }
-    );
+    
+    // Return graceful degradation response
+    const fallbackContext = Array(10).fill(0).map((_, i) => ({
+      content: `Search temporarily unavailable (chunk ${i + 1}/10). Please try again.`,
+      score: 0,
+      file_id: `error-${i}`,
+      filename: 'error_message'
+    }));
+    
+    return NextResponse.json({ 
+      matchedContext: fallbackContext,
+      error: error instanceof Error ? error.message : 'Search service error'
+    }, { status: 200 }); // Return 200 with error in body to prevent frontend crash
   }
 });

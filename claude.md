@@ -30,3 +30,5 @@ Claude should first return a design proposal (not code) that we approve, then pr
 When you need domain docs, call:
 import { getDoc } from '@/lib/docs' const prdTemplate = await getDoc('prd_template_v2'); // GDoc ID
 Docs that ClaudeCode can cite (embed IDs only): • PRD_TEMPLATE_V2 • DESIGN_GUIDELINES_V1 • ENGINEERING_CHECKLIST_V3
+
+When possible, always prioritize narrowly scoped apis that can be chained together on the client side, rather than large endpoints doing more than one thing

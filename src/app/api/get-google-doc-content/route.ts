@@ -14,7 +14,7 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
       }, { status: 401 });
     }
 
-    const { docId } = await request.json();
+    const { docId, format = 'text' } = await request.json();
     if (!docId) {
       return NextResponse.json({ error: 'Document ID is required' }, { status: 400 });
     }
@@ -52,16 +52,34 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
       throw accessError;
     }
 
-    // Fetch document content as plain text
-    const contentResponse = await drive.files.export({
-      fileId: docId,
-      mimeType: 'text/plain',
-    });
-
-    const textContent = contentResponse.data as string;
+    // Fetch document content in requested format
+    let textContent = '';
+    let htmlContent = '';
+    
+    if (format === 'html' || format === 'both') {
+      const htmlResponse = await drive.files.export({
+        fileId: docId,
+        mimeType: 'text/html',
+      });
+      htmlContent = htmlResponse.data as string;
+      
+      // Also get plain text for fallback
+      const textResponse = await drive.files.export({
+        fileId: docId,
+        mimeType: 'text/plain',
+      });
+      textContent = textResponse.data as string;
+    } else {
+      const contentResponse = await drive.files.export({
+        fileId: docId,
+        mimeType: 'text/plain',
+      });
+      textContent = contentResponse.data as string;
+    }
 
     return NextResponse.json({ 
-      content: textContent
+      content: textContent,
+      htmlContent: format === 'html' || format === 'both' ? htmlContent : undefined
     });
   } catch (error: unknown) {
     console.error('Error fetching Google Doc content:', error);
