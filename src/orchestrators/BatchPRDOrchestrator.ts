@@ -93,11 +93,13 @@ export class BatchPRDOrchestrator {
         ...pmProfile?.vocabulary_glossary
       };
 
+      const personaContext = this.getPersonaContext(feature, pmProfile);
       const questionsResult = await generateQuestions({
         title: feature.name,
-        query: feature.jtbd,
-        teamTerms: mergedTeamTerms,
-        additionalContext: this.getPersonaContext(feature, pmProfile)
+        query: feature.jtbd + (personaContext ? `\n\nContext: ${personaContext}` : ''),
+        matchedContext: '',
+        storedContext: '',
+        teamTerms: JSON.stringify(mergedTeamTerms)
       });
 
       const questions = questionsResult.questions || [];

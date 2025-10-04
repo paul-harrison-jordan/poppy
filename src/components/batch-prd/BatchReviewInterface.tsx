@@ -277,7 +277,7 @@ export default function BatchReviewInterface({
                   {currentCard.data.edited && (
                     <span className="text-blue-600">Edited</span>
                   )}
-                  {currentCard.type === 'question' && currentCard.data.sources?.length > 0 && (
+                  {currentCard.type === 'question' && currentCard.data.sources && currentCard.data.sources.length > 0 && (
                     <span>{currentCard.data.sources.length} sources</span>
                   )}
                 </div>

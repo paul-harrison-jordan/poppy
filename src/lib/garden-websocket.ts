@@ -94,8 +94,9 @@ export class GardenWebSocket {
         break;
 
       case 'research_finding':
+        const source = (update.metadata?.source as 'competitive' | 'internal' | 'vectordb' | 'klaviyo' | 'web') || 'web';
         store.addResearchFinding({
-          source: update.metadata?.source || 'web',
+          source,
           summary: update.content,
           confidence: update.metadata?.confidence || 0.5,
           relevance: update.metadata?.relevance || 0.5,

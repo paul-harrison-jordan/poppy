@@ -35,7 +35,14 @@ function DocumentPreview({ messages, onExport, isExporting }: DocumentPreviewPro
   const agentResponses = messages.filter(m => m.type === 'agent_response');
   
   // Extract JTBD, scope, and other key sections from messages
-  const extractedContent = {
+  const extractedContent: {
+    jtbd: string;
+    inScope: string[];
+    outOfScope: string[];
+    features: string[];
+    releasePhases: string[];
+    keyQuestions: string[];
+  } = {
     jtbd: '',
     inScope: [],
     outOfScope: [],
@@ -66,7 +73,7 @@ function DocumentPreview({ messages, onExport, isExporting }: DocumentPreviewPro
             <CheckCircle2 className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-warm-neutral">{documentComplete.document?.title || 'Product Requirements Document'}</h2>
+            <h2 className="text-2xl font-bold text-warm-neutral">{(documentComplete.document as { title?: string })?.title || 'Product Requirements Document'}</h2>
             <p className="text-warm-neutral/70">Ready for review and implementation</p>
           </div>
         </div>
@@ -79,7 +86,7 @@ function DocumentPreview({ messages, onExport, isExporting }: DocumentPreviewPro
         
         <div className="flex gap-4 pt-6 border-t border-white/20">
           <button 
-            onClick={() => onExport(documentComplete.document?.title || 'Product Requirements Document', documentComplete.content)}
+            onClick={() => onExport((documentComplete.document as { title?: string })?.title || 'Product Requirements Document', documentComplete.content)}
             disabled={isExporting}
             className="px-6 py-3 bg-gradient-to-r from-poppy-primary to-lavender-secondary text-white rounded-xl hover:shadow-lg transition-all font-semibold flex items-center gap-2 disabled:opacity-50"
           >
@@ -279,8 +286,9 @@ export default function GardenChat({ storedContext, teamTerms }: GardenChatProps
               if (update.type === 'phase_start') {
                 store.updatePhaseStatus(update.phase || '', 'active');
               } else if (update.type === 'research_finding') {
+                const source = (update.metadata?.source as 'competitive' | 'internal' | 'vectordb' | 'klaviyo' | 'web') || 'web';
                 store.addResearchFinding({
-                  source: update.metadata?.source || 'web',
+                  source,
                   summary: update.content,
                   confidence: update.metadata?.confidence || 0.5,
                   relevance: update.metadata?.relevance || 0.5,

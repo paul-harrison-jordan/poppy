@@ -25,10 +25,13 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const update of GardenOrchestrator.continueWithHumanResponses(
-            gardenRequest,
-            humanResponses
-          )) {
+          // Continue workflow with updated request that includes human responses
+          const updatedRequest = {
+            ...gardenRequest,
+            userResponses: humanResponses
+          };
+
+          for await (const update of GardenOrchestrator.streamWorkflow(updatedRequest)) {
             const chunk = encoder.encode(JSON.stringify(update) + '\n');
             controller.enqueue(chunk);
           }

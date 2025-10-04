@@ -27,7 +27,7 @@ export interface PersonalContext {
   teamStrategy?: string;
   productVision?: string;
   productAreaPersonas?: ProductAreaPersonas;
-  [key: string]: string | number | boolean | string[] | number[] | undefined;
+  [key: string]: string | number | boolean | string[] | number[] | ProductAreaPersonas | undefined;
 }
 
 export interface ProductAreaPersonas {

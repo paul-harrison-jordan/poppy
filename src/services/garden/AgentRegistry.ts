@@ -5,6 +5,7 @@ import { RESEARCH_AGENT } from './agents/research';
 import { DESIGN_AGENT } from './agents/design';
 import { SCOPING_AGENT } from './agents/scoping';
 import { WRITING_AGENT } from './agents/writing';
+import { ENGINEERING_AGENT } from './agents/engineering';
 
 /**
  * Central registry for all Garden agents
@@ -19,11 +20,12 @@ export class AgentRegistry {
       systemPrompt: '' // Set by orchestrator
     },
     planning: PLANNING_AGENT,
-    strategy: STRATEGY_AGENT, 
+    strategy: STRATEGY_AGENT,
     research: RESEARCH_AGENT,
     design: DESIGN_AGENT,
     scoping: SCOPING_AGENT,
-    writing: WRITING_AGENT
+    writing: WRITING_AGENT,
+    engineering: ENGINEERING_AGENT
   };
 
   /**

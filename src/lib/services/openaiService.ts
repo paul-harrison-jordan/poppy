@@ -856,9 +856,9 @@ export async function streamChat(opts: ChatRequest) {
   return streamTextResponse(stream, 'text/plain');
 }
 
-export async function* streamGardenWorkflow(opts: GardenRequest) {
+export async function* streamGardenWorkflow(opts: { query: string; storedContext?: string; teamTerms?: Record<string, string>; existingDocument?: unknown }) {
   // Delegate to the dedicated Garden service
-  yield* GardenOrchestrator.streamWorkflow(opts);
+  yield* GardenOrchestrator.streamWorkflow(opts as import('@/services/garden/types').GardenRequest);
 }
 
 export interface DecomposePRDRequest {

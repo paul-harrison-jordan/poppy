@@ -1,5 +1,5 @@
 // Garden Types
-export type AgentType = 'orchestrator' | 'planning' | 'strategy' | 'research' | 'design' | 'scoping' | 'writing';
+export type AgentType = 'orchestrator' | 'planning' | 'strategy' | 'research' | 'design' | 'scoping' | 'writing' | 'engineering';
 
 // Extended types for improved functionality
 export interface WorkflowPhase {

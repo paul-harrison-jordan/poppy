@@ -1479,20 +1479,14 @@ Please try again with different URLs or check your internet connection.`
                   <div className="w-20 h-20 bg-gradient-to-br from-poppy/20 to-orange-100 rounded-3xl flex items-center justify-center mx-auto mb-6 transform transition-transform hover:scale-110">
                     <div className="text-3xl">
                       {mode === 'draft' && '✨'}
-                      {mode === 'techdoc' && '📚'}
                       {mode === 'chat' && '👋'}
-                      {mode === 'design' && '🎨'}
                       {mode === 'feedback' && '💬'}
-                      {mode === 'garden' && '🧠'}
                     </div>
                   </div>
                   <div className="text-2xl font-bold mb-3 text-gray-900">
                     {mode === 'draft' && 'Let\'s create something amazing'}
-                    {mode === 'techdoc' && 'Transform PRDs into Documentation'}
                     {mode === 'chat' && 'Hi! I\'m Poppy, your PM partner'}
-                    {mode === 'design' && 'Design Studio'}
                     {mode === 'feedback' && 'Let\'s find customer insights'}
-                    {mode === 'garden' && 'Welcome to Garden'}
                   </div>
                   <div className="text-base text-gray-600 leading-relaxed">
                     {mode === 'draft' && 'I\'ll guide you through creating a comprehensive PRD. Just share your product idea and I\'ll ask the right questions to help you think through every detail.'}
@@ -1500,15 +1494,13 @@ Please try again with different URLs or check your internet connection.`
                     {mode === 'chat' && 'I can help with roadmap planning, feature prioritization, stakeholder communication, or any product challenge you\'re facing.'}
                     {mode === 'design' && 'Transform your ideas into interactive prototypes. Describe what you want to build and I\'ll help you visualize it.'}
                     {mode === 'feedback' && 'I\'ll search through customer feedback to find insights relevant to your feature or pain point. Just describe what you\'re looking for.'}
-                    {mode === 'garden' && 'Your multi-agent PM assistant. I coordinate specialist agents for planning, strategy, research, design, and engineering to give you comprehensive product insights.'}
                   </div>
                   <div className="mt-6 text-sm text-gray-500 italic">
                     {mode === 'draft' && '💡 Tip: The more context you share, the better I can tailor the PRD to your needs'}
                     {mode === 'techdoc' && '💡 Tip: Have 2-3 Klaviyo help articles ready to ensure the documentation matches their style'}
                     {mode === 'chat' && '💡 Tip: Try the different modes below for specialized workflows'}
                     {mode === 'design' && '💡 Tip: You can also paste a PRD link to create designs from existing specs'}
-                    {mode === 'feedback' && '💡 Tip: I can help you reach out to specific customers with relevant feedback'}
-                    {mode === 'garden' && '💡 Tip: Ask complex PM questions to see multiple specialist agents collaborate on your answer'}
+                    {mode === 'feedback' && '💡 Tip: Describe the problem space or feature area you\'re exploring'}
                   </div>
                 </div>
               </div>

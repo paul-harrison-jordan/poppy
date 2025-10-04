@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       async start(controller) {
         try {
           // Use new orchestrator by default, fallback to original if explicitly requested
-          const workflowGenerator = version === 'v1' 
+          const workflowGenerator = version === 'v1'
             ? streamGardenWorkflow({
                 query,
                 storedContext,
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
                 storedContext,
                 teamTerms,
                 existingDocument
-              }, userEmail);
+              }, userEmail || undefined);
           
           for await (const update of workflowGenerator) {
             const chunk = encoder.encode(`data: ${JSON.stringify(update)}\n\n`);

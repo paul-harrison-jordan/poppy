@@ -17,10 +17,14 @@ const DEFAULT_PERSONAS = {
 export default function PMProfileCreation({ onProfileCreated, onSkip }: PMProfileCreationProps) {
   const [step, setStep] = useState<'intro' | 'personas' | 'preferences'>('intro');
   const [personas, setPersonas] = useState<ProductAreaPersonas>(DEFAULT_PERSONAS);
-  const [preferences, setPreferences] = useState({
-    speedVsQuality: 'balanced' as const,
-    riskTolerance: 'medium' as const,
-    userFocus: 'balanced' as const
+  const [preferences, setPreferences] = useState<{
+    speedVsQuality: 'speed' | 'balanced' | 'quality';
+    riskTolerance: 'low' | 'medium' | 'high';
+    userFocus: 'internal' | 'external' | 'balanced';
+  }>({
+    speedVsQuality: 'balanced',
+    riskTolerance: 'medium',
+    userFocus: 'balanced'
   });
   const [productVision, setProductVision] = useState('');
   const [teamStrategy, setTeamStrategy] = useState('');

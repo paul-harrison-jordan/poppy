@@ -92,9 +92,9 @@ export const useGardenStore = create<GardenStore>()(
       ...initialState,
       
       // Message management
-      addMessage: (message) => 
-        set((state) => ({ 
-          messages: [...state.messages, { ...message, id: message.id || Date.now().toString() }] 
+      addMessage: (message) =>
+        set((state) => ({
+          messages: [...state.messages, { ...message, id: (message as { id?: string }).id || Date.now().toString() }]
         }), false, 'addMessage'),
         
       clearMessages: () => 
@@ -102,8 +102,8 @@ export const useGardenStore = create<GardenStore>()(
         
       updateMessage: (id, updates) =>
         set((state) => ({
-          messages: state.messages.map(msg => 
-            msg.id === id ? { ...msg, ...updates } : msg
+          messages: state.messages.map(msg =>
+            (msg as { id?: string }).id === id ? { ...msg, ...updates } : msg
           )
         }), false, 'updateMessage'),
       
@@ -259,7 +259,7 @@ export const useGardenStore = create<GardenStore>()(
     }),
     {
       name: 'garden-store',
-      partialize: (state) => ({
+      partialize: (state: GardenState) => ({
         // Only persist essential state, not UI state
         messages: state.messages.slice(-50), // Keep last 50 messages
         workflowPhases: state.workflowPhases,
