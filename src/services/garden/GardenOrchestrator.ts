@@ -148,15 +148,17 @@ export class GardenOrchestrator {
       );
 
       for (const result of agentResults) {
-        yield {
-          type: 'agent_response',
-          agent: result.agent,
-          content: result.response,
-          metadata: {
-            tokensUsed: result.tokensUsed,
-            confidence: result.confidence
-          }
-        };
+        if (result) {
+          yield {
+            type: 'agent_response',
+            agent: result.agent,
+            content: result.response,
+            metadata: {
+              tokensUsed: result.tokensUsed,
+              confidence: result.confidence
+            }
+          };
+        }
       }
 
       // Phase 4: Quality Validation & Iteration
