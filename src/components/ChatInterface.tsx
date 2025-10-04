@@ -14,7 +14,6 @@ import { getEnrichedPersonalContext } from '@/lib/utils/contextHelpers';
 // Lazy load heavy components
 const DesignSidebar = lazy(() => import('./DesignSidebar'));
 const TechDocWizard = lazy(() => import('./TechDocWizard'));
-const GardenChat = lazy(() => import('./garden/GardenChat'));
 
 declare global {
   interface Window {
@@ -28,7 +27,7 @@ export interface ChatMessage {
   className?: string;
 }
 
-type ChatMode = 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback' | 'garden';
+type ChatMode = 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback';
 
 
 
@@ -42,7 +41,7 @@ export default function ChatInterface() {
   // Handle client-side initialization
   useEffect(() => {
     const savedMode = localStorage.getItem('currentChatMode') as ChatMode;
-    if (savedMode && ['chat', 'draft', 'techdoc', 'agent', 'design', 'feedback', 'garden'].includes(savedMode)) {
+    if (savedMode && ['chat', 'draft', 'techdoc', 'agent', 'design', 'feedback'].includes(savedMode)) {
       setMode(savedMode);
     }
   }, []);
@@ -1377,20 +1376,6 @@ Please try again with different URLs or check your internet connection.`
               onBrainstorm={() => alert('Brainstorm solutions')}
             />
           ))}
-        </div>
-      ) : mode === 'garden' ? (
-        // Garden mode: Multi-agent PM assistant
-        <div className="h-screen">
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-            </div>
-          }>
-            <GardenChat
-              storedContext={getEnrichedPersonalContext()}
-              teamTerms={JSON.parse(localStorage.getItem("teamTerms") || "{}")}
-            />
-          </Suspense>
         </div>
       ) : mode === ('design' as ChatMode) ? (
       // Design mode: Split-screen layout with smooth visual transition

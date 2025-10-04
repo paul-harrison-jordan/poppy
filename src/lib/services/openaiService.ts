@@ -811,9 +811,7 @@ export interface ChatRequest {
   model?: string;
 }
 
-// Garden multi-agent - now using dedicated services
-import { GardenOrchestrator } from '@/services/garden';
-export type { AgentType, GardenRequest, AgentUpdate } from '@/services/garden/types';
+// Garden multi-agent removed - using batch-prd instead
 
 export async function streamChat(opts: ChatRequest) {
   const { messages, storedContext = '', teamTerms = {}, model = 'gpt-4' } = opts;
@@ -856,10 +854,7 @@ export async function streamChat(opts: ChatRequest) {
   return streamTextResponse(stream, 'text/plain');
 }
 
-export async function* streamGardenWorkflow(opts: { query: string; storedContext?: string; teamTerms?: Record<string, string>; existingDocument?: unknown }) {
-  // Delegate to the dedicated Garden service
-  yield* GardenOrchestrator.streamWorkflow(opts as import('@/services/garden/types').GardenRequest);
-}
+// Removed: streamGardenWorkflow - Garden mode deprecated in favor of batch-prd
 
 export interface DecomposePRDRequest {
   content: string;
