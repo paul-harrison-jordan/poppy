@@ -87,8 +87,6 @@ export default function ChatInput({
         return "Describe the design you'd like to create...";
       case 'feedback':
         return "Describe what customer feedback you're looking for...";
-      case 'garden':
-        return "Ask Garden about your PM challenges...";
       default:
         return "Ask me anything about product management...";
     }
@@ -188,21 +186,6 @@ export default function ChatInput({
         <div className="text-center">
           <div className="font-medium">Feedback</div>
           <div className="text-xs opacity-75">Search customers</div>
-        </div>
-      </button>
-      <button
-        type="button"
-        onClick={() => onModeChange('garden')}
-        className={`px-space-3 py-space-2 text-sm rounded-xl transition-smooth flex flex-col items-center gap-1 group ${
-          mode === 'garden' 
-            ? 'bg-gradient-to-br from-poppy-primary to-poppy-primary/80 text-white elevation-sm' 
-            : 'text-warm-neutral hover:text-poppy-primary hover:bg-poppy-primary/5 border border-border hover:border-poppy-primary/30'
-        }`}
-      >
-        <Brain className={`w-4 h-4 ${mode === 'garden' ? '' : 'group-hover:scale-110 transition-transform'}`} />
-        <div className="text-center">
-          <div className="font-medium">Garden</div>
-          <div className="text-xs opacity-75">Multi-agent PM</div>
         </div>
       </button>
       {/* Agentic (Bot) button: show if agentic messages exist or in agent mode */}
