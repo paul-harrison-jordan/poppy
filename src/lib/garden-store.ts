@@ -88,7 +88,7 @@ const initialState: GardenState = {
 
 export const useGardenStore = create<GardenStore>()(
   devtools(
-    (set, get) => ({
+    (set) => ({
       ...initialState,
       
       // Message management
@@ -128,7 +128,7 @@ export const useGardenStore = create<GardenStore>()(
           })
         }), false, 'updateSubStep'),
         
-      initializeWorkflowPhases: (requestType) => {
+      initializeWorkflowPhases: () => {
         const phases: WorkflowPhase[] = [
           {
             id: 'research',

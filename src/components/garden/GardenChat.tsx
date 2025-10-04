@@ -1,5 +1,5 @@
 'use client';
-import React, { useRef } from 'react';
+import React from 'react';
 import { 
   Brain, 
   Sparkles, 
@@ -190,28 +190,6 @@ interface GardenChatProps {
   teamTerms?: Record<string, string>;
 }
 
-// Dynamic phase tracking
-interface WorkflowPhase {
-  id: string;
-  name: string;
-  icon: React.ReactNode;
-  status: 'pending' | 'active' | 'completed' | 'skipped';
-  subSteps?: {
-    name: string;
-    status: 'pending' | 'active' | 'completed';
-  }[];
-  findings?: number;
-  confidence?: number;
-}
-
-// Research finding card
-interface ResearchFinding {
-  source: 'vectordb' | 'klaviyo' | 'web' | 'competitive' | 'internal';
-  summary: string;
-  confidence: number;
-  relevance: number;
-  timestamp: string;
-}
 
 const SOURCE_ICONS = {
   vectordb: <Database className="w-4 h-4" />,
@@ -644,7 +622,7 @@ export default function GardenChat({ storedContext, teamTerms }: GardenChatProps
                     <FileText className="w-10 h-10 text-poppy-primary" />
                   </div>
                   <h3 className="text-xl font-bold text-warm-neutral mb-3">Ready to Create Your PRD</h3>
-                  <p className="text-warm-neutral/70 mb-6">Describe your product idea below and watch as our AI agents research, analyze, and craft a comprehensive PRD based on Klaviyo's proven template.</p>
+                  <p className="text-warm-neutral/70 mb-6">Describe your product idea below and watch as our AI agents research, analyze, and craft a comprehensive PRD based on Klaviyo&apos;s proven template.</p>
                   <div className="grid grid-cols-2 gap-4 text-sm text-warm-neutral/60">
                     <div className="flex items-center gap-2">
                       <Search className="w-4 h-4" />
@@ -714,8 +692,7 @@ export default function GardenChat({ storedContext, teamTerms }: GardenChatProps
         <HumanInputModal
           isOpen={store.showHumanInput}
           onClose={() => store.setShowHumanInput(false)}
-          onSubmit={(_responses) => {
-            // Handle responses - could process them here if needed
+          onSubmit={() => {
             store.setShowHumanInput(false);
           }}
           questions={store.humanQuestions}

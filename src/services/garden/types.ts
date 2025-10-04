@@ -48,7 +48,7 @@ export interface AgentUpdate {
   questions?: HumanQuestion[];
   userResponses?: Record<string, string>;
   phase?: string;
-  document?: any;
+  document?: Record<string, unknown>;
   metadata?: {
     source?: string;
     confidence?: number;
@@ -123,7 +123,7 @@ export interface ResearchInsight {
   source: 'vectordb' | 'klaviyo' | 'web' | 'competitive' | 'internal';
   query: string;
   summary: string;
-  details: any;
+  details: Record<string, unknown>;
   confidence: number;
   relevance: number;
   timestamp: string;

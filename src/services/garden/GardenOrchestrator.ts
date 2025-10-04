@@ -305,7 +305,7 @@ Output JSON:
   }
 
   // Cache for vector store results - 15 minute TTL
-  private static vectorStoreCache = new Map<string, { data: any; expires: number }>();
+  private static vectorStoreCache = new Map<string, { data: Record<string, Array<{ content: string; filename: string; score: number; type: string }>>; expires: number }>();
 
   /**
    * Retrieve relevant context from user's OpenAI Vector Store with performance optimizations
@@ -315,7 +315,7 @@ Output JSON:
     requiredContext: string[],
     userVectorStore?: { vectorStoreId: string; assistantId: string } | null
   ) {
-    const results: Record<string, any[]> = {
+    const results: Record<string, Array<{ content: string; filename: string; score: number; type: string }>> = {
       relevantDocs: [],
       previousPRDs: [],
       teamKnowledge: []
@@ -365,9 +365,9 @@ Output JSON:
       searchResults.forEach((result, index) => {
         const keys = ['previousPRDs', 'relevantDocs', 'teamKnowledge'];
         const key = keys[index];
-        
+
         if (result.status === 'fulfilled' && result.value) {
-          results[key] = this.deduplicateAndRank(result.value, query);
+          results[key] = this.deduplicateAndRank(result.value);
         } else {
           console.error(`${key} search failed:`, result.status === 'rejected' ? result.reason : 'Unknown error');
           results[key] = [];
@@ -435,7 +435,7 @@ Output JSON:
   /**
    * Deduplicate and rank search results by semantic similarity
    */
-  private static deduplicateAndRank(results: Array<{ content: string; filename: string; score: number; type: string }>, _query: string) {
+  private static deduplicateAndRank(results: Array<{ content: string; filename: string; score: number; type: string }>) {
     if (!results.length) return [];
 
     // Remove near-duplicates based on content similarity
@@ -462,7 +462,7 @@ Output JSON:
    */
   private static async executeResearchPlan(
     researchPlan: ResearchTopic[],
-    contextRetrieval: any
+    contextRetrieval: DeepResearchPhase['contextRetrieval']
   ): Promise<ResearchInsight[]> {
     const findings: ResearchInsight[] = [];
     
@@ -1029,7 +1029,15 @@ Extract key insights that inform:
    * Synthesize all page insights into key takeaways for PRD
    */
   private static async synthesizePageInsights(
-    pageAnalyses: any[],
+    pageAnalyses: Array<{
+      url: string;
+      title: string;
+      domain?: string;
+      contentLength: number;
+      insights: string;
+      crawledAt: string;
+      fallbackMode?: boolean;
+    }>,
     query: string,
     focusArea: string
   ) {
@@ -1175,7 +1183,7 @@ Focus on specificity and actionability. Include numbers, percentages, and concre
   /**
    * Internal knowledge research
    */
-  private static async researchInternal(query: string, contextRetrieval: any): Promise<ResearchInsight> {
+  private static async researchInternal(query: string, contextRetrieval: DeepResearchPhase['contextRetrieval']): Promise<ResearchInsight> {
     const relevantContext = [
       ...contextRetrieval.previousPRDs,
       ...contextRetrieval.teamKnowledge
@@ -1197,9 +1205,9 @@ Focus on specificity and actionability. Include numbers, percentages, and concre
    */
   private static async* synthesizeResearchStreaming(
     originalContext: string,
-    contextRetrieval: any,
+    contextRetrieval: DeepResearchPhase['contextRetrieval'],
     researchFindings: ResearchInsight[],
-    analysis: any
+    analysis: DeepResearchPhase['initialAnalysis']
   ): AsyncGenerator<{ chunk: string; isComplete: boolean }> {
     // Chunk the research findings to prevent memory overload
     const maxContextLength = 8000; // Characters
@@ -1277,9 +1285,9 @@ Be concise but comprehensive.`;
    */
   private static async synthesizeResearch(
     originalContext: string,
-    contextRetrieval: any,
+    contextRetrieval: DeepResearchPhase['contextRetrieval'],
     researchFindings: ResearchInsight[],
-    analysis: any
+    analysis: DeepResearchPhase['initialAnalysis']
   ): Promise<string> {
     let result = '';
     
@@ -1337,8 +1345,8 @@ Output JSON:
     });
 
     const result = JSON.parse(response.choices[0].message.content || '{"questions":[]}');
-    
-    return result.questions.map((q: any, idx: number) => ({
+
+    return result.questions.map((q: { category: string; question: string; why_important: string }, idx: number) => ({
       id: `q_${idx}`,
       category: q.category,
       question: q.question,
@@ -1406,8 +1414,15 @@ Output JSON:
    * Smart agent selection based on request analysis
    */
   private static selectOptimalAgents(
-    requestContext: any,
-    researchPhase: DeepResearchPhase
+    requestContext: {
+      requestType: string;
+      complexity: string;
+      businessStage: string;
+      themes: string[];
+      hasCompetitiveData: boolean;
+      hasUserData: boolean;
+      hasTechnicalData: boolean;
+    }
   ): AgentType[] {
     const { requestType, complexity, businessStage, themes } = requestContext;
     
@@ -1537,7 +1552,13 @@ Create a smart orchestration plan that maximizes PM impact.`
    * Execute Mixture-of-Agents approach with parallel proposers and synthesis layers
    */
   private static async executeMixtureOfAgents(
-    orchestrationPlan: any,
+    orchestrationPlan: {
+      optimalAgents: string[];
+      agent_queries?: Record<string, { query: string; context_focus?: string; expected_output?: string; builds_on?: string }>;
+      requestContext: Record<string, unknown>;
+      researchSummary: ResearchInsight[];
+      [key: string]: unknown;
+    },
     enhancedContext: string,
     researchPhase: DeepResearchPhase
   ) {
@@ -1564,8 +1585,7 @@ Create a smart orchestration plan that maximizes PM impact.`
       aggregatedResult,
       orchestrationPlan.optimalAgents.slice(0, 2), // Top 2 agents for refinement
       orchestrationPlan,
-      enhancedContext,
-      researchPhase
+      enhancedContext
     );
 
     // Layer 4: Final Synthesis - Create final PRD-ready output
@@ -1583,7 +1603,10 @@ Create a smart orchestration plan that maximizes PM impact.`
    */
   private static async executeProposerLayer(
     agents: string[],
-    orchestrationPlan: any,
+    orchestrationPlan: {
+      agent_queries?: Record<string, { query: string; context_focus?: string; expected_output?: string }>;
+      [key: string]: unknown;
+    },
     enhancedContext: string,
     researchPhase: DeepResearchPhase
   ) {
@@ -1613,10 +1636,10 @@ Create a smart orchestration plan that maximizes PM impact.`
     });
 
     const results = await Promise.allSettled(proposerPromises);
-    
+
     return results
-      .filter(result => result.status === 'fulfilled')
-      .map(result => (result as PromiseFulfilledResult<any>).value)
+      .filter((result): result is PromiseFulfilledResult<{ agent: string; query: string; response: string; tokensUsed: number; confidence: number; timestamp: string; fallback?: boolean }> => result.status === 'fulfilled')
+      .map(result => result.value)
       .filter(Boolean);
   }
 
@@ -1624,8 +1647,8 @@ Create a smart orchestration plan that maximizes PM impact.`
    * Layer 2: Aggregate multiple proposer outputs using MoA synthesis
    */
   private static async executeAggregationLayer(
-    proposerResults: any[],
-    orchestrationPlan: any,
+    proposerResults: Array<{ agent: string; query: string; response: string; tokensUsed: number; confidence: number; timestamp: string; fallback?: boolean }>,
+    orchestrationPlan: { optimalAgents: string[]; [key: string]: unknown },
     enhancedContext: string,
     aggregationType: string
   ) {
@@ -1666,11 +1689,10 @@ Create a smart orchestration plan that maximizes PM impact.`
    * Layer 3: Refine based on aggregated output
    */
   private static async executeRefinementLayer(
-    aggregatedResult: any,
+    aggregatedResult: { agent: string; response: string; aggregated_from: string[]; synthesis_type: string; [key: string]: unknown } | null,
     refinementAgents: string[],
-    orchestrationPlan: any,
-    enhancedContext: string,
-    researchPhase: DeepResearchPhase
+    orchestrationPlan: { [key: string]: unknown },
+    enhancedContext: string
   ) {
     console.log(`🔄 Layer 3: Refining with ${refinementAgents.length} specialist agents`);
 
@@ -1682,8 +1704,7 @@ Create a smart orchestration plan that maximizes PM impact.`
       const refinementPrompt = this.buildRefinementPrompt(
         agentType,
         aggregatedResult,
-        enhancedContext,
-        researchPhase
+        enhancedContext
       );
 
       const result = await this.executeAgentWithTimeout(
@@ -1703,19 +1724,19 @@ Create a smart orchestration plan that maximizes PM impact.`
     });
 
     const results = await Promise.allSettled(refinementPromises);
-    
+
     return results
-      .filter(result => result.status === 'fulfilled')
-      .map(result => (result as PromiseFulfilledResult<any>).value)
-      .filter(Boolean);
+      .filter((result): result is PromiseFulfilledResult<{ agent: string; response: string; refined_from: string; [key: string]: unknown } | null> => result.status === 'fulfilled')
+      .map(result => result.value)
+      .filter((value): value is { agent: string; response: string; refined_from: string; [key: string]: unknown } => value !== null);
   }
 
   /**
    * Layer 4: Final synthesis for PRD-ready output
    */
   private static async executeFinalSynthesis(
-    allResults: any[],
-    orchestrationPlan: any,
+    allResults: Array<{ agent: string; response: string; [key: string]: unknown }>,
+    orchestrationPlan: { optimalAgents: string[]; [key: string]: unknown },
     enhancedContext: string
   ) {
     console.log(`🔄 Layer 4: Final synthesis from ${allResults.length} agent outputs`);
@@ -1748,7 +1769,7 @@ Create a smart orchestration plan that maximizes PM impact.`
    * Build MoA aggregation prompt for synthesizing multiple proposer outputs
    */
   private static buildMoAAggregationPrompt(
-    proposerResults: any[],
+    proposerResults: Array<{ agent: string; response: string; [key: string]: unknown }>,
     enhancedContext: string,
     aggregationType: string
   ): string {
@@ -1874,7 +1895,7 @@ Your synthesis should be comprehensive yet concise, building on the collective i
    */
   private static buildProposerContext(
     agentType: string,
-    agentQuery: any,
+    agentQuery: { query: string; context_focus?: string; expected_output?: string },
     enhancedContext: string,
     researchPhase: DeepResearchPhase
   ): string {
@@ -1976,9 +1997,8 @@ EXPECTED CONTRIBUTION: ${agentQuery.expected_output || `${agentType} analysis an
    */
   private static buildRefinementPrompt(
     agentType: string,
-    aggregatedResult: any,
-    enhancedContext: string,
-    researchPhase: DeepResearchPhase
+    aggregatedResult: { agent: string; response: string; [key: string]: unknown },
+    enhancedContext: string
   ): string {
     return `You are a specialist ${agentType} refiner in the MoA system. Your job is to refine and enhance the aggregated analysis with your domain expertise.
 
@@ -2007,7 +2027,7 @@ Your refinement should enhance the aggregated analysis with deep ${agentType} ex
    * Build final synthesis prompt for Layer 4 comprehensive output
    */
   private static buildFinalSynthesisPrompt(
-    allResults: any[],
+    allResults: Array<{ agent: string; response: string; synthesized_from?: string[]; refined_from?: string; aggregated_from?: string[]; [key: string]: unknown }>,
     enhancedContext: string
   ): string {
     const resultSummaries = allResults.map((result, index) => {
@@ -2053,10 +2073,10 @@ This is the final output that will inform PRD creation - make it comprehensive, 
    */
   private static async executePhaseAgents(
     agents: string[],
-    orchestrationPlan: any,
+    orchestrationPlan: { agent_queries?: Record<string, unknown>; [key: string]: unknown },
     enhancedContext: string,
     researchPhase: DeepResearchPhase,
-    conversationContext: Record<string, any>
+    conversationContext: Record<string, { response: string; keyInsights?: string[]; confidence?: number; [key: string]: unknown }>
   ) {
     const results = [];
     
@@ -2082,10 +2102,10 @@ This is the final output that will inform PRD creation - make it comprehensive, 
    */
   private static async executeSingleAgentWithContext(
     agentType: string,
-    orchestrationPlan: any,
+    orchestrationPlan: { agent_queries?: Record<string, unknown>; [key: string]: unknown },
     enhancedContext: string,
     researchPhase: DeepResearchPhase,
-    conversationContext: Record<string, any>
+    conversationContext: Record<string, { response: string; keyInsights?: string[]; confidence?: number; [key: string]: unknown }>
   ) {
     const agentQuery = orchestrationPlan.agent_queries?.[agentType];
     if (!agentQuery) {
@@ -2116,10 +2136,10 @@ This is the final output that will inform PRD creation - make it comprehensive, 
    */
   private static buildContextualPrompt(
     agentType: string,
-    agentQuery: any,
+    agentQuery: { query?: string; context_focus?: string; expected_output?: string; builds_on?: string; [key: string]: unknown },
     enhancedContext: string,
     researchPhase: DeepResearchPhase,
-    conversationContext: Record<string, any>
+    conversationContext: Record<string, { response: string; keyInsights?: string[]; confidence?: number; [key: string]: unknown }>
   ): string {
     let prompt = agentQuery.query || `Analyze the following request from a ${agentType} perspective.`;
     
@@ -2141,7 +2161,7 @@ This is the final output that will inform PRD creation - make it comprehensive, 
 
     // Add insights from previous agents
     const previousInsights = Object.entries(conversationContext)
-      .filter(([agent, _]) => agent !== agentType)
+      .filter(([agent]) => agent !== agentType)
       .map(([agent, data]) => ({
         agent,
         insights: data.keyInsights || []
@@ -2270,9 +2290,9 @@ This is the final output that will inform PRD creation - make it comprehensive, 
    * Validate phase results and detect conflicts
    */
   private static async validatePhaseResults(
-    phase: any,
-    conversationContext: Record<string, any>,
-    validationPoints: any[]
+    phase: { phase: number; [key: string]: unknown },
+    conversationContext: Record<string, { response: string; keyInsights?: string[]; confidence?: number; [key: string]: unknown }>,
+    validationPoints: Array<{ checkpoint: string; questions?: string[]; conflicts_to_watch?: string[]; [key: string]: unknown }>
   ) {
     const relevantValidation = validationPoints.find(
       vp => vp.checkpoint === `After Phase ${phase.phase}` || vp.checkpoint === 'after_each_phase'
@@ -2313,7 +2333,7 @@ This is the final output that will inform PRD creation - make it comprehensive, 
   /**
    * Detect specific conflict patterns in agent responses
    */
-  private static detectConflictPattern(pattern: string, context: Record<string, any>): boolean {
+  private static detectConflictPattern(pattern: string, context: Record<string, { response?: string; [key: string]: unknown }>): boolean {
     const responses = Object.values(context).map(ctx => ctx.response || '');
     const allText = responses.join(' ').toLowerCase();
     
@@ -2351,7 +2371,7 @@ This is the final output that will inform PRD creation - make it comprehensive, 
    */
   private static async validateSpecificQuestion(
     question: string,
-    conversationContext: Record<string, any>
+    conversationContext: Record<string, { keyInsights?: string[]; [key: string]: unknown }>
   ) {
     const contextSummary = Object.entries(conversationContext)
       .map(([agent, data]) => `${agent}: ${data.keyInsights?.join('; ') || 'No insights'}`)
@@ -2390,7 +2410,7 @@ Respond with JSON: {"passes": true/false, "issue": "description if fails", "conf
    */
   private static async resolveAgentConflicts(
     conflicts: string[],
-    conversationContext: Record<string, any>,
+    conversationContext: Record<string, { keyInsights?: string[]; confidence?: number; [key: string]: unknown }>,
     enhancedContext: string
   ) {
     console.log('🧠 Senior PM reviewing conflicts and making decisions...');
@@ -2475,7 +2495,7 @@ Respond in JSON:
    * Validate PRD quality and identify gaps
    */
   private static async validatePRDQuality(
-    agentResults: any[],
+    agentResults: Array<{ agent: string; response: string; [key: string]: unknown }>,
     enhancedContext: string,
     query: string
   ) {
@@ -2549,11 +2569,11 @@ Agent Results: ${JSON.stringify(agentResults.map(r => ({ agent: r.agent, summary
    */
   private static async createEnhancedDocument(
     query: string,
-    agentResults: any[],
+    agentResults: Array<{ agent: string; response: string; [key: string]: unknown }>,
     enhancedContext: string,
     teamTerms: Record<string, string>,
-    validation: any,
-    existingDocument?: any
+    validation: { qualityScore?: number; completeness?: number; gaps?: string[]; [key: string]: unknown },
+    existingDocument?: Record<string, unknown>
   ) {
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -2583,7 +2603,7 @@ Create a comprehensive PRD that addresses all quality requirements and gaps.`
    * Store document in user's OpenAI Vector Store for future retrieval
    */
   private static async storeInVectorDB(
-    document: any,
+    document: { title?: string; quality_score?: number; [key: string]: unknown },
     query: string,
     context: string,
     userVectorStore?: { vectorStoreId: string; assistantId: string } | null

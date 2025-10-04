@@ -156,7 +156,7 @@ export class GardenWebSocket {
     }, delay);
   }
 
-  public send(data: any) {
+  public send(data: AgentUpdate) {
     const message: WebSocketMessage = {
       type: 'garden_update',
       data,

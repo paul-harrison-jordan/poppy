@@ -168,7 +168,7 @@ ${domainEnhancements.frameworks.map(f => `- ${f}`).join('\n')}`
  * Get domain-specific enhancements
  */
 function getDomainEnhancements(domain: string) {
-  const enhancements: Record<string, any> = {
+  const enhancements: Record<string, { context: string; considerations: string[]; terminology: Record<string, string> }> = {
     'email-marketing': {
       context: `EMAIL MARKETING DOMAIN: You specialize in email service providers, marketing automation, and customer communication platforms.`,
       considerations: [

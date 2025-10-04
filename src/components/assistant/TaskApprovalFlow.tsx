@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
   Edit3, 
   ArrowLeft, 
@@ -42,11 +42,56 @@ export default function TaskApprovalFlow({
   const completedTasks = plan.tasks.filter(t => t.status === 'completed').length;
   const progressPercentage = (completedTasks / plan.tasks.length) * 100;
 
+  const handleApprove = useCallback(() => {
+    onApprove(currentTask.id);
+
+    if (isLastTask) {
+      setTimeout(() => onComplete(), 800); // Delay for animation
+    } else {
+      setTimeout(() => {
+        setCurrentTaskIndex(prev => prev + 1);
+        setShowThinking(false);
+        setShowPreview(false);
+      }, 400);
+    }
+  }, [currentTask.id, isLastTask, onApprove, onComplete]);
+
+  const handleReject = useCallback(() => {
+    onReject(currentTask.id);
+
+    if (isLastTask) {
+      onComplete();
+    } else {
+      setTimeout(() => {
+        setCurrentTaskIndex(prev => prev + 1);
+        setShowThinking(false);
+        setShowPreview(false);
+      }, 400);
+    }
+  }, [currentTask.id, isLastTask, onReject, onComplete]);
+
+  const handleRequestChanges = () => {
+    if (!feedback.trim()) return;
+
+    onRequestChanges(currentTask.id, feedback);
+    setFeedback('');
+    setFeedbackMode(false);
+
+    // Move to next task after requesting changes
+    if (!isLastTask) {
+      setTimeout(() => {
+        setCurrentTaskIndex(prev => prev + 1);
+        setShowThinking(false);
+        setShowPreview(false);
+      }, 400);
+    }
+  };
+
   // Keyboard navigation
-  useEffect(() => {
+  React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (feedbackMode) return; // Don't handle keys when typing feedback
-      
+
       switch (e.key) {
         case 'ArrowRight':
         case 'Enter':
@@ -83,52 +128,7 @@ export default function TaskApprovalFlow({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [currentTaskIndex, feedbackMode, showThinking, showPreview]);
-
-  const handleApprove = () => {
-    onApprove(currentTask.id);
-    
-    if (isLastTask) {
-      setTimeout(() => onComplete(), 800); // Delay for animation
-    } else {
-      setTimeout(() => {
-        setCurrentTaskIndex(prev => prev + 1);
-        setShowThinking(false);
-        setShowPreview(false);
-      }, 400);
-    }
-  };
-
-  const handleReject = () => {
-    onReject(currentTask.id);
-    
-    if (isLastTask) {
-      onComplete();
-    } else {
-      setTimeout(() => {
-        setCurrentTaskIndex(prev => prev + 1);
-        setShowThinking(false);
-        setShowPreview(false);
-      }, 400);
-    }
-  };
-
-  const handleRequestChanges = () => {
-    if (!feedback.trim()) return;
-    
-    onRequestChanges(currentTask.id, feedback);
-    setFeedback('');
-    setFeedbackMode(false);
-    
-    // Move to next task after requesting changes
-    if (!isLastTask) {
-      setTimeout(() => {
-        setCurrentTaskIndex(prev => prev + 1);
-        setShowThinking(false);
-        setShowPreview(false);
-      }, 400);
-    }
-  };
+  }, [currentTaskIndex, feedbackMode, showThinking, showPreview, handleApprove, handleReject]);
 
   const getImpactIcon = (impact: string) => {
     switch (impact) {

@@ -22,7 +22,9 @@
       "Bash(for:*)",
       "Bash(do echo \"=== $f ===\")",
       "Bash(done)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(pnpm eslint:*)",
+      "Bash(npx eslint:*)"
     ],
     "deny": []
   }
