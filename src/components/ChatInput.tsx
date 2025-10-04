@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Sparkles, FileText, Paintbrush, Bot, MessageSquare, Brain } from 'lucide-react';
+import { Sparkles, FileText, Paintbrush, Bot, MessageSquare } from 'lucide-react';
 import CompetitorAnalysisCard from './CompetitorAnalysisCard';
 
 type ChatMode = 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback';
