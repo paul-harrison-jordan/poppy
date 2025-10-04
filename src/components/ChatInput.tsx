@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Sparkles, FileText, Paintbrush, Bot, MessageSquare, Brain } from 'lucide-react';
 import CompetitorAnalysisCard from './CompetitorAnalysisCard';
 
-type ChatMode = 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback' | 'garden';
+type ChatMode = 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback';
 type DraftStep = 'initial' | 'vocabulary' | 'questions' | 'content';
 
 interface CompetitorAnalysis {
