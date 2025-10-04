@@ -170,7 +170,7 @@ export class GardenOrchestrator {
       };
 
       const validation = await this.validatePRDQuality(
-        agentResults,
+        agentResults.filter((r): r is NonNullable<typeof r> => r !== null),
         enhancedContext,
         query
       );
