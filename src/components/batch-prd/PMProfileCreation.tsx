@@ -54,36 +54,49 @@ export default function PMProfileCreation({ onProfileCreated, onSkip }: PMProfil
 
   if (step === 'intro') {
     return (
-      <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-4">Create Your PM Profile</h2>
-        <p className="text-gray-700 mb-6">
-          Your PM profile helps Poppy understand your decision-making style and generate better PRDs.
-          We&apos;ll ask a few questions about your personas and preferences.
-        </p>
-        <div className="space-y-4">
-          <div className="bg-blue-50 p-4 rounded-md">
-            <h3 className="font-semibold mb-2">What we&apos;ll cover:</h3>
-            <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-              <li>Product area personas (customer-facing, customer-impacting, infrastructure)</li>
-              <li>Your trade-off preferences (speed vs quality, risk tolerance)</li>
-              <li>Team strategy and product vision (optional)</li>
-            </ul>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setStep('personas')}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Get Started
-            </button>
-            {onSkip && (
+      <div className="max-w-3xl mx-auto px-6">
+        <div className="bg-white rounded-2xl shadow-md border border-warmGray-200 p-8">
+          <h2 className="font-display text-3xl font-semibold text-batch-charcoal mb-3">Create Your PM Profile</h2>
+          <p className="text-batch-charcoal-light text-lg mb-8">
+            Your PM profile helps Poppy understand your decision-making style and generate PRDs tailored to your approach.
+          </p>
+          <div className="space-y-4">
+            <div className="bg-batch-terracotta-light border border-batch-terracotta/20 p-6 rounded-xl">
+              <h3 className="font-semibold text-batch-charcoal mb-3 flex items-center gap-2">
+                <span className="text-batch-terracotta">📋</span>
+                What we&apos;ll cover:
+              </h3>
+              <ul className="space-y-2 text-batch-charcoal-light">
+                <li className="flex items-start gap-2">
+                  <span className="text-batch-terracotta mt-0.5">•</span>
+                  <span>Product area personas (customer-facing, customer-impacting, infrastructure)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-batch-terracotta mt-0.5">•</span>
+                  <span>Your trade-off preferences (speed vs quality, risk tolerance)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-batch-terracotta mt-0.5">•</span>
+                  <span>Team strategy and product vision (optional)</span>
+                </li>
+              </ul>
+            </div>
+            <div className="flex gap-3 pt-4">
               <button
-                onClick={onSkip}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                onClick={() => setStep('personas')}
+                className="flex-1 px-8 py-4 bg-gradient-to-r from-batch-terracotta to-batch-terracotta-hover text-white rounded-full hover:shadow-lg transition-all font-semibold"
               >
-                Skip for now
+                Get Started →
               </button>
-            )}
+              {onSkip && (
+                <button
+                  onClick={onSkip}
+                  className="px-6 py-4 text-batch-charcoal-light hover:text-batch-charcoal transition-colors font-medium rounded-full hover:bg-warmGray-50"
+                >
+                  Skip for now
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

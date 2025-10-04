@@ -141,11 +141,27 @@ module.exports = {
   				700: '#44403C',
   				800: '#292524',
   				900: '#1C1917'
+  			},
+  			// Batch PRD Identity Colors
+  			'batch-terracotta': {
+  				DEFAULT: '#E87A52',
+  				hover: '#D66A42',
+  				light: '#FDF5F2',
+  				foreground: '#FFFFFF'
+  			},
+  			'batch-charcoal': {
+  				DEFAULT: '#44403C',
+  				light: '#78716C'
+  			},
+  			'batch-canvas': {
+  				DEFAULT: '#FFFDF9',
+  				alt: '#F9F5F1'
   			}
   		},
   		fontFamily: {
   			sans: ['Inter', 'sans-serif'],
   			mono: ['JetBrains Mono', 'monospace'],
+  			display: ['var(--font-display)', 'Georgia', 'serif'],
   		},
   		spacing: {
   			'space-1': 'var(--space-1)',

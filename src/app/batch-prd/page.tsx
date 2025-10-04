@@ -5,8 +5,11 @@ import PMProfileCreation from '@/components/batch-prd/PMProfileCreation';
 import BatchFeatureInput from '@/components/batch-prd/BatchFeatureInput';
 import BatchReviewInterface from '@/components/batch-prd/BatchReviewInterface';
 import { PMPreferenceProfile, FeatureInput, ProposedContent, BatchPRDSession } from '@/types/knowledge';
+import RadialSeedIcon from '@/components/batch-prd/icons/RadialSeedIcon';
+import StageIndicator from '@/components/batch-prd/ui/StageIndicator';
 
 type Step = 'profile' | 'features' | 'generating' | 'review' | 'generating-prds' | 'complete';
+type Stage = 'profile' | 'features' | 'review' | 'complete';
 
 export default function BatchPRDPage() {
   const [step, setStep] = useState<Step>('profile');
@@ -141,43 +144,39 @@ export default function BatchPRDPage() {
     }
   };
 
+  // Map step to stage for indicator
+  const getCurrentStage = (): Stage => {
+    if (step === 'profile') return 'profile';
+    if (step === 'features' || step === 'generating') return 'features';
+    if (step === 'review') return 'review';
+    return 'complete';
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      {/* Progress Bar */}
-      <div className="max-w-6xl mx-auto px-6 mb-8">
-        <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className={`text-sm font-semibold ${step === 'profile' ? 'text-blue-600' : 'text-gray-600'}`}>
-              1. Profile
-            </span>
-            <span className={`text-sm font-semibold ${step === 'features' || step === 'generating' ? 'text-blue-600' : 'text-gray-600'}`}>
-              2. Features
-            </span>
-            <span className={`text-sm font-semibold ${step === 'review' ? 'text-blue-600' : 'text-gray-600'}`}>
-              3. Review
-            </span>
-            <span className={`text-sm font-semibold ${step === 'generating-prds' || step === 'complete' ? 'text-blue-600' : 'text-gray-600'}`}>
-              4. Generate
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-              style={{
-                width: step === 'profile' ? '25%' :
-                       step === 'features' || step === 'generating' ? '50%' :
-                       step === 'review' ? '75%' : '100%'
-              }}
-            />
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-batch-canvas to-batch-canvas-alt py-16">
+      {/* Header */}
+      <header className="max-w-4xl mx-auto text-center mb-12 px-6">
+        <div className="mb-4 flex justify-center">
+          <RadialSeedIcon className="w-16 h-16 text-batch-terracotta" size={64} />
         </div>
+        <h1 className="font-display text-5xl text-batch-charcoal mb-3 tracking-tight">
+          Batch PRD
+        </h1>
+        <p className="font-sans text-xl text-batch-charcoal-light">
+          Cultivate your features into comprehensive PRDs
+        </p>
+      </header>
+
+      {/* Stage Indicator */}
+      <div className="max-w-4xl mx-auto px-6 mb-16">
+        <StageIndicator currentStage={getCurrentStage()} />
       </div>
 
       {/* Error Display */}
       {error && (
-        <div className="max-w-6xl mx-auto px-6 mb-6">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800 font-semibold">Error: {error}</p>
+        <div className="max-w-4xl mx-auto px-6 mb-6">
+          <div className="bg-poppy-50 border border-poppy-400 rounded-xl p-4 shadow-sm">
+            <p className="text-poppy-700 font-medium">⚠️ {error}</p>
           </div>
         </div>
       )}

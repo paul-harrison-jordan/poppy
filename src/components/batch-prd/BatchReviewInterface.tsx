@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { ProposedContent, FeatureInput } from '@/types/knowledge';
+import StatusIcon from './icons/StatusIcon';
+import ProgressBar from './ui/ProgressBar';
 
 interface BatchReviewInterfaceProps {
   features: FeatureInput[];
@@ -191,37 +193,35 @@ export default function BatchReviewInterface({
   const isApproved = currentCard.data.approved;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-batch-canvas to-batch-canvas-alt">
       {/* Minimal Header */}
-      <div className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-10">
+      <div className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-warmGray-200 z-10 shadow-sm">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-4">
               {onBack && (
                 <button
                   onClick={onBack}
-                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                  className="text-batch-charcoal-light hover:text-batch-charcoal transition-colors p-2 hover:bg-warmGray-50 rounded-lg"
                 >
                   ←
                 </button>
               )}
               <div>
-                <h1 className="text-lg font-medium text-gray-900">Review Content</h1>
-                <p className="text-sm text-gray-500">{currentCard.featureName}</p>
+                <h1 className="font-display text-xl font-semibold text-batch-charcoal">Review Content</h1>
+                <p className="text-sm text-batch-charcoal-light flex items-center gap-2">
+                  <StatusIcon status="bud" size={14} className="text-batch-terracotta" />
+                  {currentCard.featureName}
+                </p>
               </div>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm font-medium text-batch-charcoal-light">
               {currentCardIndex + 1} of {totalCards}
             </div>
           </div>
 
-          {/* Elegant Progress Bar */}
-          <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-black transition-all duration-500 ease-out rounded-full"
-              style={{ width: `${((currentCardIndex + 1) / totalCards) * 100}%` }}
-            />
-          </div>
+          {/* Progress Bar with Bloom Gradient */}
+          <ProgressBar value={((currentCardIndex + 1) / totalCards) * 100} variant="bloom" />
         </div>
       </div>
 
@@ -238,23 +238,28 @@ export default function BatchReviewInterface({
             }`}
           >
             {/* Main Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+            <div className="bg-white rounded-2xl shadow-md border border-warmGray-200 overflow-hidden hover:shadow-lg hover:border-batch-terracotta/30 transition-all duration-200">
               {/* Card Header */}
-              <div className="px-8 pt-8 pb-6 border-b border-gray-100">
+              <div className="px-8 pt-8 pb-6 border-b border-warmGray-100">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                    <div className="text-xs font-semibold text-batch-terracotta uppercase tracking-wide mb-2 flex items-center gap-2">
+                      <StatusIcon
+                        status={isApproved ? 'bloom' : 'bud'}
+                        size={16}
+                        className="text-current"
+                      />
                       {currentCard.type === 'term' ? 'Vocabulary' : 'Question'}
                     </div>
-                    <h2 className="text-2xl font-semibold text-gray-900 leading-tight">
+                    <h2 className="font-display text-2xl font-semibold text-batch-charcoal leading-tight">
                       {currentCard.type === 'term'
                         ? currentCard.data.term
                         : currentCard.data.question}
                     </h2>
                   </div>
                   {isApproved && (
-                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium">
-                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-sprout-100 text-sprout-700 rounded-full text-sm font-medium">
+                      <span className="w-1.5 h-1.5 bg-sprout-500 rounded-full"></span>
                       Approved
                     </div>
                   )}
@@ -343,27 +348,28 @@ export default function BatchReviewInterface({
       </div>
 
       {/* Fixed Bottom Actions */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-warmGray-200 shadow-lg">
         <div className="max-w-4xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between gap-4">
             <button
               onClick={goToPrevCard}
               disabled={isFirstCard}
-              className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
+              className={`px-6 py-3 rounded-xl font-medium transition-all ${
                 isFirstCard
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  ? 'text-warmGray-300 cursor-not-allowed'
+                  : 'text-batch-charcoal hover:bg-warmGray-50'
               }`}
             >
-              Previous
+              ← Previous
             </button>
 
             <div className="flex items-center gap-3">
               {!isApproved ? (
                 <button
                   onClick={handleApproval}
-                  className="px-8 py-2.5 bg-black text-white rounded-lg hover:bg-gray-800 transition-all font-medium"
+                  className="px-8 py-3 bg-gradient-to-r from-batch-terracotta to-batch-terracotta-hover text-white rounded-full hover:shadow-lg transition-all font-semibold flex items-center gap-2"
                 >
+                  <StatusIcon status="bloom" size={18} className="text-white" />
                   Approve
                 </button>
               ) : (
@@ -376,27 +382,28 @@ export default function BatchReviewInterface({
               <button
                 onClick={goToNextCard}
                 disabled={isLastCard}
-                className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
+                className={`px-6 py-3 rounded-xl font-medium transition-all ${
                   isLastCard
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'text-warmGray-300 cursor-not-allowed'
+                    : 'text-batch-charcoal hover:bg-warmGray-50'
                 }`}
               >
-                {isLastCard ? 'Last item' : 'Next'}
+                {isLastCard ? 'Last item' : 'Next →'}
               </button>
             </div>
           </div>
 
           {/* Progress Indicator */}
-          <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="mt-4 pt-4 border-t border-warmGray-100">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">
-                {approvedCount} of {totalCards} approved
+              <span className="text-batch-charcoal-light font-medium flex items-center gap-2">
+                <StatusIcon status="bloom" size={16} className="text-sprout" />
+                {approvedCount} of {totalCards} bloomed
               </span>
               {approvedCount === totalCards && (
                 <button
                   onClick={handleSubmit}
-                  className="text-black hover:underline font-medium"
+                  className="text-batch-terracotta hover:text-batch-terracotta-hover font-semibold flex items-center gap-1"
                 >
                   Continue to PRD generation →
                 </button>
