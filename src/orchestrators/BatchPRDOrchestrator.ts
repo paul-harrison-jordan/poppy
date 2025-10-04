@@ -29,7 +29,8 @@ export class BatchPRDOrchestrator {
    */
   async generateBatchContent(
     session: BatchPRDSession,
-    pmProfile?: PMPreferenceProfile
+    pmProfile?: PMPreferenceProfile,
+    teamTerms?: Record<string, string>
   ): Promise<ProposedContent[]> {
     console.log(`[BatchPRDOrchestrator] Starting batch generation for ${session.features.length} features`);
     const startTime = Date.now();
@@ -52,7 +53,7 @@ export class BatchPRDOrchestrator {
       // Process all features in parallel
       const results = await Promise.all(
         session.features.map(feature =>
-          this.generateFeatureContent(feature, pmProfile, session.id, progressMap)
+          this.generateFeatureContent(feature, pmProfile, session.id, progressMap, teamTerms)
         )
       );
 
@@ -73,7 +74,8 @@ export class BatchPRDOrchestrator {
     feature: FeatureInput,
     pmProfile: PMPreferenceProfile | undefined,
     sessionId: string,
-    progressMap: Map<string, BatchGenerationProgress>
+    progressMap: Map<string, BatchGenerationProgress>,
+    teamTerms?: Record<string, string>
   ): Promise<ProposedContent> {
     console.log(`[BatchPRDOrchestrator] Generating content for feature: "${feature.name}"`);
 
@@ -85,10 +87,16 @@ export class BatchPRDOrchestrator {
       });
 
       // Step 1: Generate questions based on JTBD
+      // Merge teamTerms from localStorage with PM profile
+      const mergedTeamTerms = {
+        ...teamTerms,
+        ...pmProfile?.vocabulary_glossary
+      };
+
       const questionsResult = await generateQuestions({
         title: feature.name,
         query: feature.jtbd,
-        teamTerms: pmProfile?.vocabulary_glossary || {},
+        teamTerms: mergedTeamTerms,
         additionalContext: this.getPersonaContext(feature, pmProfile)
       });
 

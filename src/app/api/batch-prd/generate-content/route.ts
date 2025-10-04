@@ -8,9 +8,10 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
   const startTime = Date.now();
 
   try {
-    const { batchSession, pmProfile } = await request.json() as {
+    const { batchSession, pmProfile, teamTerms } = await request.json() as {
       batchSession: BatchPRDSession;
       pmProfile?: PMPreferenceProfile;
+      teamTerms?: Record<string, string>;
     };
 
     if (!batchSession || !batchSession.features || batchSession.features.length === 0) {
@@ -21,9 +22,12 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
     }
 
     console.log(`[generate-content] Starting content generation for ${batchSession.features.length} features`);
+    if (teamTerms) {
+      console.log(`[generate-content] Using ${Object.keys(teamTerms).length} team terms for smarter vocab generation`);
+    }
 
     const orchestrator = new BatchPRDOrchestrator();
-    const proposedContent = await orchestrator.generateBatchContent(batchSession, pmProfile);
+    const proposedContent = await orchestrator.generateBatchContent(batchSession, pmProfile, teamTerms);
 
     const totalTime = Date.now() - startTime;
     console.log(`[generate-content] Generated content for ${proposedContent.length} features in ${totalTime}ms`);

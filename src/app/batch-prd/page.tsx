@@ -16,8 +16,10 @@ export default function BatchPRDPage() {
   const [generatedPRDs, setGeneratedPRDs] = useState<Array<{
     featureId: string;
     featureName: string;
-    sections?: unknown[];
+    title?: string;
+    markdown?: string;
     googleDocUrl?: string;
+    docId?: string;
     error?: string;
   }>>([]);
   const [error, setError] = useState<string | null>(null);
@@ -56,12 +58,18 @@ export default function BatchPRDPage() {
 
       // Generate content
       console.log('[BatchPRD] Generating content for features...');
+
+      // Pull existing teamTerms from localStorage to inform vocab generation
+      const existingTeamTerms = JSON.parse(localStorage.getItem('teamTerms') || '{}');
+      console.log(`[BatchPRD] Using ${Object.keys(existingTeamTerms).length} existing team terms for smart vocab generation`);
+
       const contentRes = await fetch('/api/batch-prd/generate-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           batchSession: newSession,
-          pmProfile: pmProfile as PMPreferenceProfile
+          pmProfile: pmProfile as PMPreferenceProfile,
+          teamTerms: existingTeamTerms
         })
       });
 
@@ -88,13 +96,33 @@ export default function BatchPRDPage() {
 
     try {
       console.log('[BatchPRD] Generating PRDs...');
+
+      // Pull all context from localStorage (like draft-prd flow does)
+      const existingTeamTerms = JSON.parse(localStorage.getItem('teamTerms') || '{}');
+
+      // Save approved terms to localStorage for future learning
+      const newTerms: Record<string, string> = {};
+      approvedContent.forEach(content => {
+        content.terms.filter(t => t.approved).forEach(term => {
+          newTerms[term.term] = term.definition;
+        });
+      });
+
+      const mergedTeamTerms = { ...existingTeamTerms, ...newTerms };
+      localStorage.setItem('teamTerms', JSON.stringify(mergedTeamTerms));
+      console.log(`[BatchPRD] Saved ${Object.keys(newTerms).length} new terms to localStorage`);
+
+      const personalContext = localStorage.getItem('personalContext') || '';
+
       const prdsRes = await fetch('/api/batch-prd/generate-prds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           features,
           proposedContent: approvedContent,
-          pmProfile: pmProfile as PMPreferenceProfile
+          pmProfile: pmProfile as PMPreferenceProfile,
+          teamTerms: mergedTeamTerms,
+          personalContext
         })
       });
 
@@ -216,13 +244,13 @@ export default function BatchPRDPage() {
           <div className="space-y-4">
             {generatedPRDs.map((prd, idx) => (
               <div key={idx} className="p-4 border rounded-lg">
-                <h3 className="text-lg font-semibold mb-2">{prd.featureName}</h3>
+                <h3 className="text-lg font-semibold mb-2">{prd.title || prd.featureName}</h3>
                 {prd.error ? (
                   <p className="text-red-600">Error: {prd.error}</p>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-green-600">✓ Generated {prd.sections?.length || 0} sections</p>
-                    {prd.googleDocUrl && (
+                    <p className="text-green-600">✓ PRD Generated Successfully</p>
+                    {prd.googleDocUrl ? (
                       <a
                         href={prd.googleDocUrl}
                         target="_blank"
@@ -242,6 +270,10 @@ export default function BatchPRDPage() {
                         </svg>
                         View in Google Docs
                       </a>
+                    ) : (
+                      <p className="text-yellow-600 text-sm">
+                        ⚠ Google Docs save skipped (not signed in with Google)
+                      </p>
                     )}
                   </div>
                 )}

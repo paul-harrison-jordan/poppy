@@ -1,4 +1,5 @@
 import { openai } from '@/lib/openai';
+import { WebSearchService } from '@/lib/integrations/WebSearchService';
 
 export interface SearchResult {
   title: string;
@@ -7,59 +8,26 @@ export interface SearchResult {
   content?: string;
 }
 
+// Initialize the web search service
+const webSearchService = new WebSearchService();
+
 /**
- * Perform actual web search using WebSearch tool
- * This should be called from an API route that has access to the WebSearch tool
+ * Perform actual web search using Google Search API
  */
 export async function performWebSearch(query: string): Promise<SearchResult[]> {
   console.log(`[RealWebResearch] Performing web search for: "${query}"`);
 
-  // NOTE: This function should ideally use the WebSearch tool directly
-  // For now, we'll use OpenAI to generate realistic search results based on the query
-  // In production, this would be replaced with actual WebSearch integration
-
   try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: `You are a web search assistant. Given a search query, provide realistic search results that would be returned by Google.
-Return results as JSON with this structure:
-{
-  "results": [
-    {
-      "title": "Page title",
-      "url": "https://example.com/page",
-      "snippet": "Brief description of the page content..."
-    }
-  ]
-}
-
-Provide 3-5 diverse, high-quality results from authoritative sources like:
-- Wikipedia, technical documentation sites
-- Industry blogs (TechCrunch, HBR, Medium)
-- Educational institutions (.edu)
-- Official product websites
-- Technical forums (Stack Overflow, Reddit)
-
-Make URLs realistic and relevant to the query.`
-        },
-        {
-          role: 'user',
-          content: `Search query: ${query}
-
-Provide 3-5 realistic search results for this query.`
-        }
-      ],
-      temperature: 0.4,
-      max_tokens: 600,
-      response_format: { type: 'json_object' }
+    const response = await webSearchService.search({
+      query,
+      maxResults: 5
     });
 
-    const content = completion.choices[0]?.message?.content || '{"results": []}';
-    const parsed = JSON.parse(content);
-    const results = parsed.results || [];
+    const results: SearchResult[] = response.results.map(result => ({
+      title: result.title,
+      url: result.url,
+      snippet: result.snippet
+    }));
 
     console.log(`[RealWebResearch] Found ${results.length} search results`);
     return results;
@@ -70,41 +38,53 @@ Provide 3-5 realistic search results for this query.`
 }
 
 /**
- * Fetch and extract content from a URL using WebFetch tool
- * This should use the WebFetch tool to get actual page content
+ * Fetch and extract content from a URL
  */
 export async function fetchWebContent(url: string, prompt: string): Promise<string> {
   console.log(`[RealWebResearch] Fetching content from: ${url}`);
 
   try {
-    // NOTE: This should use the WebFetch tool directly
-    // For now, we'll use OpenAI to generate realistic content
-    // In production, this would fetch the actual page
+    // Fetch the page
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; PoppyBot/1.0; +https://poppy.com/bot)'
+      }
+    });
 
+    if (!response.ok) {
+      console.error(`[RealWebResearch] Failed to fetch ${url}: ${response.status}`);
+      return '';
+    }
+
+    const html = await response.text();
+
+    // Use OpenAI to extract relevant content from HTML
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
           role: 'system',
-          content: `You are a web content extraction assistant. Given a URL and context, generate realistic content that would be found on that page.
-The content should be factual, informative, and relevant to the URL's domain and topic.
-Write 2-4 paragraphs of detailed, professional content.`
+          content: `You are a web content extraction assistant. Extract the main text content from HTML, focusing on the most relevant information.
+Remove navigation, ads, footers, and boilerplate. Focus on article text, documentation, and informative content.
+Provide a concise summary of 2-4 paragraphs.`
         },
         {
           role: 'user',
-          content: `URL: ${url}
+          content: `HTML from ${url}:
 
-Context/What to extract: ${prompt}
+${html.substring(0, 15000)}
 
-Generate realistic web page content that addresses the context. Be specific and factual.`
+Context: ${prompt}
+
+Extract the relevant content focusing on the context above. Be concise and factual.`
         }
       ],
-      temperature: 0.4,
+      temperature: 0.3,
       max_tokens: 800
     });
 
     const content = completion.choices[0]?.message?.content || '';
-    console.log(`[RealWebResearch] Fetched ${content.length} characters of content`);
+    console.log(`[RealWebResearch] Extracted ${content.length} characters of content`);
     return content;
   } catch (error) {
     console.error(`[RealWebResearch] Error fetching content from ${url}:`, error);
@@ -157,7 +137,7 @@ export async function researchTerm(term: string): Promise<{
 export async function researchQuestion(
   question: string,
   featureName: string,
-  jtbd: string
+  jtbd: string // eslint-disable-line @typescript-eslint/no-unused-vars
 ): Promise<{
   question: string;
   searchResults: SearchResult[];
