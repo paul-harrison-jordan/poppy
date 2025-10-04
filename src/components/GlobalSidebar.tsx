@@ -15,7 +15,6 @@ import {
   ChevronRight,
   Users,
   Bot,
-  Target,
   Flower2
 } from 'lucide-react'
 
@@ -64,13 +63,6 @@ export default function GlobalSidebar({ isCollapsed = false, onToggleCollapse }:
       actionable: true
     },
     {
-      path: '/competitive-analysis',
-      icon: Target,
-      label: 'Competitive Analysis',
-      description: 'Analyze competitor approaches',
-      actionable: true
-    },
-    {
       path: '/petals',
       icon: Flower2,
       label: 'Petals',
@@ -88,10 +80,10 @@ export default function GlobalSidebar({ isCollapsed = false, onToggleCollapse }:
       actionable: false
     },
     {
-      path: '/sync',
+      path: '/configure',
       icon: RefreshCw,
-      label: 'Document Sync',
-      description: 'Connect knowledge sources',
+      label: 'Configure',
+      description: 'Customize your Poppy experience',
       actionable: false
     },
     {

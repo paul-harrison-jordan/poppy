@@ -10,11 +10,11 @@ import { usePRDFlow } from '@/hooks/usePRDFlow';
 import ChatMessageList from './ChatMessageList';
 import ChatInput from './ChatInput';
 import { getEnrichedPersonalContext } from '@/lib/utils/contextHelpers';
-import CompetitiveAnalysisResults from './CompetitiveAnalysisResults';
 
 // Lazy load heavy components
 const DesignSidebar = lazy(() => import('./DesignSidebar'));
 const TechDocWizard = lazy(() => import('./TechDocWizard'));
+const GardenChat = lazy(() => import('./garden/GardenChat'));
 
 declare global {
   interface Window {
@@ -28,7 +28,7 @@ export interface ChatMessage {
   className?: string;
 }
 
-type ChatMode = 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback' | 'competitive';
+type ChatMode = 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback' | 'garden';
 
 
 
@@ -42,7 +42,7 @@ export default function ChatInterface() {
   // Handle client-side initialization
   useEffect(() => {
     const savedMode = localStorage.getItem('currentChatMode') as ChatMode;
-    if (savedMode && ['chat', 'draft', 'techdoc', 'agent', 'design', 'feedback', 'competitive'].includes(savedMode)) {
+    if (savedMode && ['chat', 'draft', 'techdoc', 'agent', 'design', 'feedback', 'garden'].includes(savedMode)) {
       setMode(savedMode);
     }
   }, []);
@@ -53,14 +53,10 @@ export default function ChatInterface() {
   const [showStartPrdButton, setShowStartPrdButton] = useState(false);
   const [, setCompletedPrdContent] = useState<string>('');
   const [demoUrl, setDemoUrl] = useState<string | null>(null);
-  const [competitiveUrls, setCompetitiveUrls] = useState<string[]>(['']);
-  const [showCompetitiveUrlInput, setShowCompetitiveUrlInput] = useState(false);
-  const [competitiveQuery, setCompetitiveQuery] = useState<string>('');
   const [isCreatingDesign, setIsCreatingDesign] = useState(false);
   const [v0ChatId, setV0ChatId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(256);
-  const [typingDemo, setTypingDemo] = useState(false);
 
   // Use custom hooks
   const knowledgeSession = useKnowledgeSession();
@@ -73,43 +69,6 @@ export default function ChatInterface() {
     }
   }, [status, knowledgeSession, prdFlow]);
 
-  // Subtle typing demo on first load when there are no messages
-  useEffect(() => {
-    if (messages.length === 0 && input === '' && isInitialized && !typingDemo) {
-      const timer = setTimeout(() => {
-        setTypingDemo(true);
-        const demoTexts = {
-          draft: "Draft a PRD for user authentication...",
-          techdoc: "Create technical documentation for checkout flow...",
-          design: "Create a design for mobile checkout...",
-          feedback: "Find customer feedback about search...",
-          competitive: "Analyze how Slack handles notifications...",
-          chat: "Help me with roadmap planning..."
-        };
-        
-        const demoText = demoTexts[mode as keyof typeof demoTexts] || demoTexts.draft;
-        let i = 0;
-        
-        const typeInterval = setInterval(() => {
-          if (i < demoText.length) {
-            setInput(demoText.slice(0, i + 1));
-            i++;
-          } else {
-            // Clear after showing full text for 1.5 seconds
-            setTimeout(() => {
-              setInput('');
-              setTypingDemo(false);
-            }, 1500);
-            clearInterval(typeInterval);
-          }
-        }, 50);
-        
-        return () => clearInterval(typeInterval);
-      }, 2000); // Start demo after 2 seconds
-      
-      return () => clearTimeout(timer);
-    }
-  }, [messages.length, input, isInitialized, mode, typingDemo]);
 
   // Track design mode changes
   useEffect(() => {
@@ -611,84 +570,11 @@ export default function ChatInterface() {
   };
 
   const handleSafeModeChange = (newMode: ChatMode) => {
-    // Reset competitive mode UI when switching modes
-    if (newMode !== 'competitive') {
-      setShowCompetitiveUrlInput(false);
-      setCompetitiveQuery('');
-      setCompetitiveUrls(['']);
-    }
     
     // For now, directly change mode - can add confirmation logic later if needed
     handleModeChange(newMode);
   };
 
-  const handleCompetitiveAnalyze = async () => {
-    const validUrls = competitiveUrls.filter(url => url.trim() !== '');
-    
-    if (validUrls.length === 0 || !competitiveQuery) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: `Analyzing ${validUrls.length} competitor help sites for insights on "${competitiveQuery}"...`
-      }]);
-
-      const response = await fetch("/api/competitive-analysis", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: competitiveQuery,
-          urls: validUrls
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Analysis failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      // Remove loading message
-      setMessages(prev => prev.filter(msg => typeof msg.content === 'string' && !msg.content.includes('Analyzing')));
-      
-      // Add styled competitive analysis results
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: (
-          <CompetitiveAnalysisResults 
-            query={competitiveQuery}
-            competitors={result.competitors || []}
-            summary={result.summary}
-            sourceCount={result.sourceCount || 0}
-            searchedUrls={result.searchedUrls || []}
-            onSearchOtherCompetitors={() => {
-              // Reset the competitive analysis UI and show suggestion message
-              setMessages(prev => [...prev, {
-                role: 'assistant',
-                content: `Let's find alternative competitors for "${competitiveQuery}". Please provide different competitor help desk URLs, or I can suggest some common competitors in this space. What type of product/service are you building?`
-              }]);
-            }}
-          />
-        )
-      }]);
-
-      // Hide the URL input UI after successful analysis
-      setShowCompetitiveUrlInput(false);
-
-    } catch (error) {
-      console.error('Error in competitive analysis:', error);
-      setMessages(prev => prev.filter(msg => typeof msg.content === 'string' && !msg.content.includes('Analyzing')));
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: "Sorry, I encountered an error while analyzing the competitor documentation. Please try again with valid help desk URLs."
-      }]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleGetEmailFromChat = async (customerMatch: Record<string, unknown>, index: number) => {
     try {
@@ -1045,7 +931,7 @@ P.S. If you have any other thoughts or suggestions, I'm always happy to hear the
       // Create stylized result card
       setMessages(prev => prev.slice(0, -1).concat([{
         role: 'assistant',
-        content: `✅ **Competitive Analysis Complete**
+        content: `✅ **Analysis Complete**
 
 **Query:** ${result.query}
 **Search Strategy:** ${result.synthesizedQuery}
@@ -1085,9 +971,9 @@ Please try again with different URLs or check your internet connection.`
     e.preventDefault();
     if (!input.trim()) return;
 
-    // Check if user wants competitive analysis
+    // Check if user wants analysis
     const lowerInput = input.toLowerCase();
-    if (lowerInput.includes('analyze competitors') || lowerInput.includes('competitive analysis')) {
+    if (lowerInput.includes('analyze competitors') || lowerInput.includes('analysis')) {
       const userMessage: ChatMessage = { role: 'user', content: input };
       setMessages(prev => [...prev, userMessage]);
       
@@ -1390,10 +1276,6 @@ Please try again with different URLs or check your internet connection.`
             content: "Sorry, I encountered an error while searching for customer feedback. Please try again."
           }]);
         }
-      } else if (mode === 'competitive') {
-        // Competitive analysis mode - show URL input UI
-        setCompetitiveQuery(input);
-        setShowCompetitiveUrlInput(true);
         
         setMessages(prev => [...prev, {
           role: 'assistant',
@@ -1496,6 +1378,20 @@ Please try again with different URLs or check your internet connection.`
             />
           ))}
         </div>
+      ) : mode === 'garden' ? (
+        // Garden mode: Multi-agent PM assistant
+        <div className="h-screen">
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-full">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+            </div>
+          }>
+            <GardenChat
+              storedContext={getEnrichedPersonalContext()}
+              teamTerms={JSON.parse(localStorage.getItem("teamTerms") || "{}")}
+            />
+          </Suspense>
+        </div>
       ) : mode === ('design' as ChatMode) ? (
       // Design mode: Split-screen layout with smooth visual transition
       <div className="flex h-screen w-full bg-neutral/80 transition-all duration-500 ease-in-out">
@@ -1587,6 +1483,7 @@ Please try again with different URLs or check your internet connection.`
                       {mode === 'chat' && '👋'}
                       {mode === 'design' && '🎨'}
                       {mode === 'feedback' && '💬'}
+                      {mode === 'garden' && '🧠'}
                     </div>
                   </div>
                   <div className="text-2xl font-bold mb-3 text-gray-900">
@@ -1595,6 +1492,7 @@ Please try again with different URLs or check your internet connection.`
                     {mode === 'chat' && 'Hi! I\'m Poppy, your PM partner'}
                     {mode === 'design' && 'Design Studio'}
                     {mode === 'feedback' && 'Let\'s find customer insights'}
+                    {mode === 'garden' && 'Welcome to Garden'}
                   </div>
                   <div className="text-base text-gray-600 leading-relaxed">
                     {mode === 'draft' && 'I\'ll guide you through creating a comprehensive PRD. Just share your product idea and I\'ll ask the right questions to help you think through every detail.'}
@@ -1602,6 +1500,7 @@ Please try again with different URLs or check your internet connection.`
                     {mode === 'chat' && 'I can help with roadmap planning, feature prioritization, stakeholder communication, or any product challenge you\'re facing.'}
                     {mode === 'design' && 'Transform your ideas into interactive prototypes. Describe what you want to build and I\'ll help you visualize it.'}
                     {mode === 'feedback' && 'I\'ll search through customer feedback to find insights relevant to your feature or pain point. Just describe what you\'re looking for.'}
+                    {mode === 'garden' && 'Your multi-agent PM assistant. I coordinate specialist agents for planning, strategy, research, design, and engineering to give you comprehensive product insights.'}
                   </div>
                   <div className="mt-6 text-sm text-gray-500 italic">
                     {mode === 'draft' && '💡 Tip: The more context you share, the better I can tailor the PRD to your needs'}
@@ -1609,6 +1508,7 @@ Please try again with different URLs or check your internet connection.`
                     {mode === 'chat' && '💡 Tip: Try the different modes below for specialized workflows'}
                     {mode === 'design' && '💡 Tip: You can also paste a PRD link to create designs from existing specs'}
                     {mode === 'feedback' && '💡 Tip: I can help you reach out to specific customers with relevant feedback'}
+                    {mode === 'garden' && '💡 Tip: Ask complex PM questions to see multiple specialist agents collaborate on your answer'}
                   </div>
                 </div>
               </div>
@@ -1652,10 +1552,6 @@ Please try again with different URLs or check your internet connection.`
                 onSummarizeAndSave={handleSummarizeAndSave}
                 onOpenAgentMode={openAgentMode}
                 onCompetitorUrlsChange={prdFlow.setCompetitorUrls}
-                competitiveUrls={competitiveUrls}
-                showCompetitiveUrlInput={showCompetitiveUrlInput}
-                onCompetitiveUrlsChange={setCompetitiveUrls}
-                onCompetitiveAnalyze={handleCompetitiveAnalyze}
               />
             </div>
           </div>

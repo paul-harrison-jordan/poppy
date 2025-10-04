@@ -14,7 +14,7 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
       }, { status: 401 });
     }
 
-    const { docId, format = 'text' } = await request.json();
+    const { docId, format = 'text', includeMetadata = false } = await request.json();
     if (!docId) {
       return NextResponse.json({ error: 'Document ID is required' }, { status: 400 });
     }
@@ -32,9 +32,14 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
     // Initialize the Drive API
     const drive = google.drive({ version: 'v3', auth });
 
-    // First check if we can access the file
+    // First check if we can access the file and get metadata if requested
+    let fileMetadata = null;
     try {
-      await drive.files.get({ fileId: docId });
+      const fileResponse = await drive.files.get({ 
+        fileId: docId,
+        fields: includeMetadata ? 'id,name,mimeType,webViewLink,modifiedTime' : 'id'
+      });
+      fileMetadata = fileResponse.data;
     } catch (accessError: unknown) {
       console.error('Access error:', accessError);
       if (accessError && typeof accessError === 'object' && 'code' in accessError) {
@@ -79,7 +84,8 @@ export const POST = withAuth<NextResponse, Session, [Request]>(async (session, r
 
     return NextResponse.json({ 
       content: textContent,
-      htmlContent: format === 'html' || format === 'both' ? htmlContent : undefined
+      htmlContent: format === 'html' || format === 'both' ? htmlContent : undefined,
+      metadata: includeMetadata ? fileMetadata : undefined
     });
   } catch (error: unknown) {
     console.error('Error fetching Google Doc content:', error);

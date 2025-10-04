@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Paintbrush } from 'lucide-react';
 
-type ChatMode = 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback' | 'competitive';
+type ChatMode = 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback';
 
 interface ChatMessage {
   role: 'user' | 'assistant';

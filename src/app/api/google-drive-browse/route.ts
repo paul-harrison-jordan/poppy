@@ -43,7 +43,7 @@ export const GET = withAuth<NextResponse, Session, [Request]>(async (session, re
     const drive = google.drive({ version: 'v3', auth });
 
     const pageToken = searchParams.get('pageToken');
-    const pageSize = parseInt(searchParams.get('pageSize') || '20');
+    const pageSize = parseInt(searchParams.get('pageSize') || '50'); // Increased default
 
     // Build query based on parameters - prioritize owned files and recent updates
     let query = '';
@@ -63,8 +63,8 @@ export const GET = withAuth<NextResponse, Session, [Request]>(async (session, re
         query = `mimeType='application/vnd.google-apps.folder' and 'me' in owners and trashed=false`;
       }
     } else if (searchQuery) {
-      // Search across accessible files, prioritizing owned
-      query = `name contains '${searchQuery.replace(/'/g, "\\'")}' and (mimeType='application/vnd.google-apps.document' or mimeType='application/vnd.google-apps.folder') and trashed=false`;
+      // Search across all accessible documents, not just folders
+      query = `fullText contains '${searchQuery.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.document' and trashed=false`;
     } else if (folderId && folderId !== 'root') {
       // Browse specific folder
       query = `'${folderId}' in parents and (mimeType='application/vnd.google-apps.document' or mimeType='application/vnd.google-apps.folder') and trashed=false`;

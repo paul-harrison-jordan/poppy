@@ -26,8 +26,17 @@ export interface PersonalContext {
   examplesOfHowYouThink?: string[];
   teamStrategy?: string;
   productVision?: string;
+  productAreaPersonas?: ProductAreaPersonas;
   [key: string]: string | number | boolean | string[] | number[] | undefined;
 }
+
+export interface ProductAreaPersonas {
+  customerFacing?: string; // e.g., segment builder persona
+  customerImpacting?: string; // e.g., campaign sender persona
+  infrastructure?: string; // e.g., internal databases persona
+}
+
+export type ProductArea = 'customerFacing' | 'customerImpacting' | 'infrastructure';
 
 export interface MetricContextData {
   sessionType?: string;
@@ -236,4 +245,54 @@ export interface MatchedContext {
     KLAVIYO_ACCOUNT_ID: string;
     row_number: number;
   };
+}
+
+// Batch PRD Types
+export interface BatchPRDSession {
+  id: string;
+  user_email: string;
+  features: FeatureInput[];
+  status: 'defining_jtbd' | 'generating' | 'reviewing' | 'approved' | 'generating_prds' | 'completed';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeatureInput {
+  id: string;
+  name: string;
+  jtbd: string;
+  productArea: ProductArea;
+  appliedPersonas: string[];
+}
+
+export interface ProposedTerm {
+  term: string;
+  definition: string;
+  source: string;
+  confidence: number;
+  approved?: boolean;
+  edited?: boolean;
+}
+
+export interface ProposedQuestionAnswer {
+  question: string;
+  answer: string;
+  reasoning: string;
+  sources: string[];
+  confidence: number;
+  approved?: boolean;
+  edited?: boolean;
+}
+
+export interface ProposedContent {
+  featureId: string;
+  terms: ProposedTerm[];
+  questionAnswers: ProposedQuestionAnswer[];
+  generatedAt: string;
+}
+
+export interface BatchReviewData {
+  sessionId: string;
+  proposedContent: ProposedContent[];
+  status: 'pending_review' | 'reviewed' | 'approved';
 }

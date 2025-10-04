@@ -56,12 +56,13 @@ export default function GlobalLayout({ children }: { children: React.ReactNode }
   // ])
 
   // Sidebar collapse state
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(isDesignMode)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [wasCollapsedByDesignMode, setWasCollapsedByDesignMode] = useState(false)
 
   // Track notified PRDs to avoid duplicate notifications
   const [notifiedPrdIds, setNotifiedPrdIds] = useState<Set<string>>(new Set())
 
-  // Auto-collapse sidebar in design mode
+  // Auto-collapse sidebar in design mode only
   useEffect(() => {
     const handleModeChange = (event?: CustomEvent<{ mode: string }>) => {
       let mode: string
@@ -74,11 +75,18 @@ export default function GlobalLayout({ children }: { children: React.ReactNode }
         mode = localStorage.getItem('currentChatMode') || 'brainstorm'
       }
       
-      if (mode === 'design' && !isSidebarCollapsed) {
-        setIsSidebarCollapsed(true)
-      } else if (mode !== 'design' && isSidebarCollapsed) {
-        // Auto-expand when leaving design mode with smooth transition
-        setTimeout(() => setIsSidebarCollapsed(false), 100)
+      if (mode === 'design') {
+        // Entering design mode - collapse sidebar if not already collapsed
+        if (!isSidebarCollapsed) {
+          setIsSidebarCollapsed(true)
+          setWasCollapsedByDesignMode(true)
+        }
+      } else if (mode !== 'design' && wasCollapsedByDesignMode) {
+        // Leaving design mode - only auto-expand if we auto-collapsed it
+        setTimeout(() => {
+          setIsSidebarCollapsed(false)
+          setWasCollapsedByDesignMode(false)
+        }, 100)
       }
     }
 
@@ -101,10 +109,12 @@ export default function GlobalLayout({ children }: { children: React.ReactNode }
       window.removeEventListener('storage', handleStorageChange)
       window.removeEventListener('chatModeChange', handleCustomModeChange)
     }
-  }, [isSidebarCollapsed, isDesignMode])
+  }, [isSidebarCollapsed, wasCollapsedByDesignMode])
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed)
+    // Reset design mode tracking since user manually toggled
+    setWasCollapsedByDesignMode(false)
   }
 
   const setPRDs = usePRDStore((state) => state.setPRDs)

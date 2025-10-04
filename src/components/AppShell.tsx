@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useEffect, useState } from "react";
-import Sidebar from './Sidebar'
 import { cn } from "@/lib/utils";
 import { determineCategory, analyzeSummary } from '@/lib/prdCategorization'
 import { usePRDStore, PRD } from '@/store/prdStore';
@@ -111,21 +110,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [notifiedPrdIds]);
 
 
-  // No banner height needed since we removed the duplicate banner
-  const bannerHeight = 0;
 
   return (
     <div className={cn(
       "min-h-screen w-full flex flex-col",
       isHome ? "bg-gradient-to-br from-[#FFFAF3] to-white" : "bg-neutral/80"
     )}>
-      {/* Sidebar and main content below banner, with top margin to avoid overlap */}
-      <div className="flex min-h-screen h-screen" style={{ marginTop: `${bannerHeight}px` }}>
-        <Sidebar />
-        <main className="flex-1 flex flex-col min-h-0 ml-64">
-          {children}
-        </main>
-      </div>
+      {/* Main content without sidebar - GlobalLayout handles the sidebar */}
+      <main className="flex-1 flex flex-col min-h-0">
+        {children}
+      </main>
     </div>
   )
 } 

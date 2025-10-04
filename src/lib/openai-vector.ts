@@ -63,17 +63,21 @@ export async function findExistingVectorStore(username: string): Promise<UserVec
 
     // Search for existing vector store with matching name
     const vectorStores = await openai.vectorStores.list({
-      limit: 100 // Increase limit to find user's store
+      limit: 100, // Increase limit to find user's store
+      order: 'desc' // Get most recent first
     });
 
-    const existingStore = vectorStores.data.find(store => store.name === expectedStoreName);
+    const existingStore = vectorStores.data.find(store => 
+      store.name === expectedStoreName && store.status === 'completed'
+    );
     
     if (existingStore) {
       console.log(`Found existing vector store ${existingStore.id} for user ${username}`);
       
       // Search for existing assistant with matching name and vector store
       const assistants = await openai.beta.assistants.list({
-        limit: 100
+        limit: 100,
+        order: 'desc' // Get most recent first
       });
 
       const existingAssistant = assistants.data.find(assistant => 
@@ -135,13 +139,10 @@ async function createNewUserVectorStore(username: string): Promise<UserVectorSto
       return placeholderStore;
     }
 
-    // Create a new vector store for this user
+    // Create a new vector store for this user (without expiration)
     const vectorStore = await openai.vectorStores.create({
-      name: `${username}-documents`,
-      expires_after: {
-        anchor: 'last_active_at',
-        days: 30 // Increased to 30 days to avoid frequent recreation
-      }
+      name: `${username}-documents`
+      // Removed expires_after to prevent vector store expiration
     });
 
     // Create an assistant with file search capability
@@ -293,13 +294,10 @@ export async function createFeedbackVectorStore(): Promise<string> {
       return 'disabled-vector-store';
     }
 
-    // Create a vector store for customer feedback
+    // Create a vector store for customer feedback (without expiration)
     const vectorStore = await openai.vectorStores.create({
-      name: 'customer-feedback-store',
-      expires_after: {
-        anchor: 'last_active_at',
-        days: 30 // Keep feedback data longer
-      }
+      name: 'customer-feedback-store'
+      // Removed expires_after to prevent vector store expiration
     });
 
     console.log(`Created feedback vector store: ${vectorStore.id}`);

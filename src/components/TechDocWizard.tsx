@@ -22,10 +22,10 @@ interface HelpArticlePreview {
   isValid: boolean;
 }
 
-type WizardStep = 'select-prd' | 'questions' | 'help-docs' | 'generating' | 'complete';
+type WizardStep = 'select-prd' | 'questions' | 'persona' | 'help-docs' | 'generating' | 'complete';
 
 interface TechDocWizardProps {
-  onModeChange?: (mode: 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback' | 'competitive') => void;
+  onModeChange?: (mode: 'chat' | 'draft' | 'techdoc' | 'agent' | 'design' | 'feedback') => void;
 }
 
 export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {}) {
@@ -40,13 +40,20 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
   const [prdContent, setPrdContent] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
+  const [inputMode, setInputMode] = useState<'browse' | 'url'>('browse');
   const documentsPerPage = 10;
   
   // Questions State
   const [questions, setQuestions] = useState<TechDocQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  
+  // Persona State
+  const [personaOutline, setPersonaOutline] = useState<string>('');
+  const [customPrompt, setCustomPrompt] = useState<string>('');
   
   // Help Docs State
   const [helpUrls, setHelpUrls] = useState<string[]>(['', '', '']);
@@ -57,12 +64,17 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
   const [generatedDocUrl, setGeneratedDocUrl] = useState<string>('');
   const [generatedDocTitle, setGeneratedDocTitle] = useState<string>('');
 
-  // Fetch PRDs on mount
+  // Fetch PRDs on mount and when search changes
   useEffect(() => {
-    if (currentStep === 'select-prd') {
-      fetchPRDs();
+    if (currentStep === 'select-prd' && inputMode === 'browse') {
+      const debounceTimer = setTimeout(() => {
+        fetchPRDs();
+      }, searchQuery ? 500 : 0); // Debounce search
+      
+      return () => clearTimeout(debounceTimer);
     }
-  }, [currentStep]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, searchQuery, inputMode]);
 
   // Filter and paginate documents when search or page changes
   useEffect(() => {
@@ -77,11 +89,10 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
     }
     
     // Calculate pagination
-    const totalPages = Math.ceil(filtered.length / documentsPerPage);
-    setTotalPages(totalPages);
+    const totalPagesCalc = Math.ceil(filtered.length / documentsPerPage);
     
     // Reset to page 1 if current page is beyond available pages
-    const safePage = currentPage > totalPages ? 1 : currentPage;
+    const safePage = currentPage > totalPagesCalc ? 1 : currentPage;
     if (safePage !== currentPage) {
       setCurrentPage(safePage);
     }
@@ -94,24 +105,28 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
     setFilteredDocuments(paginatedDocs);
   }, [documents, searchQuery, currentPage, documentsPerPage]);
 
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1); // Reset to first page when searching
-  };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  const fetchPRDs = async () => {
-    setLoading(true);
+  const fetchPRDs = async (pageToken?: string | null, append: boolean = false) => {
+    if (!append) {
+      setLoading(true);
+    } else {
+      setIsLoadingMore(true);
+    }
     setError(null);
     
     try {
       const params = new URLSearchParams({
-        pageSize: '20',
+        pageSize: '50', // Fetch more documents per request
         itemType: 'documents'
       });
+      
+      if (pageToken) {
+        params.append('pageToken', pageToken);
+      }
+      
+      if (searchQuery.trim()) {
+        params.append('search', searchQuery.trim());
+      }
       
       const response = await fetch(`/api/google-drive-browse?${params}`);
       const result = await response.json();
@@ -125,10 +140,108 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
         doc.mimeType === 'application/vnd.google-apps.document'
       );
       
-      setDocuments(googleDocs);
+      if (append) {
+        setDocuments(prev => [...prev, ...googleDocs]);
+      } else {
+        setDocuments(googleDocs);
+      }
+      
+      setNextPageToken(result.nextPageToken || null);
     } catch (err) {
       console.error('Error fetching PRDs:', err);
       setError(err instanceof Error ? err.message : 'Failed to load PRDs');
+    } finally {
+      setLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+  
+  const extractDocIdFromUrl = (url: string): string | null => {
+    // Handle various Google Docs URL formats
+    const patterns = [
+      /\/document\/d\/([a-zA-Z0-9-_]+)/,
+      /\/open\?id=([a-zA-Z0-9-_]+)/,
+      /docs\.google\.com\/.*[?&]id=([a-zA-Z0-9-_]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    
+    // If it's not a URL but looks like a doc ID
+    if (/^[a-zA-Z0-9-_]+$/.test(url) && url.length > 20) {
+      return url;
+    }
+    
+    return null;
+  };
+  
+  const handleUrlSubmit = async () => {
+    const docId = extractDocIdFromUrl(urlInput);
+    
+    if (!docId) {
+      setError('Invalid Google Docs URL. Please paste a valid Google Docs link.');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // First fetch the document content with metadata
+      const response = await fetch('/api/get-google-doc-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docId, includeMetadata: true })
+      });
+      
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to fetch document');
+      }
+      
+      const { content, metadata } = await response.json();
+      
+      // Create a document object with actual metadata if available
+      const doc: GoogleDriveDocument = {
+        id: docId,
+        name: metadata?.name || (urlInput.includes('docs.google.com') 
+          ? 'Document from URL' 
+          : 'Direct Document'),
+        mimeType: 'application/vnd.google-apps.document',
+        webViewLink: metadata?.webViewLink || (urlInput.includes('docs.google.com') 
+          ? urlInput 
+          : `https://docs.google.com/document/d/${docId}/edit`),
+        modifiedTime: metadata?.modifiedTime
+      };
+      
+      setSelectedPrd(doc);
+      setPrdContent(content);
+      
+      // Generate questions based on PRD
+      const questionsResponse = await fetch('/api/tech-doc/generate-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prdContent: content,
+          prdTitle: doc.name
+        })
+      });
+      
+      if (!questionsResponse.ok) {
+        throw new Error('Failed to generate questions');
+      }
+      
+      const { questions: generatedQuestions } = await questionsResponse.json();
+      setQuestions(generatedQuestions);
+      setCurrentStep('questions');
+      
+    } catch (err) {
+      console.error('Error processing URL:', err);
+      setError(err instanceof Error ? err.message : 'Failed to process document from URL');
     } finally {
       setLoading(false);
     }
@@ -193,7 +306,7 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      setCurrentStep('help-docs');
+      setCurrentStep('persona');
     }
   };
 
@@ -324,7 +437,9 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
           teamTerms,
           prdContent,
           styleGuide,
-          helpExamples
+          helpExamples,
+          personaOutline,
+          customPrompt
         })
       });
       
@@ -351,14 +466,40 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
         throw new Error('No content generated');
       }
       
-      // Step 4: Create Google Doc and save
+      // Step 4: Review and improve with persona if provided
+      let finalContent = generatedContent;
+      if (personaOutline.trim()) {
+        try {
+          const reviewResponse = await fetch('/api/tech-doc/review-persona', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              draftContent: generatedContent,
+              personaOutline,
+              featureName: selectedPrd?.name || 'Feature',
+              customPrompt
+            })
+          });
+          
+          if (reviewResponse.ok) {
+            const { reviewedContent } = await reviewResponse.json();
+            if (reviewedContent) {
+              finalContent = reviewedContent;
+            }
+          }
+        } catch (error) {
+          console.warn('Persona review failed, using original content:', error);
+        }
+      }
+      
+      // Step 5: Create Google Doc and save
       const docResponse = await fetch('/api/tech-doc/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prdTitle: selectedPrd?.name,
           prdUrl: selectedPrd?.webViewLink,
-          generatedContent
+          generatedContent: finalContent
         })
       });
       
@@ -423,9 +564,9 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
               {/* Progress Indicator - Chat-like */}
               <div className="mb-8">
                 <div className="flex items-center justify-center gap-2 mb-4">
-                  {['select-prd', 'questions', 'help-docs', 'generating', 'complete'].map((step, index) => {
+                  {['select-prd', 'questions', 'persona', 'help-docs', 'generating', 'complete'].map((step, index) => {
                     const isActive = step === currentStep;
-                    const isCompleted = ['select-prd', 'questions', 'help-docs', 'generating', 'complete'].indexOf(currentStep) > index;
+                    const isCompleted = ['select-prd', 'questions', 'persona', 'help-docs', 'generating', 'complete'].indexOf(currentStep) > index;
                     
                     return (
                       <div key={step} className="flex items-center">
@@ -436,7 +577,7 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
                         }`}>
                           {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
                         </div>
-                        {index < 4 && (
+                        {index < 5 && (
                           <div className={`w-12 h-1 mx-1 rounded-full transition-all ${
                             isCompleted ? 'bg-green-200' : 'bg-gray-200'
                           }`} />
@@ -461,40 +602,109 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
                       </h2>
                     </div>
                     
-                    {loading ? (
-                      <div className="flex items-center justify-center py-12">
-                        <div className="flex items-center gap-3 text-gray-600">
-                          <Loader2 className="w-5 h-5 animate-spin text-poppy" />
-                          <span>Loading your PRDs...</span>
+                    {/* Tab switcher for Browse vs URL input */}
+                    <div className="flex gap-2 mb-4">
+                      <button
+                        onClick={() => setInputMode('browse')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          inputMode === 'browse' 
+                            ? 'bg-poppy text-white' 
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Browse Drive
+                      </button>
+                      <button
+                        onClick={() => setInputMode('url')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          inputMode === 'url' 
+                            ? 'bg-poppy text-white' 
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Paste URL
+                      </button>
+                    </div>
+                    
+                    {inputMode === 'url' ? (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Paste your Google Docs URL
+                          </label>
+                          <input
+                            type="text"
+                            value={urlInput}
+                            onChange={(e) => setUrlInput(e.target.value)}
+                            placeholder="https://docs.google.com/document/d/..."
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-poppy focus:border-transparent"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Paste any Google Docs URL or document ID
+                          </p>
                         </div>
-                      </div>
-                    ) : error ? (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-                        <div className="flex items-center gap-2">
-                          <X className="w-4 h-4" />
-                          {error}
-                        </div>
+                        {error && (
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+                            <div className="flex items-center gap-2">
+                              <X className="w-4 h-4" />
+                              {error}
+                            </div>
+                          </div>
+                        )}
+                        <button
+                          onClick={handleUrlSubmit}
+                          disabled={!urlInput.trim() || loading}
+                          className="w-full px-6 py-3 bg-poppy text-white rounded-lg hover:bg-poppy/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all shadow-sm"
+                        >
+                          {loading ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              Continue with this document
+                              <ChevronRight className="w-4 h-4" />
+                            </>
+                          )}
+                        </button>
                       </div>
                     ) : (
                       <>
-                        {/* Search Bar */}
-                        <div className="mb-4">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                              type="text"
-                              placeholder="Search PRDs by name..."
-                              value={searchQuery}
-                              onChange={(e) => handleSearchChange(e.target.value)}
-                              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-poppy focus:border-transparent"
-                            />
+                        {loading && documents.length === 0 ? (
+                          <div className="flex items-center justify-center py-12">
+                            <div className="flex items-center gap-3 text-gray-600">
+                              <Loader2 className="w-5 h-5 animate-spin text-poppy" />
+                              <span>Loading your PRDs...</span>
+                            </div>
                           </div>
-                          {searchQuery && (
-                            <p className="text-sm text-gray-500 mt-2">
-                              {documents.filter(doc => doc.name.toLowerCase().includes(searchQuery.toLowerCase())).length} results found
-                            </p>
-                          )}
-                        </div>
+                        ) : error ? (
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+                            <div className="flex items-center gap-2">
+                              <X className="w-4 h-4" />
+                              {error}
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Search Bar */}
+                            <div className="mb-4">
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                  type="text"
+                                  placeholder="Search all your Google Docs..."
+                                  value={searchQuery}
+                                  onChange={(e) => setSearchQuery(e.target.value)}
+                                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-poppy focus:border-transparent"
+                                />
+                              </div>
+                              {searchQuery && (
+                                <p className="text-sm text-gray-500 mt-2">
+                                  Searching across all your documents...
+                                </p>
+                              )}
+                            </div>
 
                         {/* Document List */}
                         <div className="space-y-2 mb-4">
@@ -529,60 +739,35 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
                           )}
                         </div>
 
-                        {/* Pagination */}
-                        {totalPages > 1 && (
-                          <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-                            <div className="text-sm text-gray-600">
-                              Page {currentPage} of {totalPages}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                disabled={currentPage === 1}
-                                className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              >
-                                Previous
-                              </button>
-                              
-                              {/* Page Numbers */}
-                              <div className="flex items-center gap-1">
-                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                  let pageNum;
-                                  if (totalPages <= 5) {
-                                    pageNum = i + 1;
-                                  } else if (currentPage <= 3) {
-                                    pageNum = i + 1;
-                                  } else if (currentPage >= totalPages - 2) {
-                                    pageNum = totalPages - 4 + i;
-                                  } else {
-                                    pageNum = currentPage - 2 + i;
-                                  }
-                                  
-                                  return (
-                                    <button
-                                      key={pageNum}
-                                      onClick={() => handlePageChange(pageNum)}
-                                      className={`px-3 py-1 text-sm rounded transition-colors ${
-                                        pageNum === currentPage
-                                          ? 'bg-poppy text-white'
-                                          : 'border border-gray-300 hover:bg-gray-50'
-                                      }`}
-                                    >
-                                      {pageNum}
-                                    </button>
-                                  );
-                                })}
+                            {/* Load More Button */}
+                            {nextPageToken && (
+                              <div className="flex justify-center pt-4 border-t border-gray-200">
+                                <button
+                                  onClick={() => fetchPRDs(nextPageToken, true)}
+                                  disabled={isLoadingMore}
+                                  className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                                >
+                                  {isLoadingMore ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                      Loading more...
+                                    </>
+                                  ) : (
+                                    <>
+                                      Load more documents
+                                      <ChevronRight className="w-4 h-4" />
+                                    </>
+                                  )}
+                                </button>
                               </div>
-                              
-                              <button
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
-                                className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              >
-                                Next
-                              </button>
-                            </div>
-                          </div>
+                            )}
+                            
+                            {documents.length > 0 && (
+                              <div className="text-center text-sm text-gray-500 pt-2">
+                                Showing {filteredDocuments.length} of {documents.length} documents
+                              </div>
+                            )}
+                          </>
                         )}
                       </>
                     )}
@@ -637,7 +822,103 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
                   </div>
                 )}
 
-                {/* Step 3: Help Documentation URLs */}
+                {/* Step 3: Persona Definition */}
+                {currentStep === 'persona' && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-green-600 font-semibold text-sm">3</span>
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-semibold text-gray-900">
+                          Define Your Target Persona
+                        </h2>
+                        <p className="text-sm text-gray-600">
+                          Help us tailor the documentation to your primary audience
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-base font-medium text-gray-900 mb-2">
+                          Primary Persona Outline
+                        </label>
+                        <textarea
+                          value={personaOutline}
+                          onChange={(e) => setPersonaOutline(e.target.value)}
+                          placeholder="Example: Marketing Manager at a mid-size e-commerce company (500-1000 employees). Has 3-5 years experience with email marketing but new to Klaviyo. Primary goals: increase email revenue, improve segmentation, and reduce time spent on campaign creation. Pain points: limited technical knowledge, needs clear step-by-step guidance, worried about deliverability issues."
+                          className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-poppy focus:border-transparent resize-none"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Include role, experience level, goals, and pain points
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-base font-medium text-gray-900 mb-2">
+                          Additional Context (Optional)
+                        </label>
+                        <textarea
+                          value={customPrompt}
+                          onChange={(e) => setCustomPrompt(e.target.value)}
+                          placeholder="Any specific focus areas or requirements? For example: 'Focus on compliance and GDPR considerations' or 'Include more technical API details'"
+                          className="w-full h-24 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-poppy focus:border-transparent resize-none"
+                        />
+                      </div>
+
+                      {/* Persona Templates */}
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <p className="text-sm font-medium text-gray-700 mb-2">Quick Templates:</p>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => setPersonaOutline('E-commerce Marketing Manager: 2-3 years email experience, manages campaigns for online retail. Goals: increase AOV, reduce cart abandonment, improve customer retention. Challenges: limited dev resources, needs pre-built solutions.')}
+                            className="px-3 py-1 bg-white border border-gray-300 rounded-md text-xs hover:bg-gray-100 transition-colors"
+                          >
+                            E-commerce Manager
+                          </button>
+                          <button
+                            onClick={() => setPersonaOutline('Agency Account Manager: Manages multiple client accounts, experienced with various ESPs. Goals: quick client onboarding, scalable workflows, white-label solutions. Challenges: managing multiple brands, proving ROI to clients.')}
+                            className="px-3 py-1 bg-white border border-gray-300 rounded-md text-xs hover:bg-gray-100 transition-colors"
+                          >
+                            Agency Manager
+                          </button>
+                          <button
+                            onClick={() => setPersonaOutline('Technical Implementation Lead: Developer background, responsible for integrations. Goals: API efficiency, data accuracy, custom solutions. Challenges: complex data flows, maintaining performance at scale.')}
+                            className="px-3 py-1 bg-white border border-gray-300 rounded-md text-xs hover:bg-gray-100 transition-colors"
+                          >
+                            Technical Lead
+                          </button>
+                          <button
+                            onClick={() => setPersonaOutline('Small Business Owner: Limited marketing experience, wearing multiple hats. Goals: simple automation, cost-effective solutions, quick wins. Challenges: time constraints, learning curve, budget limitations.')}
+                            className="px-3 py-1 bg-white border border-gray-300 rounded-md text-xs hover:bg-gray-100 transition-colors"
+                          >
+                            Small Business Owner
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between mt-6">
+                      <button
+                        onClick={() => setCurrentStep('questions')}
+                        className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
+                      >
+                        Back
+                      </button>
+                      <button
+                        onClick={() => setCurrentStep('help-docs')}
+                        disabled={!personaOutline.trim()}
+                        className="px-6 py-2 bg-poppy text-white rounded-lg hover:bg-poppy/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all shadow-sm"
+                      >
+                        Continue
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 4: Help Documentation URLs */}
                 {currentStep === 'help-docs' && (
                   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <div className="flex items-center gap-3 mb-4">
@@ -709,7 +990,7 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
                       
                       <div className="flex gap-3">
                         <button
-                          onClick={() => setCurrentStep('questions')}
+                          onClick={() => setCurrentStep('persona')}
                           className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
                         >
                           Back
@@ -786,10 +1067,16 @@ export default function TechDocWizard({ onModeChange }: TechDocWizardProps = {})
                             setSelectedPrd(null);
                             setQuestions([]);
                             setAnswers({});
+                            setPersonaOutline('');
+                            setCustomPrompt('');
                             setHelpUrls(['', '', '']);
                             setHelpPreviews([]);
                             setSearchQuery('');
                             setCurrentPage(1);
+                            setUrlInput('');
+                            setInputMode('browse');
+                            setDocuments([]);
+                            setNextPageToken(null);
                           }}
                           className="mt-6 text-poppy hover:text-poppy/80 transition-colors"
                         >

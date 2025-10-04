@@ -3,7 +3,6 @@ import OpenAI from 'openai';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { openai } from '../openai';
 import { terms } from '../constants/terms';
-import { PMPreferenceProfile } from '@/types/knowledge';
 import { CompetitiveLandscaperAgent } from '@/agents/competitiveLandscaper';
 
 export { terms };
@@ -41,11 +40,14 @@ export interface GenerateContentRequest {
   storedContext?: string;
   additionalContext: string;
   teamTerms: Record<string, string>;
-  pmProfile?: PMPreferenceProfile;
   competitorUrls?: string[];
+  userPersona?: string; // User's configured persona
+  userInstructions?: string; // User's poppy.md instructions
   // Tech doc specific fields
   prdContent?: string;
   prdUrl?: string;
+  personaOutline?: string;
+  customPrompt?: string;
   styleGuide?: {
     commonPhrases: string[];
     structurePattern: string[];
@@ -60,21 +62,36 @@ export interface GenerateContentRequest {
   }>;
 }
 
+export interface PersonaReviewRequest {
+  draftContent: string;
+  personaOutline: string;
+  featureName: string;
+  customPrompt?: string;
+  personaData?: {
+    role: string;
+    experience: string;
+    goals: string;
+    painPoints: string;
+    industry: string;
+  };
+}
+
 export async function generateContent(opts: GenerateContentRequest) {
-  const { type, title, query, questions, questionAnswers, storedContext, additionalContext, pmProfile, competitorUrls, prdContent, styleGuide, helpExamples } = opts;
+  const { type, title, query, questions, questionAnswers, storedContext, additionalContext, competitorUrls, userPersona, userInstructions, prdContent, personaOutline, customPrompt, styleGuide, helpExamples } = opts;
   
   // Ensure teamTerms is always an object to prevent undefined errors
   const teamTerms = opts.teamTerms || {};
-  const pmProfileContext = pmProfile ? `
-
-  PM Profile Context:
-  - Product Philosophy: ${pmProfile.product_philosophy || 'Not defined'}
-  - Domain Expertise: ${pmProfile.domain_expertise?.join(', ') || 'Not defined'}
-  - Recurring Themes: ${pmProfile.recurring_themes?.join(', ') || 'Not defined'}
-  - Decision Frameworks: ${Object.keys(pmProfile.decision_frameworks || {}).join(', ') || 'Not defined'}
-  - Trade-off Preferences: ${Object.keys(pmProfile.trade_off_preferences || {}).join(', ') || 'Not defined'}
   
-  Use this PM profile to generate questions that align with their expertise, thinking style, and decision-making approach. Tailor questions to their domain expertise and recurring themes.` : '';
+  // Build user context from persona and instructions
+  const userContext = `${userPersona ? `
+USER PERSONA:
+${userPersona}
+` : ''}${userInstructions ? `
+CUSTOM INSTRUCTIONS:
+${userInstructions}
+
+Please follow these instructions in your response.
+` : ''}`;
   if (type === 'prd') {
     if (!storedContext) throw new Error('Stored context required for PRD generation');
     const ctx = JSON.parse(storedContext);
@@ -117,8 +134,8 @@ COMPETITIVE ANALYSIS: Failed to analyze competitor documentation (${error instan
           role: 'user',
           content:`I have  included a list of key terms that you may need to use to generate your response. Use this as background information to help you understand the rest of the prompt. ${Object.keys(terms).join(', ')}
 
-I've also included a list of key terms that my team has defined for our product. Use this as background information to help you understand the rest of the prompt. ${teamTerms && Object.keys(teamTerms).length > 0 ? Object.keys(teamTerms).join(', ') : 'No custom team terms defined'}${pmProfileContext}
-
+I've also included a list of key terms that my team has defined for our product. Use this as background information to help you understand the rest of the prompt. ${teamTerms && Object.keys(teamTerms).length > 0 ? Object.keys(teamTerms).join(', ') : 'No custom team terms defined'}
+${userContext}
 I've included instructions for how to think and write PRDs like a product manager with" ${ctx.examplesOfHowYouThink} "I've also included background on how to think like my product team" ${ctx.pillarGoalsKeyTermsBackground} "I've included an example document to demonstrate my personal philosophy on how we should approach building a product to cross sell to existing users" ${ctx.howYouThinkAboutProduct} "I've included a doc that outlines the strategic goals of the my product team for the rest of the year" ${ctx.teamStrategy} I've included example text from work that my team has already done that I want for you to use as additional context for relevant features and terms" ${additionalContext} "I've asked you to write a PRD for the following question" ${query} "I've also included a list of questions and answers about the PRD to provide additional clarity around how we should approach the PRD." ${
     questionAnswers && Array.isArray(questionAnswers) ? questionAnswers.map(qa => `Q: ${qa.question}${qa.reasoning ? ` (${qa.reasoning})` : ''}\nA: ${qa.answer}`).join('\n\n') : questions.join('\n')
   }${competitiveAnalysisText} "When I ask you to write a doc, I want you to evaluate the Job to be Done statement I provide from each perspective (Product Manager, My product team, and Building a product that grows with its users) before beginning to write the PRD. Once done with that step, I want you to write the document with a focus on narrow scope, highly detailed breakdowns of which feature will support which part of the JTBD, and an open questions section that interrogates the JTBD from each of your perspectives (my product team, Product Manager, my philosophy)${competitiveAnalysisText ? ' Include a competitive analysis section that references the actual competitor research provided above and explains how our solution will differentiate.' : ''} our edits should be returned in markdown format`,
@@ -139,6 +156,21 @@ I've included instructions for how to think and write PRDs like a product manage
       ? questionAnswers.map(qa => `Q: ${qa.question}${qa.reasoning ? ` (${qa.reasoning})` : ''}\nA: ${qa.answer}`).join('\n\n')
       : questions.join('\n');
 
+    // Add persona context if provided
+    const personaContext = personaOutline ? `
+
+TARGET PERSONA:
+${personaOutline}
+
+${customPrompt ? `ADDITIONAL REQUIREMENTS:\n${customPrompt}\n` : ''}
+
+Please ensure the documentation is tailored for this specific persona:
+- Use language and terminology appropriate for their experience level
+- Focus on use cases and examples relevant to their role and goals
+- Address their specific pain points and challenges
+- Include metrics and outcomes they care about
+` : '';
+
     const stream = await openai.chat.completions.create({
       model: 'o3',
       stream: true,
@@ -156,7 +188,8 @@ ${prdContent}
 
 USER CONTEXT (from Q&A):
 ${qaContext}
-
+${personaContext}
+${userContext}
 RELEVANT KNOWLEDGE BASE CONTEXT:
 ${additionalContext || 'No additional context available'}
 
@@ -294,23 +327,10 @@ export interface GenerateQuestionsRequest {
   storedContext: string;
   teamTerms: string;
   type?: 'prd' | 'brand-messaging';
-  pmProfile?: PMPreferenceProfile;
 }
 
 export async function generateQuestions(opts: GenerateQuestionsRequest): Promise<QuestionsResponse> {
-  const { title, query, matchedContext, storedContext, teamTerms, type = 'prd', pmProfile } = opts;
-  
-  // Build PM profile context string
-  const pmProfileContext = pmProfile ? `
-
-PM Profile Context:
-- Product Philosophy: ${pmProfile.product_philosophy || 'Not defined'}
-- Domain Expertise: ${pmProfile.domain_expertise?.join(', ') || 'Not defined'}
-- Recurring Themes: ${pmProfile.recurring_themes?.join(', ') || 'Not defined'}
-- Decision Frameworks: ${Object.keys(pmProfile.decision_frameworks || {}).join(', ') || 'Not defined'}
-- Trade-off Preferences: ${Object.keys(pmProfile.trade_off_preferences || {}).join(', ') || 'Not defined'}
-
-Use this PM profile to generate questions that align with their expertise, thinking style, and decision-making approach. Tailor questions to their domain expertise and recurring themes.` : '';
+  const { title, query, matchedContext, storedContext, teamTerms, type = 'prd' } = opts;
 
   const completion = await openai.chat.completions.create({
     messages: [
@@ -343,7 +363,7 @@ Example JSON response:
 }
 
 I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a product manager would ask.
-${Object.keys(terms).join(', ')}${pmProfileContext}`
+${Object.keys(terms).join(', ')}`
           : `You are a system that helps a brand messaging expert write a brand messaging document. You will be given a title and query for a new brand messaging document, as well as relevant context from previous documents that the user has shared with you.
 
 Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of brand messaging terms over time.
@@ -385,7 +405,7 @@ Example JSON response:
 }
 
 I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a brand messaging expert would ask.
-${Object.keys(terms).join(', ')}${pmProfileContext}`,
+${Object.keys(terms).join(', ')}`,
       },
       {
         role: 'user',
@@ -519,7 +539,6 @@ export interface VocabularyRequest {
   matchedContext: string;
   type?: 'prd' | 'brand-messaging';
   teamTerms?: Record<string, string>;
-  pmProfile?: PMPreferenceProfile;
 }
 
 export type TeamTerms = string[];
@@ -528,19 +547,7 @@ export async function generateVocabulary(opts: VocabularyRequest): Promise<TeamT
   const startTime = Date.now();
   console.log('[generateVocabulary] Starting vocabulary generation');
   
-  const { title, query, matchedContext, type = 'prd', pmProfile } = opts;
-  
-  // Build PM profile context string
-  const pmProfileContext = pmProfile ? `
-
-PM Profile Context:
-- Product Philosophy: ${pmProfile.product_philosophy || 'Not defined'}
-- Domain Expertise: ${pmProfile.domain_expertise?.join(', ') || 'Not defined'}
-- Recurring Themes: ${pmProfile.recurring_themes?.join(', ') || 'Not defined'}
-- Existing Vocabulary: ${Object.keys(pmProfile.vocabulary_glossary || {}).join(', ') || 'None defined yet'}
-- Decision Frameworks: ${Object.keys(pmProfile.decision_frameworks || {}).join(', ') || 'Not defined'}
-
-Use this PM profile to suggest vocabulary terms that align with their expertise, thinking style, and existing knowledge base. Avoid suggesting terms they've already defined unless they're highly relevant to the current query.` : '';
+  const { title, query, matchedContext, type = 'prd' } = opts;
 
   console.log('[generateVocabulary] Making OpenAI API call...');
   const completion = await openai.chat.completions.create({
@@ -558,7 +565,7 @@ You must respond with a JSON object containing a terms_to_define array of terms 
 }
 
 I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a product manager would ask.
-${Object.keys(terms).join(', ')}${pmProfileContext}`
+${Object.keys(terms).join(', ')}`
           : `You are a system that helps a brand messaging expert write a brand messaging document. You will be given a title and query for a new brand messaging document, as well as relevant context from previous documents that the user has shared with you.
 
 Over time, you should become smarter and more proficient at your job, because of this, it's especially important that you build a better understanding of brand messaging terms over time.
@@ -569,7 +576,7 @@ You must respond with a JSON object containing a terms_to_define array of terms 
 }
 
 I have also included a list of key terms that you may need to use to generate questions. Use this as background information to help you understand the questions that a brand messaging expert would ask.
-${Object.keys(terms).join(', ')}${pmProfileContext}`,
+${Object.keys(terms).join(', ')}`,
       },
       {
         role: 'user',
@@ -661,7 +668,6 @@ export async function generateEmbedding(opts: GenerateEmbeddingRequest) {
 
 export interface DesignPromptRequest {
   prdText: string;
-  pmProfile?: PMPreferenceProfile;
 }
 
 export interface DesignPromptResponse {
@@ -671,7 +677,7 @@ export interface DesignPromptResponse {
 }
 
 export async function generateDesignPrompt(opts: DesignPromptRequest): Promise<DesignPromptResponse> {
-  const { prdText, pmProfile } = opts;
+  const { prdText } = opts;
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
@@ -687,8 +693,6 @@ Focus on:
 1. Core value proposition 
 2. Primary user workflow
 3. Key UI requirements
-
-${pmProfile?.domain_expertise ? `Domain context: ${pmProfile.domain_expertise.join(', ')}` : ''}
 
 Return JSON with:
 - "design_summary": 1-2 sentence summary
@@ -807,6 +811,10 @@ export interface ChatRequest {
   model?: string;
 }
 
+// Garden multi-agent - now using dedicated services
+import { GardenOrchestrator } from '@/services/garden';
+export type { AgentType, GardenRequest, AgentUpdate } from '@/services/garden/types';
+
 export async function streamChat(opts: ChatRequest) {
   const { messages, storedContext = '', teamTerms = {}, model = 'gpt-4' } = opts;
 
@@ -846,6 +854,11 @@ export async function streamChat(opts: ChatRequest) {
   });
 
   return streamTextResponse(stream, 'text/plain');
+}
+
+export async function* streamGardenWorkflow(opts: GardenRequest) {
+  // Delegate to the dedicated Garden service
+  yield* GardenOrchestrator.streamWorkflow(opts);
 }
 
 export interface DecomposePRDRequest {
@@ -898,4 +911,135 @@ Do not include any markdown formatting, explanations, or text outside the JSON a
   });
 
   return streamTextResponse(stream);
+}
+
+export async function reviewWithPersona(opts: PersonaReviewRequest) {
+  const { draftContent, personaOutline, featureName, customPrompt } = opts;
+  
+  if (!draftContent || !personaOutline || !featureName) {
+    throw new Error('Draft content, persona outline, and feature name are required');
+  }
+
+  const systemPrompt = `You are an expert technical documentation reviewer specializing in customer persona-based content optimization for Klaviyo help articles. 
+
+Your role is to:
+1. Critically analyze technical documentation from the perspective of the TARGET CUSTOMER PERSONA
+2. Ensure the content directly addresses the customer's pain points, business objectives, and experience level
+3. Optimize the documentation to help this specific customer persona succeed with Klaviyo
+4. Verify the content is accurate, actionable, and persona-appropriate
+
+Key principles:
+- Focus on the customer persona's business goals and desired outcomes
+- Use language and examples that resonate with their industry and role
+- Address their specific pain points and challenges directly
+- Include use cases and scenarios relevant to their business context
+- Ensure technical depth matches their expertise level
+- Provide clear value propositions that matter to this persona
+- Include success metrics and outcomes they care about`;
+
+  const reviewPrompt = `Review and improve this Klaviyo help article draft for the feature "${featureName}" to ensure it solves for the target customer persona while being technically accurate.
+
+TARGET CUSTOMER PERSONA:
+${personaOutline}
+
+DRAFT ARTICLE:
+${draftContent}
+
+${customPrompt ? `ADDITIONAL INSTRUCTIONS:\n${customPrompt}\n` : ''}
+
+Please provide a comprehensive review focused on both PERSONA ALIGNMENT and TECHNICAL ACCURACY:
+
+1. **Customer Persona Analysis** (200-300 words)
+   - How well does this content serve the target customer's business needs?
+   - Does it address their specific pain points and goals?
+   - Are the examples and use cases relevant to their industry/role?
+   - Is the technical depth appropriate for their experience level?
+   - What critical gaps exist in serving this persona?
+
+2. **Accuracy & Completeness Review** (bullet points)
+   - Verify all technical information is accurate
+   - Check that setup steps are complete and correct
+   - Ensure all prerequisites and requirements are clearly stated
+   - Validate that success metrics and outcomes are realistic
+   - Identify any missing edge cases or limitations
+
+3. **Customer-Focused Improvements** (bullet points)
+   - List 5-7 specific improvements to better serve the customer persona
+   - Focus on making content more actionable for their business context
+   - Suggest persona-specific examples, templates, or use cases
+   - Recommend tone/language adjustments for their expertise level
+
+4. **Optimized Article** (complete rewrite)
+   - Rewrite the full article optimized for the target customer persona
+   - Ensure all technical information remains accurate and complete
+   - Add customer-specific examples and business context
+   - Include success metrics and outcomes this persona values
+   - Address their pain points throughout the content
+   - Maintain Klaviyo help center style and structure
+   - Use clear, actionable language appropriate for their role
+
+5. **Customer Success Additions**
+   - Suggest new sections that would help this persona succeed
+   - Include common pitfalls specific to their use case
+   - Add business impact metrics they care about
+   - Provide next steps aligned with their broader goals
+
+Focus on creating documentation that not only teaches the feature accurately but helps this specific customer persona achieve their business objectives with Klaviyo.`;
+
+  const completion = await openai.chat.completions.create({
+    model: 'o3',
+    messages: [
+      { 
+        role: 'system', 
+        content: systemPrompt
+      },
+      { 
+        role: 'user', 
+        content: reviewPrompt 
+      }
+    ]
+  });
+
+  const reviewedContent = completion.choices[0].message.content;
+  
+  if (!reviewedContent) {
+    throw new Error('No response from OpenAI');
+  }
+
+  // Parse the response to extract different sections
+  const sections = {
+    analysis: '',
+    accuracyReview: '',
+    improvements: '',
+    revisedContent: '',
+    additions: ''
+  };
+
+  // Extract sections using regex patterns
+  const analysisMatch = reviewedContent.match(/customer persona analysis[:\s]*([\s\S]*?)(?=accuracy.*?review|$)/i);
+  const accuracyMatch = reviewedContent.match(/accuracy.*?review[:\s]*([\s\S]*?)(?=customer-focused improvements|$)/i);
+  const improvementsMatch = reviewedContent.match(/customer-focused improvements[:\s]*([\s\S]*?)(?=optimized article|$)/i);
+  const revisedMatch = reviewedContent.match(/optimized article[:\s]*([\s\S]*?)(?=customer success additions|$)/i);
+  const additionsMatch = reviewedContent.match(/customer success additions[:\s]*([\s\S]*?)$/i);
+
+  if (analysisMatch) sections.analysis = analysisMatch[1].trim();
+  if (accuracyMatch) sections.accuracyReview = accuracyMatch[1].trim();
+  if (improvementsMatch) sections.improvements = improvementsMatch[1].trim();
+  if (revisedMatch) sections.revisedContent = revisedMatch[1].trim();
+  if (additionsMatch) sections.additions = additionsMatch[1].trim();
+
+  // If we couldn't parse sections, return the full content
+  if (!sections.revisedContent) {
+    sections.revisedContent = reviewedContent;
+  }
+
+  return {
+    success: true,
+    reviewedContent: sections.revisedContent,
+    analysis: sections.analysis,
+    accuracyReview: sections.accuracyReview,
+    improvements: sections.improvements,
+    additions: sections.additions,
+    fullResponse: reviewedContent
+  };
 }

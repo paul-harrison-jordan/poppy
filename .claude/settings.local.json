@@ -15,7 +15,9 @@
       "Bash(curl:*)",
       "Bash(pnpm remove:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(pnpm build:*)",
+      "Bash(npx next build:*)"
     ],
     "deny": []
   }

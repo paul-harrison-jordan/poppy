@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getAuthServerSession } from '@/lib/auth';
-import { createServiceClient } from '@/utils/supabase/service';
 import { generateDesignPrompt } from '@/lib/services/openaiService';
 
 export async function POST(request: Request) {
@@ -16,24 +15,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'PRD text is required' }, { status: 400 });
     }
 
-    // Fetch pm-profile from Supabase
-    const supabase = createServiceClient();
-    const { data: pmProfile } = await supabase
-      .from('pm_preference_profiles')
-      .select('*')
-      .eq('user_email', session.user.email)
-      .single();
-
-    console.log('Generating design prompt for PRD with PM profile:', {
+    console.log('Generating design prompt for PRD:', {
       prdLength: prdText.length,
-      hasPmProfile: !!pmProfile,
       userEmail: session.user.email
     });
 
     // Generate design summary focused on value proposition
     const designData = await generateDesignPrompt({
-      prdText,
-      pmProfile
+      prdText
     });
     
     // Validate the generated data
@@ -56,8 +45,7 @@ export async function POST(request: Request) {
       success: true,
       designSummary: designData.design_summary,
       primaryWorkflow: designData.primary_workflow,
-      designPrompt: designData.design_prompt,
-      pmProfileUsed: !!pmProfile
+      designPrompt: designData.design_prompt
     });
 
   } catch (error) {
